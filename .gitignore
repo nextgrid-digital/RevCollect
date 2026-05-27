@@ -43,7 +43,8 @@ next-env.d.ts
 /.clerk/
 
 
-# cursor 
+# cursor
+.cursor/
 .cursorrules
 /memory-bank
 
