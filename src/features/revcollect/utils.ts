@@ -26,6 +26,19 @@ export function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Stable en-US datetime for tooltips — avoids SSR/client locale hydration mismatches. */
+export function formatDateTimeTitle(iso: string | Date): string {
+  const date = typeof iso === 'string' ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
+}
+
 export function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
   const now = new Date();

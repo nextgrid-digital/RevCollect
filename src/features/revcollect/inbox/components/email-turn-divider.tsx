@@ -1,6 +1,6 @@
 'use client';
 
-import { formatRelativeDate } from '../../utils';
+import { formatDateTimeTitle, formatRelativeDate } from '../../utils';
 
 interface EmailTurnDividerProps {
   sentAt: string;
@@ -15,7 +15,7 @@ export function EmailTurnDivider({ sentAt }: EmailTurnDividerProps) {
       <time
         className='text-muted-foreground shrink-0 text-[11px] whitespace-nowrap'
         dateTime={sentAt}
-        title={sentDate.toLocaleString()}
+        title={formatDateTimeTitle(sentDate)}
       >
         {formatRelativeDate(sentAt)} ·{' '}
         {sentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}

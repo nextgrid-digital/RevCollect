@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { formatRelativeDate } from '../../utils';
+import { formatDateTimeTitle, formatRelativeDate } from '../../utils';
 import type { ThreadEmail } from '../../types';
 
 function EmailHeaderRow({ label, value }: { label: string; value: string }) {
@@ -34,7 +34,7 @@ export function EmailThreadHeader({
           <time
             className='text-muted-foreground shrink-0 text-right text-[11px] leading-snug whitespace-nowrap'
             dateTime={email.sentAt}
-            title={sentDate.toLocaleString()}
+            title={formatDateTimeTitle(sentDate)}
           >
             <span className='block'>{formatRelativeDate(email.sentAt)}</span>
             <span className='block'>
@@ -50,7 +50,7 @@ export function EmailThreadHeader({
           <time
             className='text-muted-foreground text-right text-[11px] leading-snug whitespace-nowrap'
             dateTime={email.sentAt}
-            title={sentDate.toLocaleString()}
+            title={formatDateTimeTitle(sentDate)}
           >
             {formatRelativeDate(email.sentAt)} ·{' '}
             {sentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}

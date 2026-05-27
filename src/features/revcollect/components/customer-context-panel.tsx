@@ -25,7 +25,7 @@ function SectionLabel({ children, floating }: { children: ReactNode; floating?: 
     <p
       className={cn(
         floating
-          ? 'text-muted-foreground px-2 pt-2 pb-0.5 text-[11px] font-medium'
+          ? 'text-muted-foreground px-3 pt-3 pb-1 text-sm font-medium'
           : 'text-muted-foreground text-xs uppercase tracking-wide'
       )}
     >
@@ -46,8 +46,8 @@ function FloatingRailRow({
   valueClassName?: string;
 }) {
   return (
-    <div className='hover:bg-muted/60 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs'>
-      {Icon ? <Icon className='text-muted-foreground size-3.5 shrink-0 opacity-70' /> : null}
+    <div className='hover:bg-muted/60 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm'>
+      {Icon ? <Icon className='text-muted-foreground size-4 shrink-0 opacity-70' /> : null}
       <span className='text-muted-foreground min-w-0 flex-1 truncate'>{label}</span>
       {value != null ? (
         <span className={cn('shrink-0 text-right font-medium tabular-nums', valueClassName)}>
@@ -58,71 +58,39 @@ function FloatingRailRow({
   );
 }
 
-function CustomerContextPanelFloating({
-  customer,
-  threadSubject,
-  threadSummary
-}: {
-  customer: Customer;
-  threadSubject?: string;
-  threadSummary?: string;
-}) {
-  const showThreadSummary = Boolean(threadSubject && threadSummary);
+export function CustomerContextPanelFloatingHeader({ customer }: { customer: Customer }) {
+  return (
+    <div className='space-y-2'>
+      <div className='flex items-center gap-3'>
+        <CustomerAvatar
+          name={customer.name}
+          avatarUrl={customer.avatarUrl}
+          className='size-10 shrink-0'
+        />
+        <div className='min-w-0 flex-1'>
+          <p className='truncate text-sm font-semibold'>{customer.name}</p>
+          <p className='text-muted-foreground truncate text-sm'>{customer.company}</p>
+        </div>
+      </div>
+      <Button asChild className='w-full rounded-full' variant='outline' size='sm'>
+        <Link href={`/customers/${customer.id}`} className='gap-1.5'>
+          View customer
+          <Icons.externalLink className='size-3.5' />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+export function CustomerContextPanelFloatingBody({ customer }: { customer: Customer }) {
   const customerInvoices = getInvoicesForCustomer(customer.id).slice(0, 2);
 
   return (
     <div className='flex max-h-[min(70vh,28rem)] min-h-0 flex-col'>
-      <div className='border-border/60 flex shrink-0 items-center justify-between border-b px-3 py-2'>
-        <span className='text-xs font-medium'>Customer</span>
-        <Icons.settings className='text-muted-foreground size-3.5 opacity-60' />
-      </div>
-
-      <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-1'>
-        <div className='flex items-center gap-2 px-2 py-1.5'>
-          <CustomerAvatar
-            name={customer.name}
-            avatarUrl={customer.avatarUrl}
-            className='size-7 shrink-0'
-          />
-          <div className='min-w-0 flex-1'>
-            <p className='truncate text-xs font-semibold'>{customer.name}</p>
-            <p className='text-muted-foreground truncate text-[11px]'>{customer.company}</p>
-          </div>
-          <StatusPill status={customer.status} className='h-5 px-1.5 text-[10px]' />
-        </div>
-
-        <FloatingRailRow icon={Icons.user} label={customer.email} />
-        <FloatingRailRow
-          icon={Icons.aging}
-          label='Balance'
-          value={formatCurrency(customer.balanceCents)}
-        />
-        {customer.daysOverdue > 0 ? (
-          <FloatingRailRow
-            icon={Icons.warning}
-            label='Days overdue'
-            value={customer.daysOverdue}
-            valueClassName='text-destructive'
-          />
-        ) : null}
-
-        {showThreadSummary ? (
-          <>
-            <SectionLabel floating>Summary</SectionLabel>
-            <div className='px-2 pb-1'>
-              {threadSubject ? (
-                <p className='truncate text-[11px] font-medium'>{threadSubject}</p>
-              ) : null}
-              <p className='text-muted-foreground mt-0.5 text-[11px] leading-snug whitespace-pre-wrap break-words'>
-                {threadSummary}
-              </p>
-            </div>
-          </>
-        ) : null}
-
+      <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2'>
         <SectionLabel floating>Open invoices</SectionLabel>
         {customerInvoices.length === 0 ? (
-          <p className='text-muted-foreground px-2 py-1 text-[11px]'>No open invoices.</p>
+          <p className='text-muted-foreground px-3 py-2 text-sm'>No open invoices.</p>
         ) : (
           customerInvoices.map((invoice) => (
             <FloatingRailRow
@@ -133,16 +101,26 @@ function CustomerContextPanelFloating({
             />
           ))
         )}
-      </div>
 
-      <div className='border-border/60 shrink-0 border-t p-2'>
-        <Button asChild className='h-7 w-full text-xs' variant='ghost' size='sm'>
-          <Link href={`/customers/${customer.id}`} className='gap-1.5'>
-            View customer
-            <Icons.externalLink className='size-3' />
-          </Link>
-        </Button>
+        <FloatingRailRow
+          icon={Icons.aging}
+          label='Balance'
+          value={formatCurrency(customer.balanceCents)}
+        />
+        <div className='flex items-center justify-between gap-2 px-3 py-2'>
+          <span className='text-muted-foreground text-sm'>Status</span>
+          <StatusPill status={customer.status} />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function CustomerContextPanelFloating({ customer }: { customer: Customer }) {
+  return (
+    <div className='flex min-h-0 flex-col'>
+      <CustomerContextPanelFloatingHeader customer={customer} />
+      <CustomerContextPanelFloatingBody customer={customer} />
     </div>
   );
 }
@@ -154,13 +132,7 @@ export function CustomerContextPanel({
   layout = 'default'
 }: CustomerContextPanelProps) {
   if (layout === 'floating') {
-    return (
-      <CustomerContextPanelFloating
-        customer={customer}
-        threadSubject={threadSubject}
-        threadSummary={threadSummary}
-      />
-    );
+    return <CustomerContextPanelFloating customer={customer} />;
   }
 
   const showThreadSummary = Boolean(threadSubject && threadSummary);

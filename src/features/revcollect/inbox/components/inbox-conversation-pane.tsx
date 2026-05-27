@@ -10,8 +10,8 @@ import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { ConversationThread } from './conversation-thread';
 import { InboxFloatingComposer } from './inbox-floating-composer';
 
-/** w-56 panel + right-3 inset + gap — content padding only, no width clip */
-const FLOATING_PANEL_RESERVE = 'calc(14rem + 2rem)';
+/** w-64 panel + right inset + gap — content padding only, no width clip */
+const FLOATING_PANEL_RESERVE = 'calc(16rem + 2rem)';
 const DEFAULT_COMPOSER_RESERVE = '11rem';
 
 interface InboxConversationPaneProps {

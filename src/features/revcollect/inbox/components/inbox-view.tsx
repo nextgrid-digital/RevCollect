@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
-import { Icons } from '@/components/icons';
 import { StatusPill } from '../../components/status-pill';
 import { InboxMessageListHeader } from './inbox-message-list-header';
-import { CustomerContextPanel } from '../../components/customer-context-panel';
+import {
+  CustomerContextPanelFloatingBody,
+  CustomerContextPanelFloatingHeader
+} from '../../components/customer-context-panel';
 import { InboxConversationPane } from './inbox-conversation-pane';
+import { InboxThreadSummaryCard } from './inbox-thread-summary-card';
 import { EmailThreadHeader } from './email-thread-header';
 import { formatRelativeDate } from '../../utils';
 import { filterInboxMessages, type InboxListFilter } from '../lib/filter-inbox-messages';
@@ -18,11 +21,10 @@ import {
 } from '../../mock-data';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const INBOX_PANEL_RESERVE = 'calc(14rem + 2rem)';
+const INBOX_PANEL_RESERVE = 'calc(16rem + 2rem)';
 
-/** Shared padding and border for list + thread header bands (aligned in md grid row). */
-const inboxHeaderBandClass =
-  'border-border/60 flex min-h-0 flex-col justify-center border-b px-4 py-3 md:pr-5';
+/** Shared padding for list + thread header bands (aligned in md grid row). */
+const inboxHeaderBandClass = 'flex min-h-0 flex-col justify-center py-2';
 
 function getListEmptyMessage(
   filter: InboxListFilter,
@@ -96,7 +98,7 @@ export function InboxView() {
 
       <div
         className={cn(
-          'min-h-0 overflow-y-auto px-2 py-1 md:col-start-1 md:row-start-2 md:border-r md:pr-3',
+          'min-h-0 overflow-y-auto py-1 pr-2 md:col-start-1 md:row-start-2 md:border-r md:pr-3',
           showList ? 'flex-1 md:flex-none' : 'hidden md:block'
         )}
       >
@@ -121,7 +123,7 @@ export function InboxView() {
                       }
                     }}
                     className={cn(
-                      'hover:bg-muted/50 flex w-full gap-3 rounded-lg px-3 py-3 text-left transition-colors',
+                      'hover:bg-muted/50 flex w-full gap-3 px-3 py-3 text-left transition-colors',
                       selectedId === message.id && 'bg-muted'
                     )}
                   >
@@ -134,10 +136,6 @@ export function InboxView() {
                           {formatRelativeDate(message.receivedAt)}
                         </time>
                       </div>
-                      <p className='text-muted-foreground flex items-center gap-1 truncate text-[11px]'>
-                        <Icons.inbox className='size-3 shrink-0 opacity-70' />
-                        <span className='truncate'>{msgCustomer.email}</span>
-                      </p>
                       <p className='truncate text-sm'>{message.subject}</p>
                       <p className='text-muted-foreground mt-1 line-clamp-2 text-xs'>
                         {message.preview}
@@ -163,29 +161,38 @@ export function InboxView() {
         <div
           className={cn(
             inboxHeaderBandClass,
-            'hidden shrink-0 md:flex lg:pr-[var(--inbox-panel-reserve)]',
+            'border-border/60 hidden shrink-0 border-b md:flex md:flex-row md:items-stretch',
             !showThread && 'md:hidden'
           )}
         >
-          {latestEmail ? (
-            <EmailThreadHeader email={latestEmail} className='py-0' />
-          ) : (
-            <p className='text-muted-foreground text-sm'>Select an email</p>
-          )}
+          <div className='flex min-w-0 flex-1 flex-col justify-center px-4 md:pr-3'>
+            {latestEmail ? (
+              <EmailThreadHeader email={latestEmail} className='py-0' />
+            ) : (
+              <p className='text-muted-foreground text-sm'>Select an email</p>
+            )}
+          </div>
+          {customer && selectedMessage ? (
+            <div className='hidden w-64 shrink-0 pr-2 pb-2 pl-2 lg:block'>
+              <div className='overflow-hidden rounded-[16px] bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+                <CustomerContextPanelFloatingHeader customer={customer} />
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        {customer && selectedMessage ? (
-          <div className='pointer-events-auto absolute top-0 right-0 z-20 hidden w-56 overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 lg:block'>
-            <CustomerContextPanel
-              layout='floating'
-              customer={customer}
-              threadSubject={selectedMessage.subject}
-              threadSummary={threadSummary}
-            />
-          </div>
-        ) : null}
+        <div className='relative flex min-h-0 min-w-0 flex-1 flex-col'>
+          {customer && selectedMessage ? (
+            <div className='pointer-events-auto absolute top-0 right-0 z-20 hidden w-64 flex-col gap-2 px-3 pt-3 lg:flex'>
+              <div className='overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+                <CustomerContextPanelFloatingBody customer={customer} />
+              </div>
+              {threadSummary ? (
+                <InboxThreadSummaryCard subject={selectedMessage.subject} summary={threadSummary} />
+              ) : null}
+            </div>
+          ) : null}
 
-        <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
           {selectedMessage && customer ? (
             <InboxConversationPane
               customer={customer}
