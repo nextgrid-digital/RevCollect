@@ -359,7 +359,7 @@ export const InputBar = memo(function InputBar({
               ) : null}
             </div>
           </div>
-          <div className='pt-3 pr-3 pb-0 pl-3.5'>
+          <div className='pt-3 pr-3 pb-2 pl-3.5'>
             <textarea
               ref={textareaRef}
               value={input}

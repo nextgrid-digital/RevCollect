@@ -119,7 +119,6 @@ export function InboxConversationPane({
       <InboxFloatingComposer
         key={selectedMessage.id}
         draft={getAiDraftForMessage(selectedMessage.id)}
-        replySubject={selectedMessage.subject}
         customerStatus={customer.status}
         defaultTone={agentConfig.tone}
         overlayClassName='lg:pr-[var(--inbox-panel-reserve)]'

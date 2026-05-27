@@ -5,7 +5,6 @@ import InputBar from '@/components/chat/input-bar';
 import { ModeSelector } from '@/components/chat/mode-selector';
 import { ModelPicker } from '@/components/chat/model-picker';
 import { Icons } from '@/components/icons';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
@@ -21,14 +20,34 @@ import {
 import { cn } from '@/lib/utils';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
 
-function replySubjectLine(subject: string): string {
-  const base = subject.replace(/^Re:\s*/i, '');
-  return `Re: ${base}`;
+function InboxDraftButton({ isLoading, onClick }: { isLoading: boolean; onClick: () => void }) {
+  return (
+    <button
+      type='button'
+      disabled={isLoading}
+      aria-busy={isLoading || undefined}
+      onClick={onClick}
+      className={cn(
+        'inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5',
+        'border border-transparent bg-accent text-[11px] font-medium leading-none text-accent-foreground',
+        'transition-[color,background-color,box-shadow,transform] duration-150',
+        'hover:bg-accent/90 active:scale-[0.98]',
+        'focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
+        'disabled:pointer-events-none disabled:opacity-60'
+      )}
+    >
+      {isLoading ? (
+        <Icons.spinner className='size-3 shrink-0 animate-spin' />
+      ) : (
+        <Icons.sparkles className='size-3 shrink-0' />
+      )}
+      <span className='whitespace-nowrap'>Draft with RevCollect</span>
+    </button>
+  );
 }
 
 interface InboxFloatingComposerProps {
   draft: string;
-  replySubject: string;
   customerStatus: CollectionStatus;
   defaultTone?: AgentConfig['tone'];
   overlayClassName?: string;
@@ -37,7 +56,6 @@ interface InboxFloatingComposerProps {
 
 export function InboxFloatingComposer({
   draft,
-  replySubject,
   customerStatus,
   defaultTone = agentConfig.tone,
   overlayClassName,
@@ -154,11 +172,6 @@ export function InboxFloatingComposer({
         overlayClassName
       )}
     >
-      <div className='pointer-events-auto mx-auto w-full max-w-full px-3 pb-1'>
-        <p className='text-muted-foreground truncate px-1 text-xs'>
-          <span className='font-medium'>Subject:</span> {replySubjectLine(replySubject)}
-        </p>
-      </div>
       <InputBar
         fillWidth
         maxTextareaHeight={360}
@@ -171,18 +184,10 @@ export function InboxFloatingComposer({
         }}
         leftActions={
           <>
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              className='h-8 gap-1.5 rounded-full px-2.5 text-xs font-medium'
-              onClick={() => applyDraft({ notify: true, showLoading: true })}
-              disabled={isDrafting}
+            <InboxDraftButton
               isLoading={isDrafting}
-            >
-              <Icons.sparkles className='size-3.5 shrink-0' />
-              Draft with RevCollect
-            </Button>
+              onClick={() => applyDraft({ notify: true, showLoading: true })}
+            />
             <ModeSelector modes={COLLECTION_TONES} value={tone} onChange={handleToneChange} />
             <ModelPicker
               models={COLLECTION_PLAYBOOKS}
