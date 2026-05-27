@@ -10,11 +10,7 @@ interface CustomersMobileListProps {
 
 export function CustomersMobileList({ customers }: CustomersMobileListProps) {
   if (customers.length === 0) {
-    return (
-      <p className='text-muted-foreground text-sm'>
-        No customers yet.
-      </p>
-    );
+    return <p className='text-muted-foreground text-sm'>No customers yet.</p>;
   }
 
   return (
@@ -48,4 +44,3 @@ export function CustomersMobileList({ customers }: CustomersMobileListProps) {
     </div>
   );
 }
-

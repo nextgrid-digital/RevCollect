@@ -15,11 +15,7 @@ export function SettingsGeneralView() {
         </div>
         <div className='space-y-2'>
           <Label htmlFor='workspace-email'>Collections email</Label>
-          <Input
-            id='workspace-email'
-            defaultValue='collections@revcollect.app'
-            disabled
-          />
+          <Input id='workspace-email' defaultValue='collections@revcollect.app' disabled />
         </div>
         <p className='text-muted-foreground text-sm'>
           Workspace settings will sync from Supabase when connected.

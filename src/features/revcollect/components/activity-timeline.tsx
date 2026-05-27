@@ -19,9 +19,7 @@ interface ActivityTimelineProps {
 
 export function ActivityTimeline({ events, className }: ActivityTimelineProps) {
   if (events.length === 0) {
-    return (
-      <p className='text-muted-foreground text-sm'>No activity recorded yet.</p>
-    );
+    return <p className='text-muted-foreground text-sm'>No activity recorded yet.</p>;
   }
 
   const sorted = [...events].sort(

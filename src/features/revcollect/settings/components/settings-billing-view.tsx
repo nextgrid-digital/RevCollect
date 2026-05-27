@@ -15,8 +15,8 @@ export function SettingsBillingView() {
         </CardHeader>
         <CardContent>
           <p className='text-muted-foreground text-sm'>
-            Stripe is connected. Billing management will be available when Supabase auth is
-            wired up.
+            Stripe is connected. Billing management will be available when Supabase auth is wired
+            up.
           </p>
         </CardContent>
       </Card>

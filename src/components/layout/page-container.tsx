@@ -1,6 +1,7 @@
 import React from 'react';
 import { Heading } from '../ui/heading';
 import type { InfobarContent } from '@/components/ui/infobar';
+import { cn } from '@/lib/utils';
 
 function PageSkeleton() {
   return (
@@ -56,15 +57,17 @@ export default function PageContainer({
 
   const hasHeader = pageTitle || pageHeaderAction;
 
+  const pageClasses = compactMobile
+    ? 'flex flex-1 flex-col px-3 pt-1 pb-3 md:px-6 md:pt-4'
+    : 'flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4';
+
   return (
-    <div
-      className={compactMobile ? 'flex flex-1 flex-col px-3 pt-1 pb-3 md:px-6 md:pt-4' : 'flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4'}
-    >
+    <div className={lockPageScroll ? cn(pageClasses, 'min-h-0 overflow-hidden') : pageClasses}>
       {hasHeader && (
-        <div className='mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
+        <div className='mb-3 flex shrink-0 flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
           <Heading
             title={pageTitle ?? ''}
-            description={compactMobile ? '' : pageDescription ?? ''}
+            description={compactMobile ? '' : (pageDescription ?? '')}
             infoContent={infoContent}
           />
           {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}

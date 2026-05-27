@@ -8,11 +8,7 @@ import { StatusPill } from '../../components/status-pill';
 import { InvoiceCard } from '../../components/invoice-card';
 import { ActivityTimeline } from '../../components/activity-timeline';
 import { formatCurrency } from '../../utils';
-import {
-  getCustomerById,
-  getInvoicesForCustomer,
-  getTimelineForCustomer
-} from '../../mock-data';
+import { getCustomerById, getInvoicesForCustomer, getTimelineForCustomer } from '../../mock-data';
 
 interface CustomerDetailViewProps {
   customerId: string;
@@ -32,11 +28,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
     <div className='space-y-8'>
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='flex items-start gap-4'>
-          <CustomerAvatar
-            name={customer.name}
-            avatarUrl={customer.avatarUrl}
-            className='size-12'
-          />
+          <CustomerAvatar name={customer.name} avatarUrl={customer.avatarUrl} className='size-12' />
           <div>
             <h2 className='text-xl font-semibold sm:text-2xl'>{customer.name}</h2>
             <p className='text-muted-foreground text-sm sm:text-base'>{customer.company}</p>
@@ -61,9 +53,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
             {customerInvoices.length === 0 ? (
               <p className='text-muted-foreground text-sm'>No invoices on file.</p>
             ) : (
-              customerInvoices.map((invoice) => (
-                <InvoiceCard key={invoice.id} invoice={invoice} />
-              ))
+              customerInvoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} />)
             )}
           </div>
         </section>

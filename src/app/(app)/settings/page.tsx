@@ -3,10 +3,7 @@ import { SettingsGeneralView } from '@/features/revcollect/settings/components/s
 
 export default function SettingsPage() {
   return (
-    <PageContainer
-      pageTitle='Settings'
-      pageDescription='Workspace and collection preferences.'
-    >
+    <PageContainer pageTitle='Settings' pageDescription='Workspace and collection preferences.'>
       <SettingsGeneralView />
     </PageContainer>
   );

@@ -1,13 +1,18 @@
-export type CollectionStatus =
-  | 'current'
-  | 'due_soon'
-  | 'overdue'
-  | 'in_dispute'
-  | 'promised';
+export type CollectionStatus = 'current' | 'due_soon' | 'overdue' | 'in_dispute' | 'promised';
 
 export type AgingBucket = 'current' | '1-30' | '31-60' | '61-90' | '90+';
 
 export type MessageChannel = 'email' | 'sms';
+
+export type ConversationAuthor = 'customer' | 'agent';
+
+export interface ThreadMessage {
+  id: string;
+  threadId: string;
+  author: ConversationAuthor;
+  body: string;
+  sentAt: string;
+}
 
 export type TimelineEventType =
   | 'email_sent'
@@ -43,7 +48,6 @@ export interface InboxMessage {
   customerId: string;
   subject: string;
   preview: string;
-  body: string;
   receivedAt: string;
   unread: boolean;
   channel: MessageChannel;

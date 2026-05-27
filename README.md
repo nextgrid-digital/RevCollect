@@ -17,19 +17,19 @@ Mock data lives in one place today (`src/features/revcollect/mock-data.ts`) so t
 
 ## Routes
 
-| Route | Description |
-| --- | --- |
-| `/inbox` | Collections inbox (default landing page) |
-| `/customers` | Customer list |
-| `/customers/[id]` | Customer detail, invoices, activity |
-| `/aging` | Aging report |
-| `/agent` | AI agent configuration |
-| `/settings` | General workspace settings |
-| `/settings/integrations` | QuickBooks, Gmail, Stripe |
-| `/settings/billing` | Plan and usage |
-| `/onboarding` | Setup checklist |
-| `/onboarding/connect-quickbooks` | QuickBooks connect flow |
-| `/onboarding/connect-gmail` | Gmail connect flow |
+| Route                            | Description                              |
+| -------------------------------- | ---------------------------------------- |
+| `/inbox`                         | Collections inbox (default landing page) |
+| `/customers`                     | Customer list                            |
+| `/customers/[id]`                | Customer detail, invoices, activity      |
+| `/aging`                         | Aging report                             |
+| `/agent`                         | AI agent configuration                   |
+| `/settings`                      | General workspace settings               |
+| `/settings/integrations`         | QuickBooks, Gmail, Stripe                |
+| `/settings/billing`              | Plan and usage                           |
+| `/onboarding`                    | Setup checklist                          |
+| `/onboarding/connect-quickbooks` | QuickBooks connect flow                  |
+| `/onboarding/connect-gmail`      | Gmail connect flow                       |
 
 ## Tech stack
 
@@ -99,12 +99,12 @@ Then run `source ~/.zshrc`.
 
 ### Scripts
 
-| Command | Description |
-| --- | --- |
-| `bun run dev` | Start development server |
-| `bun run build` | Production build |
-| `bun run start` | Start production server |
-| `bun run lint` | Run OxLint |
+| Command         | Description              |
+| --------------- | ------------------------ |
+| `bun run dev`   | Start development server |
+| `bun run build` | Production build         |
+| `bun run start` | Start production server  |
+| `bun run lint`  | Run OxLint               |
 
 ## Environment variables
 

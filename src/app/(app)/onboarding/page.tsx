@@ -3,10 +3,7 @@ import { OnboardingSteps } from '@/features/revcollect/onboarding/components/onb
 
 export default function OnboardingPage() {
   return (
-    <PageContainer
-      pageTitle='Onboarding'
-      pageDescription='Get RevCollect ready to collect.'
-    >
+    <PageContainer pageTitle='Onboarding' pageDescription='Get RevCollect ready to collect.'>
       <OnboardingSteps />
     </PageContainer>
   );

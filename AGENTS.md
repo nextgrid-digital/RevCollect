@@ -194,6 +194,11 @@ bun run format:check # Check formatting
 bun run prepare      # Install Husky hooks
 ```
 
+### Dev server (agents)
+
+- Start `bun run dev` **in the background** only — never block the agent waiting for the server.
+- See `.cursor/rules/background-dev-server.mdc` for full policy (restart, manual fallbacks for auth/port conflicts).
+
 ---
 
 ## Environment Configuration
@@ -752,3 +757,4 @@ See "Theming System" section above or `docs/themes.md`.
 10. **Forms** - Use TanStack Form via `useAppForm` from `@/components/ui/tanstack-form`. Never use `useState` inside `AppField` render props — extract stateful logic into separate components.
 11. **Button loading** - Use `<Button isLoading={isPending}>` for loading states. Uses CSS Grid overlap trick for zero layout shift. When `isLoading` is not passed, button behaves as default shadcn. `SubmitButton` in forms handles this automatically via form `isSubmitting` state.
 12. **Data layer** - Always go through the service layer: `types.ts` → `service.ts` → `queries.ts`. Components import types from `types.ts`, functions from `service.ts`, query options from `queries.ts`. Never import from `@/constants/mock-api*` directly in components.
+13. **Dev server commands** - Run `bun run dev` and restarts in the background (`block_until_ms: 0`). Do not block on server output. For git auth or port conflicts, give the user manual terminal commands instead.

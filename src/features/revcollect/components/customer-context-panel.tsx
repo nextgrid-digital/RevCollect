@@ -16,11 +16,12 @@ export function CustomerContextPanel({ customer }: CustomerContextPanelProps) {
   const customerInvoices = getInvoicesForCustomer(customer.id).slice(0, 3);
 
   return (
-    <div className='flex h-full flex-col'>
+    <div className='flex h-full min-h-0 flex-col'>
       <div className='flex items-start gap-3 p-4'>
         <CustomerAvatar name={customer.name} avatarUrl={customer.avatarUrl} className='size-10' />
         <div className='min-w-0 flex-1'>
           <p className='truncate font-semibold'>{customer.name}</p>
+          <p className='text-muted-foreground truncate text-sm'>{customer.email}</p>
           <p className='text-muted-foreground truncate text-sm'>{customer.company}</p>
           <div className='mt-2'>
             <StatusPill status={customer.status} />
@@ -52,13 +53,11 @@ export function CustomerContextPanel({ customer }: CustomerContextPanelProps) {
         {customerInvoices.length === 0 ? (
           <p className='text-muted-foreground text-sm'>No open invoices.</p>
         ) : (
-          customerInvoices.map((invoice) => (
-            <InvoiceCard key={invoice.id} invoice={invoice} />
-          ))
+          customerInvoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} />)
         )}
       </div>
 
-      <div className='border-t p-4'>
+      <div className='bg-background sticky bottom-0 border-t p-4'>
         <Button asChild className='w-full' variant='outline' size='sm'>
           <Link href={`/customers/${customer.id}`}>View customer</Link>
         </Button>

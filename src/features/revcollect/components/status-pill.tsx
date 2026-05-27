@@ -2,10 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { CollectionStatus } from '../types';
 
-const statusConfig: Record<
-  CollectionStatus,
-  { label: string; className: string }
-> = {
+const statusConfig: Record<CollectionStatus, { label: string; className: string }> = {
   current: {
     label: 'Current',
     className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'

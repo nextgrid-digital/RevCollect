@@ -44,9 +44,7 @@ export function AgentConfigForm() {
                 <Label>Tone</Label>
                 <Select
                   value={field.state.value}
-                  onValueChange={(value) =>
-                    field.handleChange(value as AgentConfig['tone'])
-                  }
+                  onValueChange={(value) => field.handleChange(value as AgentConfig['tone'])}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Select tone' />
@@ -70,10 +68,7 @@ export function AgentConfigForm() {
                     Send AI drafts without manual approval (not recommended).
                   </p>
                 </div>
-                <Switch
-                  checked={field.state.value}
-                  onCheckedChange={field.handleChange}
-                />
+                <Switch checked={field.state.value} onCheckedChange={field.handleChange} />
               </div>
             )}
           </form.Field>

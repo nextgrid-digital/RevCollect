@@ -16,9 +16,7 @@ export function StatCard({ title, value, description, className }: StatCardProps
       </CardHeader>
       <CardContent>
         <p className='text-2xl font-semibold tabular-nums'>{value}</p>
-        {description ? (
-          <p className='text-muted-foreground mt-1 text-xs'>{description}</p>
-        ) : null}
+        {description ? <p className='text-muted-foreground mt-1 text-xs'>{description}</p> : null}
       </CardContent>
     </Card>
   );

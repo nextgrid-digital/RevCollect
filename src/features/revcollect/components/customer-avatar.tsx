@@ -1,19 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getInitials } from '../utils';
 
 interface CustomerAvatarProps {
   name: string;
   avatarUrl?: string;
   className?: string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export function CustomerAvatar({ name, avatarUrl, className }: CustomerAvatarProps) {

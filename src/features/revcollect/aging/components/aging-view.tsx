@@ -10,7 +10,9 @@ import { cn } from '@/lib/utils';
 
 export function AgingView() {
   const buckets = getAgingBuckets();
-  const [selectedBucket, setSelectedBucket] = useState<AgingBucket>(buckets[0]?.bucket ?? 'current');
+  const [selectedBucket, setSelectedBucket] = useState<AgingBucket>(
+    buckets[0]?.bucket ?? 'current'
+  );
   const bucketInvoices = getInvoicesByBucket(selectedBucket);
 
   return (
@@ -21,7 +23,10 @@ export function AgingView() {
             key={bucket.bucket}
             type='button'
             onClick={() => setSelectedBucket(bucket.bucket)}
-            className={cn('text-left', selectedBucket === bucket.bucket && 'ring-primary ring-2 rounded-xl')}
+            className={cn(
+              'text-left',
+              selectedBucket === bucket.bucket && 'ring-primary ring-2 rounded-xl'
+            )}
           >
             <StatCard
               title={bucket.label}
