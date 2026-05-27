@@ -87,7 +87,7 @@ export function CustomersTable() {
       <div className='block md:hidden'>
         <CustomersMobileList customers={paginatedData} />
       </div>
-      <div className='hidden md:block'>
+      <div className='hidden min-h-[24rem] md:block'>
         <DataTable table={table} />
       </div>
     </>
