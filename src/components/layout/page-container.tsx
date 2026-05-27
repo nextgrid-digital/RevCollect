@@ -25,7 +25,8 @@ export default function PageContainer({
   pageTitle,
   pageDescription,
   infoContent,
-  pageHeaderAction
+  pageHeaderAction,
+  compactMobile = false
 }: {
   children: React.ReactNode;
   isLoading?: boolean;
@@ -35,6 +36,7 @@ export default function PageContainer({
   pageDescription?: string;
   infoContent?: InfobarContent;
   pageHeaderAction?: React.ReactNode;
+  compactMobile?: boolean;
 }) {
   if (!access) {
     return (
@@ -53,12 +55,14 @@ export default function PageContainer({
   const hasHeader = pageTitle || pageHeaderAction;
 
   return (
-    <div className='flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4'>
+    <div
+      className={compactMobile ? 'flex flex-1 flex-col px-3 pt-1 pb-3 md:px-6 md:pt-4' : 'flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4'}
+    >
       {hasHeader && (
-        <div className='mb-4 flex items-start justify-between gap-4'>
+        <div className='mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
           <Heading
             title={pageTitle ?? ''}
-            description={pageDescription ?? ''}
+            description={compactMobile ? '' : pageDescription ?? ''}
             infoContent={infoContent}
           />
           {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}

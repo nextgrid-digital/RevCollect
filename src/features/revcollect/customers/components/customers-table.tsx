@@ -13,6 +13,7 @@ import { StatusPill } from '../../components/status-pill';
 import { formatCurrency } from '../../utils';
 import { customers } from '../../mock-data';
 import type { Customer } from '../../types';
+import { CustomersMobileList } from './customers-mobile-list';
 
 const columns: ColumnDef<Customer>[] = [
   {
@@ -81,5 +82,14 @@ export function CustomersTable() {
     shallow: true
   });
 
-  return <DataTable table={table} />;
+  return (
+    <>
+      <div className='block md:hidden'>
+        <CustomersMobileList customers={paginatedData} />
+      </div>
+      <div className='hidden md:block'>
+        <DataTable table={table} />
+      </div>
+    </>
+  );
 }

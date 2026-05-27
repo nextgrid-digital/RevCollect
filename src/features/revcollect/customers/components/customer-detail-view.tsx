@@ -38,15 +38,15 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
             className='size-12'
           />
           <div>
-            <h2 className='text-2xl font-semibold'>{customer.name}</h2>
-            <p className='text-muted-foreground'>{customer.company}</p>
+            <h2 className='text-xl font-semibold sm:text-2xl'>{customer.name}</h2>
+            <p className='text-muted-foreground text-sm sm:text-base'>{customer.company}</p>
             <p className='text-muted-foreground text-sm'>{customer.email}</p>
             <div className='mt-2'>
               <StatusPill status={customer.status} />
             </div>
           </div>
         </div>
-        <div className='text-right'>
+        <div className='mt-3 w-full text-left sm:mt-0 sm:w-auto sm:text-right'>
           <p className='text-muted-foreground text-sm'>Outstanding balance</p>
           <p className='text-2xl font-semibold tabular-nums'>
             {formatCurrency(customer.balanceCents)}

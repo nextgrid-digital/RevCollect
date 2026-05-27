@@ -13,16 +13,37 @@ import {
   getCustomerById,
   inboxMessages
 } from '../../mock-data';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Icons } from '@/components/icons';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet';
 
 export function InboxView() {
+  const isMobile = useIsMobile();
   const [selectedId, setSelectedId] = useState(inboxMessages[0]?.id ?? '');
+  const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
+  const [contextOpen, setContextOpen] = useState(false);
 
   const selectedMessage = inboxMessages.find((m) => m.id === selectedId);
   const customer = selectedMessage ? getCustomerById(selectedMessage.customerId) : undefined;
 
+  const showList = !isMobile || mobilePane === 'list';
+  const showThread = !isMobile || mobilePane === 'thread';
+
   return (
-    <div className='flex min-h-[calc(100vh-var(--header-height)-6rem)] flex-1 overflow-hidden rounded-lg border'>
-      <div className='flex w-full max-w-xs shrink-0 flex-col border-r md:max-w-sm'>
+    <div className='flex min-h-[calc(100dvh-var(--header-height)-5rem)] flex-1 flex-col overflow-hidden rounded-lg border md:flex-row'>
+      <div
+        className={cn(
+          'flex w-full max-w-xs shrink-0 flex-col border-b md:border-b-0 md:border-r md:max-w-sm',
+          !showList && 'hidden md:flex'
+        )}
+      >
         <div className='border-b px-4 py-3'>
           <p className='text-sm font-medium'>Messages</p>
           <p className='text-muted-foreground text-xs'>
@@ -39,7 +60,12 @@ export function InboxView() {
                 <li key={message.id}>
                   <button
                     type='button'
-                    onClick={() => setSelectedId(message.id)}
+                    onClick={() => {
+                      setSelectedId(message.id);
+                      if (isMobile) {
+                        setMobilePane('thread');
+                      }
+                    }}
                     className={cn(
                       'hover:bg-muted/50 flex w-full gap-3 px-4 py-3 text-left transition-colors',
                       selectedId === message.id && 'bg-muted'
@@ -76,17 +102,60 @@ export function InboxView() {
         </ScrollArea>
       </div>
 
-      <div className='flex min-w-0 flex-1 flex-col'>
+      <div
+        className={cn(
+          'min-w-0 flex-1 flex flex-col',
+          !showThread && 'hidden md:flex'
+        )}
+      >
         {selectedMessage && customer ? (
           <>
-            <div className='border-b px-6 py-4'>
-              <h2 className='text-lg font-semibold'>{selectedMessage.subject}</h2>
-              <p className='text-muted-foreground text-sm'>
-                {customer.name} · {customer.email}
-              </p>
+            <div className='flex items-center gap-3 border-b px-4 py-3 md:px-6 md:py-4'>
+              {isMobile && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon'
+                  className='md:hidden'
+                  onClick={() => setMobilePane('list')}
+                >
+                  <Icons.chevronLeft className='size-4' />
+                </Button>
+              )}
+              <div className='min-w-0 flex-1'>
+                <h2 className='truncate text-base font-semibold md:text-lg'>
+                  {selectedMessage.subject}
+                </h2>
+                <p className='text-muted-foreground truncate text-sm'>
+                  {customer.name} · {customer.email}
+                </p>
+              </div>
+              {customer && (
+                <Sheet open={contextOpen} onOpenChange={setContextOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      className='md:hidden'
+                    >
+                      <Icons.user className='mr-1 size-4' />
+                      Customer
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side='right' className='w-full sm:max-w-sm'>
+                    <SheetHeader>
+                      <SheetTitle>{customer.name}</SheetTitle>
+                    </SheetHeader>
+                    <div className='mt-4'>
+                      <CustomerContextPanel customer={customer} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
             </div>
             <ScrollArea className='flex-1'>
-              <div className='space-y-6 p-6'>
+              <div className='space-y-6 px-4 py-4 md:px-6 md:py-6'>
                 <div className='bg-muted/40 rounded-lg border p-4'>
                   <p className='text-muted-foreground mb-2 text-xs font-medium uppercase'>
                     Customer message

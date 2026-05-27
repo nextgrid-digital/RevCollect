@@ -29,7 +29,7 @@ export function AiDraftCard({ draft }: AiDraftCardProps) {
           className='min-h-[160px] resize-none bg-background'
         />
       </CardContent>
-      <CardFooter className='flex flex-wrap gap-2'>
+      <CardFooter className='flex flex-wrap gap-2 sm:flex-nowrap'>
         <Button
           size='sm'
           onClick={() => toast.success('Reply sent (mock)')}
