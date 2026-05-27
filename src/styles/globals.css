@@ -14,29 +14,38 @@
     @apply bg-background text-foreground;
   }
 
-  /* Global scrollbar styling to match ScrollArea */
+  /* Auto-hide native scrollbars: fully hidden until scrolling */
   * {
+    scrollbar-width: none;
+  }
+
+  *[data-scrolling='true'] {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 0;
+    height: 0;
   }
 
-  ::-webkit-scrollbar-track {
+  *[data-scrolling='true']::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *[data-scrolling='true']::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  ::-webkit-scrollbar-thumb {
+  *[data-scrolling='true']::-webkit-scrollbar-thumb {
     background-color: var(--border);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
+  *[data-scrolling='true']::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
   }
 }

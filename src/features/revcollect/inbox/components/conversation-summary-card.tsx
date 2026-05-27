@@ -2,22 +2,25 @@
 
 import type { ReactNode } from 'react';
 import { Icons } from '@/components/icons';
+import { cn } from '@/lib/utils';
 
 interface ConversationSummaryCardProps {
   subject: string;
   summary: string;
   leading?: ReactNode;
   trailing?: ReactNode;
+  className?: string;
 }
 
 export function ConversationSummaryCard({
   subject,
   summary,
   leading,
-  trailing
+  trailing,
+  className
 }: ConversationSummaryCardProps) {
   return (
-    <div className='bg-primary/5 shrink-0 border-b px-4 py-2 md:px-6'>
+    <div className={cn('bg-primary/5 shrink-0 border-b px-4 py-2 md:px-6', className)}>
       <div className='flex items-center gap-2'>
         {leading}
         <h2 className='min-w-0 flex-1 truncate text-xs font-semibold'>{subject}</h2>

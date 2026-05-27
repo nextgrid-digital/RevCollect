@@ -6,13 +6,28 @@ export type MessageChannel = 'email' | 'sms';
 
 export type ConversationAuthor = 'customer' | 'agent';
 
-export interface ThreadMessage {
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface ThreadEmail {
   id: string;
   threadId: string;
   author: ConversationAuthor;
+  from: string;
+  to: string[];
+  cc?: string[];
+  subject: string;
   body: string;
   sentAt: string;
+  attachments?: EmailAttachment[];
 }
+
+/** @deprecated Use ThreadEmail */
+export type ThreadMessage = ThreadEmail;
 
 export type TimelineEventType =
   | 'email_sent'

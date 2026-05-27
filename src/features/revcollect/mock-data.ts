@@ -7,7 +7,7 @@ import type {
   InboxMessage,
   IntegrationStatus,
   Invoice,
-  ThreadMessage,
+  ThreadEmail,
   TimelineEvent
 } from './types';
 import { createInboxThreadData } from './mock-inbox-threads';
@@ -828,8 +828,8 @@ export const inboxMessages: InboxMessage[] = inboxThreadData.inboxMessages.sort(
   (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
 );
 
-export const threadMessagesByThreadId: Record<string, ThreadMessage[]> =
-  inboxThreadData.threadMessagesByThreadId;
+export const threadEmailsByThreadId: Record<string, ThreadEmail[]> =
+  inboxThreadData.threadEmailsByThreadId;
 
 export const aiSummaryByThreadId: Record<string, string> = inboxThreadData.aiSummaryByThreadId;
 
@@ -1132,11 +1132,14 @@ export function getAiDraftForMessage(messageId: string): string {
   return aiDraftByMessageId[messageId] ?? '';
 }
 
-export function getThreadMessages(threadId: string): ThreadMessage[] {
-  return (threadMessagesByThreadId[threadId] ?? []).sort(
+export function getThreadEmails(threadId: string): ThreadEmail[] {
+  return (threadEmailsByThreadId[threadId] ?? []).sort(
     (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
   );
 }
+
+/** @deprecated Use getThreadEmails */
+export const getThreadMessages = getThreadEmails;
 
 export function getAiSummaryForThread(threadId: string): string {
   return aiSummaryByThreadId[threadId] ?? '';

@@ -1,6 +1,27 @@
-import type { CollectionStatus, Customer, InboxMessage, ThreadMessage } from './types';
+import { COLLECTIONS_AGENT } from './constants';
+import type {
+  CollectionStatus,
+  Customer,
+  EmailAttachment,
+  InboxMessage,
+  ThreadEmail
+} from './types';
 
 const SIGNATURE = '\n\nBest regards,\nRevCollect Collections Team';
+
+type TurnAttachmentInput = {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+type TurnInput = {
+  author: 'customer' | 'agent';
+  body: string;
+  hoursBeforeLatest: number;
+  cc?: string[];
+  attachments?: TurnAttachmentInput[];
+};
 
 type ScenarioTemplate = {
   subject: string;
@@ -9,12 +30,39 @@ type ScenarioTemplate = {
   daysAgo: number;
   summary: string;
   draft: string;
-  turns: Array<{ author: 'customer' | 'agent'; body: string; hoursBeforeLatest: number }>;
+  turns: TurnInput[];
 };
+
+function agentBody(greeting: string, paragraphs: string[]): string {
+  return `${greeting}\n\n${paragraphs.join('\n\n')}\n\nBest regards,\nRevCollect Collections Team`;
+}
+
+function customerBody(greeting: string, paragraphs: string[], signOff = 'Thank you'): string {
+  return `${greeting}\n\n${paragraphs.join('\n\n')}\n\n${signOff}`;
+}
+
+function replySubject(subject: string, isFirstInThread: boolean): string {
+  const base = subject.replace(/^Re:\s*/i, '');
+  return isFirstInThread ? subject : `Re: ${base}`;
+}
+
+function mapAttachments(
+  threadId: string,
+  turnIndex: number,
+  items?: TurnAttachmentInput[]
+): EmailAttachment[] | undefined {
+  if (!items?.length) return undefined;
+  return items.map((item, attIndex) => ({
+    id: `${threadId}-turn-${turnIndex + 1}-att-${attIndex + 1}`,
+    filename: item.filename,
+    mimeType: item.mimeType,
+    sizeBytes: item.sizeBytes
+  }));
+}
 
 const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
   overdue: {
-    subject: 'Re: Overdue balance follow-up',
+    subject: 'Overdue balance follow-up',
     preview: 'AP is reviewing the open invoices before releasing payment...',
     unread: true,
     daysAgo: 1,
@@ -26,22 +74,42 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
       {
         author: 'agent',
         hoursBeforeLatest: 72,
-        body: 'Hi,\n\nThis is a friendly reminder that your account has an overdue balance. Please let us know when payment can be released.'
+        body: agentBody('Hello,', [
+          'I hope this message finds you well.',
+          'Our records show an overdue balance on your account. Please let us know when payment can be released, or if any invoices require clarification from our billing team.',
+          'I have attached a current aging statement for your review.'
+        ]),
+        attachments: [
+          {
+            filename: 'aging_statement.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 248_000
+          }
+        ]
       },
       {
         author: 'customer',
         hoursBeforeLatest: 48,
-        body: 'Thanks for reaching out. Our AP team is reviewing the invoice packet before payment can be scheduled.'
+        body: customerBody('Hello,', [
+          'Thank you for sending the aging statement.',
+          'Our accounts payable team is reviewing the invoice packet internally before payment can be scheduled. We expect to have an update within the next few business days.'
+        ])
       },
       {
         author: 'agent',
         hoursBeforeLatest: 24,
-        body: 'Understood. Can you confirm whether any invoices are currently under internal dispute?'
+        body: agentBody('Hello,', [
+          'Thank you for the update.',
+          'Can you confirm whether any invoices are currently under internal dispute, or if the hold is strictly timing-related?'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 2,
-        body: 'AP is reviewing the open invoices before releasing payment. Can you confirm whether prior credits were applied?'
+        body: customerBody('Hello,', [
+          'AP is still reviewing the open invoices before releasing payment.',
+          'Could you confirm whether prior credits were applied to the oldest open items? We want to make sure our records match yours before we remit.'
+        ])
       }
     ]
   },
@@ -58,22 +126,34 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
       {
         author: 'agent',
         hoursBeforeLatest: 96,
-        body: 'Hi,\n\nPlease confirm receipt of the latest invoice and expected payment timing.'
+        body: agentBody('Hello,', [
+          'Please confirm receipt of the latest invoice and your expected payment timing.',
+          'If helpful, I can resend remittance instructions or a consolidated statement.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 72,
-        body: 'We received the invoice and added it to our AP queue for the upcoming due date.'
+        body: customerBody('Hi,', [
+          'We received the invoice and added it to our AP queue for the upcoming due date.',
+          'No discrepancies noted on our side at this time.'
+        ])
       },
       {
         author: 'agent',
         hoursBeforeLatest: 24,
-        body: 'Great, thank you. Please share the expected remittance date if available.'
+        body: agentBody('Hello,', [
+          'Thank you for confirming receipt.',
+          'When you have a moment, please share the expected remittance date so we can update our records.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 4,
-        body: 'Invoice is in our system and scheduled for the due date. No issues on our end.'
+        body: customerBody('Hi,', [
+          'The invoice is in our system and scheduled for payment on the due date.',
+          'We do not anticipate any issues on our end.'
+        ])
       }
     ]
   },
@@ -90,22 +170,41 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
       {
         author: 'agent',
         hoursBeforeLatest: 120,
-        body: 'Hi,\n\nWe noticed payment has not been released on the disputed invoice. Can you share the reason for hold?'
+        body: agentBody('Hello,', [
+          'We noticed payment has not been released on a disputed invoice on your account.',
+          'Could you share the reason for the hold and which invoice numbers are affected?'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 96,
-        body: 'We identified a billing discrepancy and paused payment until records are reconciled.'
+        body: customerBody('Hello,', [
+          'We identified a billing discrepancy and have paused payment until our records are reconciled with yours.',
+          'Our warehouse team is comparing received quantities against the billed amounts.'
+        ])
       },
       {
         author: 'agent',
         hoursBeforeLatest: 48,
-        body: 'Understood. Please share the specific line items in question so we can investigate quickly.'
+        body: agentBody('Hello,', [
+          'Understood — thank you for the context.',
+          'Please share the specific line items in question so we can investigate and respond with corrected documentation.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 6,
-        body: 'We are holding payment until the billing discrepancy is reconciled. Please send corrected documentation.'
+        body: customerBody('Hello,', [
+          'We are holding payment until the billing discrepancy is reconciled.',
+          'Please send corrected documentation. I have attached our copy of the packing slip for reference.'
+        ]),
+        attachments: [
+          {
+            filename: 'packing_slip_disputed_invoice.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 312_000
+          }
+        ]
       }
     ]
   },
@@ -122,22 +221,34 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
       {
         author: 'agent',
         hoursBeforeLatest: 72,
-        body: 'Hi,\n\nCan you confirm when payment will be released for the open balance?'
+        body: agentBody('Hello,', [
+          'Following up on the open balance on your account.',
+          'Can you confirm when payment will be released?'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 48,
-        body: 'We can commit to payment by the end of this week once treasury approves the run.'
+        body: customerBody('Hi,', [
+          'We can commit to payment by the end of this week once treasury approves the disbursement run.',
+          'I will send written confirmation as soon as the date is locked.'
+        ])
       },
       {
         author: 'agent',
         hoursBeforeLatest: 24,
-        body: 'Thank you. Please confirm the exact date so we can update our records.'
+        body: agentBody('Hello,', [
+          'Thank you — that is helpful.',
+          'Please confirm the exact date so we can update our records and pause further reminders.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 3,
-        body: 'We can honor payment by the committed date pending treasury approval. Please send an updated statement.'
+        body: customerBody('Hi,', [
+          'We can honor payment by the committed date pending treasury approval.',
+          'Please send an updated statement reflecting the commitment on file.'
+        ])
       }
     ]
   },
@@ -154,22 +265,34 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
       {
         author: 'agent',
         hoursBeforeLatest: 96,
-        body: 'Hi,\n\nSharing your upcoming invoice summary for visibility. Please confirm receipt.'
+        body: agentBody('Hello,', [
+          'Sharing your upcoming invoice summary for visibility.',
+          'Please confirm receipt and let us know if you need updated remittance instructions.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 72,
-        body: 'Received. We will process this with our normal AP cycle.'
+        body: customerBody('Hello,', [
+          'Received — thank you.',
+          'We will process this with our normal AP cycle.'
+        ])
       },
       {
         author: 'agent',
         hoursBeforeLatest: 24,
-        body: 'Thank you. Let us know if you need updated remittance instructions.'
+        body: agentBody('Hello,', [
+          'Thank you for confirming.',
+          'Reach out anytime if you need remittance details or a consolidated statement.'
+        ])
       },
       {
         author: 'customer',
         hoursBeforeLatest: 8,
-        body: 'No open issues on our side for the upcoming invoice cycle.'
+        body: customerBody('Hello,', [
+          'No open issues on our side for the upcoming invoice cycle.',
+          'We will use the remittance instructions on file.'
+        ])
       }
     ]
   }
@@ -177,7 +300,7 @@ const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
 
 const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
   'cust-1': {
-    subject: 'Re: Invoice INV-1042 — payment timing',
+    subject: 'Invoice INV-1042 — payment timing',
     preview: 'We received your reminder. AP is reviewing the March shipment dispute...',
     summary:
       'Sarah is waiting on AP review tied to a shipment dispute and credit memo CM-204. Two overdue invoices remain open on the account.',
@@ -190,7 +313,53 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     summary:
       'Elena opened a quantity mismatch dispute on INV-3301. Warehouse documentation has been requested to unblock payment.',
     draft:
-      'Hi Elena,\n\nThank you for flagging the quantity discrepancy on INV-3301. We are pulling the packing slip and delivery receipt now and will respond with a resolution within 48 hours.'
+      'Hi Elena,\n\nThank you for flagging the quantity discrepancy on INV-3301. We are pulling the packing slip and delivery receipt now and will respond with a resolution within 48 hours.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 120,
+        body: agentBody('Hi Elena,', [
+          'We are following up on INV-3301, which remains open on your account.',
+          'Could you confirm why payment has been held and which line items are in question?'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 96,
+        body: customerBody('Hi,', [
+          'The quantity on the packing slip does not match what we received in the warehouse.',
+          'We have paused payment on INV-3301 until the billing record is corrected.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 48,
+        body: agentBody('Hi Elena,', [
+          'Thank you for the detail.',
+          'Please forward any receiving documents you have so we can reconcile with our shipment records.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 6,
+        body: customerBody('Hi,', [
+          'Please see the attached packing slip and receiving log for INV-3301.',
+          'We are available for a call if your team needs to walk through the variance.'
+        ]),
+        attachments: [
+          {
+            filename: 'packing_slip_INV-3301.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 284_500
+          },
+          {
+            filename: 'receiving_log_INV-3301.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            sizeBytes: 96_200
+          }
+        ]
+      }
+    ]
   },
   'cust-6': {
     subject: 'Need payment plan options',
@@ -198,7 +367,47 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     summary:
       'Tom requested a three-installment plan due to cash-flow constraints on a 60+ day balance. Escalation notice was previously sent.',
     draft:
-      'Hi Tom,\n\nThank you for reaching out. We can offer a three-installment plan on the overdue balance. I will send proposed dates and amounts for your approval shortly.'
+      'Hi Tom,\n\nThank you for reaching out. We can offer a three-installment plan on the overdue balance. I will send proposed dates and amounts for your approval shortly.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 168,
+        body: agentBody('Hi Tom,', [
+          'This is a follow-up regarding the overdue balance on your account.',
+          'Please advise when payment can be released or if you need to discuss options.'
+        ]),
+        attachments: [
+          {
+            filename: 'escalation_notice.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 198_400
+          }
+        ]
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 24,
+        body: customerBody('Hi,', [
+          'Cash flow is tight this quarter. Can we split the overdue balance into three installments?',
+          'We can commit to the first payment within ten business days if the schedule is workable.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 4,
+        body: agentBody('Hi Tom,', [
+          'Thank you for reaching out — we can review a three-installment structure.',
+          'I have attached a draft schedule for your finance team. Please reply with any requested changes.'
+        ]),
+        attachments: [
+          {
+            filename: 'installment_proposal.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            sizeBytes: 54_800
+          }
+        ]
+      }
+    ]
   },
   'cust-9': {
     subject: 'Partial payment sent for INV-9103',
@@ -206,7 +415,39 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     summary:
       'David sent a partial payment of $5,000 toward INV-9103 and asked about fee waiver on the remaining $3,300 balance.',
     draft:
-      'Hi David,\n\nThank you for confirming the partial payment. We have applied the $5,000 remittance and the remaining balance is $3,300 across INV-9103 and INV-9114.'
+      'Hi David,\n\nThank you for confirming the partial payment. We have applied the $5,000 remittance and the remaining balance is $3,300 across INV-9103 and INV-9114.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 72,
+        body: agentBody('Hi David,', [
+          'Please find the attached aging summary for INV-9103 and INV-9114.',
+          'Let us know if you have questions before remitting the remaining balance.'
+        ]),
+        attachments: [
+          {
+            filename: 'aging_statement.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 221_000
+          }
+        ]
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 8,
+        body: customerBody('Hi,', [
+          'We processed a partial payment of $5,000 today via ACH.',
+          'Please confirm receipt and advise whether any late fees can be waived on the remaining $3,300 balance.'
+        ]),
+        attachments: [
+          {
+            filename: 'remittance_advice.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 142_300
+          }
+        ]
+      }
+    ]
   },
   'cust-16': {
     subject: 'Request for installment plan on legacy balance',
@@ -235,20 +476,25 @@ function addHours(isoBase: string, hours: number): string {
 
 function buildThreadsForCustomers(customers: Customer[]): {
   inboxMessages: InboxMessage[];
-  threadMessagesByThreadId: Record<string, ThreadMessage[]>;
+  threadEmailsByThreadId: Record<string, ThreadEmail[]>;
   aiSummaryByThreadId: Record<string, string>;
   aiDraftByMessageId: Record<string, string>;
 } {
   const inboxMessages: InboxMessage[] = [];
-  const threadMessagesByThreadId: Record<string, ThreadMessage[]> = {};
+  const threadEmailsByThreadId: Record<string, ThreadEmail[]> = {};
   const aiSummaryByThreadId: Record<string, string> = {};
   const aiDraftByMessageId: Record<string, string> = {};
+  const agentFrom = COLLECTIONS_AGENT.email;
 
   customers.forEach((customer, index) => {
     const threadId = `msg-${index + 1}`;
     const baseTemplate = scenarioByStatus[customer.status];
     const override = statusOverrides[customer.id] ?? {};
-    const template = { ...baseTemplate, ...override };
+    const template = {
+      ...baseTemplate,
+      ...override,
+      turns: override.turns ?? baseTemplate.turns
+    };
 
     const receivedAt = new Date();
     receivedAt.setDate(receivedAt.getDate() - template.daysAgo);
@@ -265,13 +511,24 @@ function buildThreadsForCustomers(customers: Customer[]): {
       channel: 'email'
     });
 
-    threadMessagesByThreadId[threadId] = template.turns.map((turn, turnIndex) => ({
-      id: `${threadId}-turn-${turnIndex + 1}`,
-      threadId,
-      author: turn.author,
-      body: turn.body,
-      sentAt: addHours(receivedAtIso, turn.hoursBeforeLatest)
-    }));
+    threadEmailsByThreadId[threadId] = template.turns.map((turn, turnIndex) => {
+      const isAgent = turn.author === 'agent';
+      const from = isAgent ? agentFrom : customer.email;
+      const to = isAgent ? [customer.email] : [agentFrom];
+
+      return {
+        id: `${threadId}-turn-${turnIndex + 1}`,
+        threadId,
+        author: turn.author,
+        from,
+        to,
+        cc: turn.cc,
+        subject: replySubject(template.subject, turnIndex === 0),
+        body: turn.body,
+        sentAt: addHours(receivedAtIso, turn.hoursBeforeLatest),
+        attachments: mapAttachments(threadId, turnIndex, turn.attachments)
+      };
+    });
 
     aiSummaryByThreadId[threadId] = template.summary;
     aiDraftByMessageId[threadId] = `${template.draft}${SIGNATURE}`;
@@ -279,7 +536,7 @@ function buildThreadsForCustomers(customers: Customer[]): {
 
   return {
     inboxMessages,
-    threadMessagesByThreadId,
+    threadEmailsByThreadId,
     aiSummaryByThreadId,
     aiDraftByMessageId
   };

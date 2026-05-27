@@ -1,68 +1,38 @@
 'use client';
 
-import { Message, MessageAvatar, MessageContent } from '@/components/prompt-kit/message';
-import { cn } from '@/lib/utils';
-import { COLLECTIONS_AGENT } from '../../constants';
-import { formatRelativeDate, getInitials } from '../../utils';
-import type { Customer, ThreadMessage } from '../../types';
+import { useEffect, useRef } from 'react';
+import type { ThreadEmail } from '../../types';
+import { EmailMessageCard } from './email-message-card';
+import { EmailTurnDivider } from './email-turn-divider';
 
 interface ConversationThreadProps {
-  messages: ThreadMessage[];
-  customer: Customer;
+  emails: ThreadEmail[];
 }
 
-export function ConversationThread({ messages, customer }: ConversationThreadProps) {
-  const customerInitials = getInitials(customer.name);
+export function ConversationThread({ emails }: ConversationThreadProps) {
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [emails]);
 
   return (
-    <div className='flex flex-col gap-6'>
-      {messages.map((message) => {
-        const isCustomer = message.author === 'customer';
-        const displayName = isCustomer ? customer.name : COLLECTIONS_AGENT.name;
-
-        return (
-          <Message
-            key={message.id}
-            className={cn('w-full gap-3', isCustomer ? 'justify-start' : 'justify-end')}
-          >
-            {isCustomer ? (
-              <MessageAvatar
-                src={customer.avatarUrl ?? ''}
-                alt={customer.name}
-                fallback={customerInitials}
-              />
-            ) : null}
-            <div className='flex min-w-0 max-w-[85%] flex-col gap-1'>
-              <div
-                className={cn(
-                  'flex items-center gap-2',
-                  isCustomer ? 'justify-start' : 'justify-end'
-                )}
-              >
-                <span className='text-xs font-medium'>{displayName}</span>
-                <time className='text-muted-foreground shrink-0 text-xs'>
-                  {formatRelativeDate(message.sentAt)}
-                </time>
-              </div>
-              <MessageContent
-                className={cn(
-                  'p-3 text-sm leading-relaxed whitespace-pre-wrap break-words',
-                  isCustomer ? 'bg-muted/40 border-0' : 'border-primary/20 bg-primary/5 border'
-                )}
-              >
-                {message.body}
-              </MessageContent>
-            </div>
-            {!isCustomer ? (
-              <MessageAvatar
-                src={COLLECTIONS_AGENT.src}
-                alt={COLLECTIONS_AGENT.alt}
-                fallback={COLLECTIONS_AGENT.fallback}
-              />
-            ) : null}
-          </Message>
-        );
-      })}
+    <div className='flex flex-col gap-4'>
+      {emails.map((email, index) => (
+        <div key={email.id} className='flex flex-col gap-4'>
+          {index > 0 ? <EmailTurnDivider sentAt={email.sentAt} /> : null}
+          <EmailMessageCard email={email} />
+        </div>
+      ))}
+      <div
+        ref={endRef}
+        className='shrink-0 scroll-mt-2'
+        style={{ height: 'var(--inbox-composer-height, 11rem)' }}
+        aria-hidden
+      />
     </div>
   );
 }

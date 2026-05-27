@@ -1,57 +1,112 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
-import { CustomerAvatar } from '../../components/customer-avatar';
+import { Icons } from '@/components/icons';
 import { StatusPill } from '../../components/status-pill';
-import { AiDraftCard } from '../../components/ai-draft-card';
+import { InboxMessageListHeader } from './inbox-message-list-header';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
+import { InboxConversationPane } from './inbox-conversation-pane';
+import { EmailThreadHeader } from './email-thread-header';
 import { formatRelativeDate } from '../../utils';
+import { filterInboxMessages, type InboxListFilter } from '../lib/filter-inbox-messages';
 import {
-  getAiDraftForMessage,
   getAiSummaryForThread,
   getCustomerById,
-  getThreadMessages,
+  getThreadEmails,
   inboxMessages
 } from '../../mock-data';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { ConversationSummaryCard } from './conversation-summary-card';
-import { ConversationThread } from './conversation-thread';
+
+const INBOX_PANEL_RESERVE = 'calc(14rem + 2rem)';
+
+/** Shared padding and border for list + thread header bands (aligned in md grid row). */
+const inboxHeaderBandClass =
+  'border-border/60 flex min-h-0 flex-col justify-center border-b px-4 py-3 md:pr-5';
+
+function getListEmptyMessage(
+  filter: InboxListFilter,
+  searchQuery: string,
+  hasResults: boolean
+): string {
+  if (searchQuery.trim() && !hasResults) {
+    return 'No emails match your search';
+  }
+  if (filter === 'unread') return 'No unread emails';
+  return 'No read emails';
+}
 
 export function InboxView() {
   const isMobile = useIsMobile();
-  const [selectedId, setSelectedId] = useState(inboxMessages[0]?.id ?? '');
+  const initialSelectedId = inboxMessages.find((m) => m.unread)?.id ?? inboxMessages[0]?.id ?? '';
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [listFilter, setListFilter] = useState<InboxListFilter>('unread');
   const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
   const [contextOpen, setContextOpen] = useState(false);
 
+  const unreadCount = useMemo(() => inboxMessages.filter((m) => m.unread).length, []);
+  const readCount = useMemo(() => inboxMessages.filter((m) => !m.unread).length, []);
+
+  const filteredMessages = useMemo(
+    () => filterInboxMessages(inboxMessages, listFilter, searchQuery, getCustomerById),
+    [listFilter, searchQuery]
+  );
+
+  useEffect(() => {
+    if (filteredMessages.length === 0) {
+      if (selectedId !== '') setSelectedId('');
+      return;
+    }
+    if (!filteredMessages.some((m) => m.id === selectedId)) {
+      setSelectedId(filteredMessages[0]!.id);
+    }
+  }, [filteredMessages, selectedId]);
+
   const selectedMessage = inboxMessages.find((m) => m.id === selectedId);
   const customer = selectedMessage ? getCustomerById(selectedMessage.customerId) : undefined;
-  const threadMessages = selectedMessage ? getThreadMessages(selectedMessage.id) : [];
+  const threadEmails = selectedMessage ? getThreadEmails(selectedMessage.id) : [];
   const threadSummary = selectedMessage ? getAiSummaryForThread(selectedMessage.id) : '';
+  const latestEmail = threadEmails[threadEmails.length - 1];
 
   const showList = !isMobile || mobilePane === 'list';
   const showThread = !isMobile || mobilePane === 'thread';
 
   return (
-    <div className='flex h-[calc(100dvh-var(--header-height)-2rem)] max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-0 flex-1 flex-col overflow-hidden rounded-lg border md:flex-row'>
+    <div
+      className='flex h-[calc(100dvh-var(--header-height)-2rem)] max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-0 flex-1 flex-col overflow-hidden md:grid md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]'
+      style={{ '--inbox-panel-reserve': INBOX_PANEL_RESERVE } as CSSProperties}
+    >
       <div
         className={cn(
-          'flex min-h-0 w-full shrink-0 flex-col border-b md:w-[22rem] md:max-w-sm md:border-r md:border-b-0',
+          inboxHeaderBandClass,
+          'md:col-start-1 md:row-start-1',
           !showList && 'hidden md:flex'
         )}
       >
-        <div className='border-b px-4 py-3'>
-          <p className='text-sm font-medium'>Messages</p>
-          <p className='text-muted-foreground text-xs'>
-            {inboxMessages.filter((m) => m.unread).length} unread
+        <InboxMessageListHeader
+          search={searchQuery}
+          onSearchChange={setSearchQuery}
+          filter={listFilter}
+          onFilterChange={setListFilter}
+          unreadCount={unreadCount}
+          readCount={readCount}
+        />
+      </div>
+
+      <div
+        className={cn(
+          'min-h-0 overflow-y-auto px-2 py-1 md:col-start-1 md:row-start-2 md:border-r md:pr-3',
+          showList ? 'flex-1 md:flex-none' : 'hidden md:block'
+        )}
+      >
+        {filteredMessages.length === 0 ? (
+          <p className='text-muted-foreground px-2 py-8 text-center text-sm'>
+            {getListEmptyMessage(listFilter, searchQuery, false)}
           </p>
-        </div>
-        <div className='min-h-0 flex-1 overflow-y-auto'>
+        ) : (
           <ul className='divide-y'>
-            {inboxMessages.map((message) => {
+            {filteredMessages.map((message) => {
               const msgCustomer = getCustomerById(message.customerId);
               if (!msgCustomer) return null;
 
@@ -66,11 +121,10 @@ export function InboxView() {
                       }
                     }}
                     className={cn(
-                      'hover:bg-muted/50 flex w-full gap-3 px-4 py-3 text-left transition-colors',
+                      'hover:bg-muted/50 flex w-full gap-3 rounded-lg px-3 py-3 text-left transition-colors',
                       selectedId === message.id && 'bg-muted'
                     )}
                   >
-                    <CustomerAvatar name={msgCustomer.name} avatarUrl={msgCustomer.avatarUrl} />
                     <div className='min-w-0 flex-1'>
                       <div className='flex items-center justify-between gap-2'>
                         <span className={cn('truncate text-sm', message.unread && 'font-semibold')}>
@@ -80,6 +134,10 @@ export function InboxView() {
                           {formatRelativeDate(message.receivedAt)}
                         </time>
                       </div>
+                      <p className='text-muted-foreground flex items-center gap-1 truncate text-[11px]'>
+                        <Icons.inbox className='size-3 shrink-0 opacity-70' />
+                        <span className='truncate'>{msgCustomer.email}</span>
+                      </p>
                       <p className='truncate text-sm'>{message.subject}</p>
                       <p className='text-muted-foreground mt-1 line-clamp-2 text-xs'>
                         {message.preview}
@@ -93,76 +151,58 @@ export function InboxView() {
               );
             })}
           </ul>
+        )}
+      </div>
+
+      <div
+        className={cn(
+          'relative flex min-h-0 min-w-0 flex-col md:col-start-2 md:row-start-1 md:row-span-2',
+          showThread ? 'flex-1 md:flex-none' : 'hidden md:flex'
+        )}
+      >
+        <div
+          className={cn(
+            inboxHeaderBandClass,
+            'hidden shrink-0 md:flex lg:pr-[var(--inbox-panel-reserve)]',
+            !showThread && 'md:hidden'
+          )}
+        >
+          {latestEmail ? (
+            <EmailThreadHeader email={latestEmail} className='py-0' />
+          ) : (
+            <p className='text-muted-foreground text-sm'>Select an email</p>
+          )}
         </div>
-      </div>
 
-      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', !showThread && 'hidden md:flex')}>
-        {selectedMessage && customer ? (
-          <>
-            <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
-              <ConversationSummaryCard
-                subject={selectedMessage.subject}
-                summary={threadSummary}
-                leading={
-                  isMobile ? (
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='icon'
-                      className='size-7 shrink-0 md:hidden'
-                      onClick={() => setMobilePane('list')}
-                    >
-                      <Icons.chevronLeft className='size-4' />
-                    </Button>
-                  ) : null
-                }
-                trailing={
-                  <Sheet open={contextOpen} onOpenChange={setContextOpen}>
-                    <SheetTrigger asChild>
-                      <Button
-                        type='button'
-                        variant='outline'
-                        size='icon'
-                        className='size-7 shrink-0 md:hidden'
-                        aria-label='Open customer context'
-                      >
-                        <Icons.user className='size-3.5' />
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side='right' className='w-full sm:max-w-sm'>
-                      <SheetHeader>
-                        <SheetTitle>{customer.name}</SheetTitle>
-                      </SheetHeader>
-                      <div className='mt-4'>
-                        <CustomerContextPanel customer={customer} />
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                }
-              />
-              <div className='min-h-0 flex-1 overflow-y-auto px-4 py-3 md:px-6 md:py-4'>
-                <ConversationThread messages={threadMessages} customer={customer} />
-              </div>
-            </div>
-            <div className='bg-background max-h-[min(36dvh,11.5rem)] shrink-0 overflow-y-auto border-t p-2 md:max-h-[min(32dvh,10.5rem)] md:p-3'>
-              <AiDraftCard draft={getAiDraftForMessage(selectedMessage.id)} compact />
-            </div>
-          </>
-        ) : (
-          <div className='text-muted-foreground flex flex-1 items-center justify-center text-sm'>
-            Select a message
+        {customer && selectedMessage ? (
+          <div className='pointer-events-auto absolute top-0 right-0 z-20 hidden w-56 overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 lg:block'>
+            <CustomerContextPanel
+              layout='floating'
+              customer={customer}
+              threadSubject={selectedMessage.subject}
+              threadSummary={threadSummary}
+            />
           </div>
-        )}
-      </div>
+        ) : null}
 
-      <div className='hidden min-h-0 w-80 shrink-0 overflow-hidden border-l lg:block xl:w-96'>
-        {customer ? (
-          <CustomerContextPanel customer={customer} />
-        ) : (
-          <div className='text-muted-foreground flex h-full items-center justify-center p-4 text-sm'>
-            No customer selected
-          </div>
-        )}
+        <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
+          {selectedMessage && customer ? (
+            <InboxConversationPane
+              customer={customer}
+              selectedMessage={selectedMessage}
+              threadEmails={threadEmails}
+              threadSummary={threadSummary}
+              isMobile={isMobile}
+              onBack={() => setMobilePane('list')}
+              contextOpen={contextOpen}
+              onContextOpenChange={setContextOpen}
+            />
+          ) : (
+            <div className='text-muted-foreground flex flex-1 items-center justify-center px-4 py-8 text-sm md:hidden'>
+              Select an email
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
