@@ -7,6 +7,7 @@ export default function InboxPage() {
       pageTitle='Inbox'
       pageDescription='Review customer replies and AI-drafted collection follow-ups.'
       compactMobile
+      lockPageScroll
     >
       <InboxView />
     </PageContainer>

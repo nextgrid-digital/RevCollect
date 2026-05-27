@@ -37,10 +37,10 @@ export function InboxView() {
   const showThread = !isMobile || mobilePane === 'thread';
 
   return (
-    <div className='flex min-h-[calc(100dvh-var(--header-height)-5rem)] flex-1 flex-col overflow-hidden rounded-lg border md:flex-row'>
+    <div className='flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-lg border md:flex-row'>
       <div
         className={cn(
-          'flex w-full shrink-0 flex-col border-b md:w-[22rem] md:border-b-0 md:border-r md:max-w-sm',
+          'flex min-h-0 w-full shrink-0 flex-col border-b md:w-[22rem] md:max-w-sm md:border-r md:border-b-0',
           !showList && 'hidden md:flex'
         )}
       >
@@ -50,7 +50,7 @@ export function InboxView() {
             {inboxMessages.filter((m) => m.unread).length} unread
           </p>
         </div>
-        <ScrollArea className='flex-1'>
+        <ScrollArea className='min-h-0 flex-1'>
           <ul className='divide-y'>
             {inboxMessages.map((message) => {
               const msgCustomer = getCustomerById(message.customerId);
@@ -104,7 +104,7 @@ export function InboxView() {
 
       <div
         className={cn(
-          'min-w-0 flex-1 flex flex-col',
+          'flex min-h-0 min-w-0 flex-1 flex-col',
           !showThread && 'hidden md:flex'
         )}
       >
@@ -154,7 +154,7 @@ export function InboxView() {
                 </Sheet>
               )}
             </div>
-            <ScrollArea className='flex-1'>
+            <ScrollArea className='min-h-0 flex-1'>
               <div className='space-y-6 px-4 py-4 md:px-6 md:py-6'>
                 <div className='bg-muted/40 rounded-lg border p-4'>
                   <p className='text-muted-foreground mb-2 text-xs font-medium uppercase'>
@@ -173,7 +173,7 @@ export function InboxView() {
         )}
       </div>
 
-      <div className='hidden w-80 shrink-0 border-l lg:block xl:w-96'>
+      <div className='hidden min-h-0 w-80 shrink-0 overflow-hidden border-l lg:block xl:w-96'>
         {customer ? (
           <CustomerContextPanel customer={customer} />
         ) : (

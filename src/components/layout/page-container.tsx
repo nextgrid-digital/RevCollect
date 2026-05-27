@@ -26,7 +26,8 @@ export default function PageContainer({
   pageDescription,
   infoContent,
   pageHeaderAction,
-  compactMobile = false
+  compactMobile = false,
+  lockPageScroll = false
 }: {
   children: React.ReactNode;
   isLoading?: boolean;
@@ -37,6 +38,7 @@ export default function PageContainer({
   infoContent?: InfobarContent;
   pageHeaderAction?: React.ReactNode;
   compactMobile?: boolean;
+  lockPageScroll?: boolean;
 }) {
   if (!access) {
     return (
@@ -68,7 +70,9 @@ export default function PageContainer({
           {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}
         </div>
       )}
-      {content}
+      <div className={lockPageScroll ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : undefined}>
+        {content}
+      </div>
     </div>
   );
 }
