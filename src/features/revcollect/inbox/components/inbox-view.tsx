@@ -40,7 +40,7 @@ export function InboxView() {
     <div className='flex min-h-[calc(100dvh-var(--header-height)-5rem)] flex-1 flex-col overflow-hidden rounded-lg border md:flex-row'>
       <div
         className={cn(
-          'flex w-full max-w-xs shrink-0 flex-col border-b md:border-b-0 md:border-r md:max-w-sm',
+          'flex w-full shrink-0 flex-col border-b md:w-[22rem] md:border-b-0 md:border-r md:max-w-sm',
           !showList && 'hidden md:flex'
         )}
       >
@@ -110,7 +110,7 @@ export function InboxView() {
       >
         {selectedMessage && customer ? (
           <>
-            <div className='flex items-center gap-3 border-b px-4 py-3 md:px-6 md:py-4'>
+            <div className='flex items-center gap-2 border-b px-4 py-3 md:px-6 md:py-4'>
               {isMobile && (
                 <Button
                   type='button'
@@ -137,10 +137,10 @@ export function InboxView() {
                       type='button'
                       variant='outline'
                       size='sm'
-                      className='md:hidden'
+                      className='shrink-0 md:hidden'
+                      aria-label='Open customer context'
                     >
-                      <Icons.user className='mr-1 size-4' />
-                      Customer
+                      <Icons.user className='size-4' />
                     </Button>
                   </SheetTrigger>
                   <SheetContent side='right' className='w-full sm:max-w-sm'>
@@ -160,7 +160,7 @@ export function InboxView() {
                   <p className='text-muted-foreground mb-2 text-xs font-medium uppercase'>
                     Customer message
                   </p>
-                  <p className='text-sm whitespace-pre-wrap'>{selectedMessage.body}</p>
+                  <p className='text-sm whitespace-pre-wrap break-words'>{selectedMessage.body}</p>
                 </div>
                 <AiDraftCard draft={getAiDraftForMessage(selectedMessage.id)} />
               </div>
