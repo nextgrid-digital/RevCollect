@@ -1,6 +1,6 @@
 import type { Customer, InboxMessage } from '../../types';
 
-export type InboxListFilter = 'unread' | 'read';
+export type InboxListFilter = 'all' | 'overdue' | 'due_soon' | 'escalated';
 
 function matchesSearch(
   message: InboxMessage,
@@ -32,10 +32,16 @@ export function filterInboxMessages(
   const normalizedQuery = query.trim().toLowerCase();
 
   return messages.filter((message) => {
-    const matchesFilter = filter === 'unread' ? message.unread : !message.unread;
+    const customer = getCustomer(message.customerId);
+    if (!customer) return false;
+
+    const matchesFilter =
+      filter === 'all' ||
+      (filter === 'overdue' && customer.status === 'overdue') ||
+      (filter === 'due_soon' && customer.status === 'due_soon') ||
+      (filter === 'escalated' && customer.status === 'in_dispute');
     if (!matchesFilter) return false;
 
-    const customer = getCustomer(message.customerId);
     return matchesSearch(message, customer, normalizedQuery);
   });
 }

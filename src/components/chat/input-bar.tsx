@@ -376,11 +376,11 @@ export const InputBar = memo(function InputBar({
             />
           </div>
           <div className='flex items-center justify-between gap-3 px-2 pt-1 pb-2'>
-            <div className='flex min-w-0 items-center gap-1'>
+            <div className='flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pb-0.5'>
               {onAttach ? <AttachmentButton onClick={onAttach} disabled={disabled} /> : null}
               {leftActions}
             </div>
-            <div className='flex items-center gap-1'>
+            <div className='flex shrink-0 items-center gap-1'>
               {rightActions}
               <SendButton
                 state={sendState}

@@ -34,8 +34,10 @@ function getListEmptyMessage(
   if (searchQuery.trim() && !hasResults) {
     return 'No emails match your search';
   }
-  if (filter === 'unread') return 'No unread emails';
-  return 'No read emails';
+  if (filter === 'all') return 'No emails';
+  if (filter === 'overdue') return 'No overdue emails';
+  if (filter === 'due_soon') return 'No due soon emails';
+  return 'No escalated emails';
 }
 
 export function InboxView() {
@@ -43,12 +45,24 @@ export function InboxView() {
   const initialSelectedId = inboxMessages.find((m) => m.unread)?.id ?? inboxMessages[0]?.id ?? '';
   const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [searchQuery, setSearchQuery] = useState('');
-  const [listFilter, setListFilter] = useState<InboxListFilter>('unread');
+  const [listFilter, setListFilter] = useState<InboxListFilter>('all');
   const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
   const [contextOpen, setContextOpen] = useState(false);
 
-  const unreadCount = useMemo(() => inboxMessages.filter((m) => m.unread).length, []);
-  const readCount = useMemo(() => inboxMessages.filter((m) => !m.unread).length, []);
+  const allCount = inboxMessages.length;
+  const overdueCount = useMemo(
+    () => inboxMessages.filter((m) => getCustomerById(m.customerId)?.status === 'overdue').length,
+    []
+  );
+  const dueSoonCount = useMemo(
+    () => inboxMessages.filter((m) => getCustomerById(m.customerId)?.status === 'due_soon').length,
+    []
+  );
+  const escalatedCount = useMemo(
+    () =>
+      inboxMessages.filter((m) => getCustomerById(m.customerId)?.status === 'in_dispute').length,
+    []
+  );
 
   const filteredMessages = useMemo(
     () => filterInboxMessages(inboxMessages, listFilter, searchQuery, getCustomerById),
@@ -91,8 +105,10 @@ export function InboxView() {
           onSearchChange={setSearchQuery}
           filter={listFilter}
           onFilterChange={setListFilter}
-          unreadCount={unreadCount}
-          readCount={readCount}
+          allCount={allCount}
+          overdueCount={overdueCount}
+          dueSoonCount={dueSoonCount}
+          escalatedCount={escalatedCount}
         />
       </div>
 

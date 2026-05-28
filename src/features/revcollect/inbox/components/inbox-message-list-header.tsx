@@ -2,7 +2,7 @@
 
 import { Icons } from '@/components/icons';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import type { InboxListFilter } from '../lib/filter-inbox-messages';
 
 interface InboxMessageListHeaderProps {
@@ -10,8 +10,10 @@ interface InboxMessageListHeaderProps {
   onSearchChange: (value: string) => void;
   filter: InboxListFilter;
   onFilterChange: (filter: InboxListFilter) => void;
-  unreadCount: number;
-  readCount: number;
+  allCount: number;
+  overdueCount: number;
+  dueSoonCount: number;
+  escalatedCount: number;
 }
 
 export function InboxMessageListHeader({
@@ -19,9 +21,18 @@ export function InboxMessageListHeader({
   onSearchChange,
   filter,
   onFilterChange,
-  unreadCount,
-  readCount
+  allCount,
+  overdueCount,
+  dueSoonCount,
+  escalatedCount
 }: InboxMessageListHeaderProps) {
+  const filterPills: Array<{ id: InboxListFilter; label: string; count: number }> = [
+    { id: 'all', label: 'All', count: allCount },
+    { id: 'overdue', label: 'Overdue', count: overdueCount },
+    { id: 'due_soon', label: 'Due Soon', count: dueSoonCount },
+    { id: 'escalated', label: 'Escalated', count: escalatedCount }
+  ];
+
   return (
     <div className='space-y-3'>
       <div className='relative'>
@@ -34,20 +45,34 @@ export function InboxMessageListHeader({
           className='h-9 pl-9 text-sm'
         />
       </div>
-      <Tabs
-        value={filter}
-        onValueChange={(value) => onFilterChange(value as InboxListFilter)}
-        className='gap-0'
-      >
-        <TabsList className='grid h-9 w-full grid-cols-2'>
-          <TabsTrigger value='unread' className='text-xs'>
-            Unread ({unreadCount})
-          </TabsTrigger>
-          <TabsTrigger value='read' className='text-xs'>
-            Read ({readCount})
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className='flex gap-1.5 overflow-x-auto pb-1 whitespace-nowrap'>
+        {filterPills.map((pill) => {
+          const isActive = filter === pill.id;
+          return (
+            <button
+              key={pill.id}
+              type='button'
+              onClick={() => onFilterChange(pill.id)}
+              className={cn(
+                'inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors',
+                isActive
+                  ? 'border-accent bg-accent text-accent-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <span>{pill.label}</span>
+              <span
+                className={cn(
+                  'rounded-full px-1.5 py-0.5 text-[11px]',
+                  isActive ? 'bg-black/10 dark:bg-white/15' : 'bg-muted'
+                )}
+              >
+                {pill.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
