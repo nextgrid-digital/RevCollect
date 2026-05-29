@@ -28,7 +28,8 @@ export default function PageContainer({
   infoContent,
   pageHeaderAction,
   compactMobile = false,
-  lockPageScroll = false
+  lockPageScroll = false,
+  flushTop = false
 }: {
   children: React.ReactNode;
   isLoading?: boolean;
@@ -40,6 +41,7 @@ export default function PageContainer({
   pageHeaderAction?: React.ReactNode;
   compactMobile?: boolean;
   lockPageScroll?: boolean;
+  flushTop?: boolean;
 }) {
   if (!access) {
     return (
@@ -58,11 +60,13 @@ export default function PageContainer({
   const hasHeader = pageTitle || pageHeaderAction;
 
   const pageClasses = compactMobile
-    ? 'flex flex-1 flex-col px-3 pt-1 pb-3 md:px-6 md:pt-4'
-    : 'flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4';
+    ? cn('flex flex-1 flex-col px-3 pb-3 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-1 md:pt-4')
+    : cn('flex flex-1 flex-col px-4 pb-4 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-2 md:pt-4');
 
   return (
-    <div className={lockPageScroll ? cn(pageClasses, 'min-h-0 overflow-hidden') : pageClasses}>
+    <div
+      className={lockPageScroll ? cn(pageClasses, 'min-h-0 flex-1 overflow-hidden') : pageClasses}
+    >
       {hasHeader && (
         <div className='mb-3 flex shrink-0 flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
           <Heading

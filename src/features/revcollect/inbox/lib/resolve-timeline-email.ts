@@ -1,7 +1,5 @@
 import type { ThreadEmail, TimelineEvent } from '../../types';
 
-const MAX_MATCH_MS = 7 * 24 * 60 * 60 * 1000;
-
 export function resolveTimelineThreadEmailId(
   event: TimelineEvent,
   emails: ThreadEmail[]
@@ -17,23 +15,11 @@ export function resolveTimelineThreadEmailId(
   }
 
   const author = event.type === 'email_sent' ? 'agent' : 'customer';
-  const eventTime = new Date(event.occurredAt).getTime();
+  const matches = emails.filter((email) => email.author === author);
 
-  let bestEmail: ThreadEmail | undefined;
-  let bestDelta = Infinity;
-
-  for (const email of emails) {
-    if (email.author !== author) continue;
-    const delta = Math.abs(new Date(email.sentAt).getTime() - eventTime);
-    if (delta < bestDelta) {
-      bestDelta = delta;
-      bestEmail = email;
-    }
-  }
-
-  if (!bestEmail || bestDelta > MAX_MATCH_MS) {
+  if (matches.length !== 1) {
     return undefined;
   }
 
-  return bestEmail.id;
+  return matches[0]!.id;
 }

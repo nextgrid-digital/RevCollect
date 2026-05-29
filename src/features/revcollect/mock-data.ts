@@ -11,6 +11,7 @@ import type {
   ThreadEmail,
   TimelineEvent
 } from './types';
+import { enrichTimelineWithThreads } from './inbox/lib/enrich-timeline-with-threads';
 import { createInboxThreadData } from './mock-inbox-threads';
 import { dicebearAvatar } from './utils';
 
@@ -908,7 +909,7 @@ export const escalationInsightByCustomerId: Record<string, string> = {
     'Escalation package sent to new AP contact after contact change. Awaiting approval on overdue invoices.'
 };
 
-export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
+const rawTimelineByCustomerId: Record<string, TimelineEvent[]> = {
   'cust-1': [
     {
       id: 'tl-1',
@@ -942,8 +943,7 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
       type: 'email_received',
       title: 'Dispute opened',
       description: 'Quantity mismatch on INV-3301',
-      occurredAt: '2026-05-26T16:42:00Z',
-      threadEmailId: 'msg-3-turn-2'
+      occurredAt: '2026-05-26T16:42:00Z'
     },
     {
       id: 'tl-5',
@@ -971,8 +971,7 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
       type: 'email_received',
       title: 'Tom replied',
       description: 'Requested installment plan',
-      occurredAt: '2026-05-29T10:14:00Z',
-      threadEmailId: 'msg-6-turn-2'
+      occurredAt: '2026-05-29T10:14:00Z'
     },
     {
       id: 'tl-7b',
@@ -980,8 +979,7 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
       type: 'email_sent',
       title: 'Escalation sent',
       description: 'Escalation notice with aging statement',
-      occurredAt: '2026-05-28T09:00:00Z',
-      threadEmailId: 'msg-6-turn-1'
+      occurredAt: '2026-05-28T09:00:00Z'
     },
     {
       id: 'tl-7c',
@@ -1004,9 +1002,9 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
     {
       id: 'tl-9',
       customerId: 'cust-9',
-      type: 'payment',
-      title: 'Partial payment received',
-      description: 'Received $5,000 toward INV-9103',
+      type: 'email_received',
+      title: 'Partial payment sent',
+      description: 'David sent $5,000 toward INV-9103 with remittance advice',
       occurredAt: '2026-05-24T12:45:00Z'
     },
     {
@@ -1181,6 +1179,12 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
     }
   ]
 };
+
+export const timelineByCustomerId = enrichTimelineWithThreads(
+  rawTimelineByCustomerId,
+  threadEmailsByThreadId,
+  customers
+);
 
 export const agentConfig: AgentConfig = {
   tone: 'professional',

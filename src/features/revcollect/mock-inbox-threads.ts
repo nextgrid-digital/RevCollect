@@ -371,6 +371,22 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     turns: [
       {
         author: 'agent',
+        hoursBeforeLatest: 336,
+        body: agentBody('Hi Tom,', [
+          'This is a friendly reminder that your account has an open balance past due.',
+          'Please let us know when payment can be released or if any invoices need clarification from our billing team.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 240,
+        body: agentBody('Hi Tom,', [
+          'Following up on the overdue balance on your account.',
+          'Invoice INV-5402 remains unpaid. Please advise on timing for remittance or share any issues blocking payment.'
+        ])
+      },
+      {
+        author: 'agent',
         hoursBeforeLatest: 168,
         body: agentBody('Hi Tom,', [
           'This is a follow-up regarding the overdue balance on your account.',
@@ -449,6 +465,55 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
       }
     ]
   },
+  'cust-10': {
+    subject: 'Invalid PO on INV-10055',
+    preview: 'Our AP team flagged an invalid PO on invoice INV-10055...',
+    summary:
+      'Maya flagged an invalid PO on INV-10055. Billing is validating the purchase order before payment release.',
+    draft:
+      'Hi Maya,\n\nThank you for flagging the PO issue on INV-10055. We are validating the purchase order with your account owner and will send corrected billing within 48 hours.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 120,
+        body: agentBody('Hello,', [
+          'We noticed payment has not been released on a disputed invoice on your account.',
+          'Could you share the reason for the hold and which invoice numbers are affected?'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 96,
+        body: customerBody('Hello,', [
+          'Our accounts payable team flagged an invalid PO on invoice INV-10055.',
+          'We have paused payment until the PO is corrected on your billing record.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 48,
+        body: agentBody('Hello,', [
+          'Thank you for the detail.',
+          'We are pulling the PO validation from your account owner and will respond with corrected documentation.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 6,
+        body: customerBody('Hello,', [
+          'Please confirm once INV-10055 reflects the correct PO so we can release payment.',
+          'I have attached our AP hold notice for reference.'
+        ]),
+        attachments: [
+          {
+            filename: 'ap_hold_notice_INV-10055.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 186_400
+          }
+        ]
+      }
+    ]
+  },
   'cust-16': {
     subject: 'Request for installment plan on legacy balance',
     preview: 'Can we split the oldest invoices over a 6-week payment schedule?',
@@ -457,6 +522,109 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     draft:
       'Hi Iris,\n\nThanks for the payment-plan request. We can offer a 3-installment structure over six weeks for INV-16001 and INV-16008.'
   },
+  'cust-23': {
+    subject: 'AP contact change — overdue approvals',
+    preview: 'Our new AP manager is now handling overdue invoice approvals...',
+    summary:
+      'Hannah shared a new AP contact. Escalation package with aging statement was sent to unblock overdue approvals.',
+    draft:
+      'Hi Hannah,\n\nThank you for introducing your new AP manager. I have resent the escalation package and aging statement for the overdue invoices pending approval.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 72,
+        body: agentBody('Hi Hannah,', [
+          'Please find attached the escalation package and aging statement for overdue invoices on your account.',
+          'We need approval on the open items so we can close the aging bucket this month.'
+        ]),
+        attachments: [
+          {
+            filename: 'escalation_package.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 312_000
+          },
+          {
+            filename: 'aging_statement.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 245_600
+          }
+        ]
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 48,
+        body: customerBody('Hi,', [
+          'Our accounts payable team is reviewing the invoice packet internally before payment can be scheduled.',
+          'We expect to have an update within the next few business days.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 24,
+        body: agentBody('Hi Hannah,', [
+          'Thank you for the update.',
+          'Can you confirm whether any invoices are currently under internal dispute, or if the hold is strictly timing-related?'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 2,
+        body: customerBody('Hi,', [
+          'Our new AP manager is now handling overdue invoice approvals on this account.',
+          'Please route future statements and escalation notices to ap.manager@blueridgehotels.com.'
+        ])
+      }
+    ]
+  },
+  'cust-24': {
+    subject: 'Short-pay on INV-24012 — freight deduction',
+    preview: 'We short-paid INV-24012 due to a freight overcharge on the shipment...',
+    summary:
+      'Oliver explained a freight overcharge deduction on INV-24012. Finance is validating the freight claim before releasing the remainder.',
+    draft:
+      'Hi Oliver,\n\nThank you for explaining the freight deduction on INV-24012. Our finance team is validating the freight claim and will respond with a credit or revised balance within two business days.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 120,
+        body: agentBody('Hello,', [
+          'We noticed payment has not been released on a disputed invoice on your account.',
+          'Could you share the reason for the hold and which invoice numbers are affected?'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 96,
+        body: customerBody('Hello,', [
+          'We short-paid INV-24012 due to a freight overcharge on the shipment.',
+          'Please review the attached freight claim summary and advise on the corrected balance.'
+        ]),
+        attachments: [
+          {
+            filename: 'freight_claim_summary.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 224_800
+          }
+        ]
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 48,
+        body: agentBody('Hello,', [
+          'Understood — thank you for the context.',
+          'Please share the specific line items in question so we can investigate and respond with corrected documentation.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 6,
+        body: customerBody('Hello,', [
+          'We are holding the remainder until the freight claim is reconciled.',
+          'Please send corrected documentation when your team completes the review.'
+        ])
+      }
+    ]
+  },
   'cust-26': {
     subject: 'Legal hold notice on oldest invoices',
     preview: 'Our counsel requested temporary hold while contract terms are reviewed.',
@@ -464,7 +632,41 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
     summary:
       'Lucas placed a legal hold on pre-February invoices while counsel reviews service-level terms. Automated outreach is paused.',
     draft:
-      'Hi Lucas,\n\nThank you for the legal hold notice. We have paused automated outreach on the affected invoices and moved this account to managed review.'
+      'Hi Lucas,\n\nThank you for the legal hold notice. We have paused automated outreach on the affected invoices and moved this account to managed review.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 96,
+        body: agentBody('Hi Lucas,', [
+          'Following up on the overdue balance on pre-February invoices on your account.',
+          'Please advise when payment can be released or if any items require escalation.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 72,
+        body: customerBody('Hi,', [
+          'Our counsel has requested a temporary legal hold on the oldest invoices while contract terms are reviewed.',
+          'Please pause automated outreach on pre-February items until we provide written clearance.'
+        ])
+      },
+      {
+        author: 'agent',
+        hoursBeforeLatest: 24,
+        body: agentBody('Hi Lucas,', [
+          'Thank you for the legal hold notice.',
+          'We have paused automated outreach on the affected invoices and moved this account to managed review.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 4,
+        body: customerBody('Hi,', [
+          'Confirming receipt of your acknowledgment.',
+          'We will follow up once counsel completes the contract review.'
+        ])
+      }
+    ]
   }
 };
 

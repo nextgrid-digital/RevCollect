@@ -16,8 +16,6 @@ import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { ConversationThread } from './conversation-thread';
 import { InboxFloatingComposer } from './inbox-floating-composer';
 
-/** w-64 panel + right inset + gap — content padding only, no width clip */
-const FLOATING_PANEL_RESERVE = 'calc(16rem + 2rem)';
 const DEFAULT_COMPOSER_RESERVE = '11rem';
 
 interface InboxConversationPaneProps {
@@ -92,12 +90,7 @@ export function InboxConversationPane({
     <div
       ref={paneRef}
       className='bg-background relative flex min-h-0 min-w-0 flex-1 flex-col'
-      style={
-        {
-          '--inbox-panel-reserve': FLOATING_PANEL_RESERVE,
-          '--inbox-composer-height': DEFAULT_COMPOSER_RESERVE
-        } as CSSProperties
-      }
+      style={{ '--inbox-composer-height': DEFAULT_COMPOSER_RESERVE } as CSSProperties}
     >
       {isMobile ? (
         <div className='flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2 lg:hidden'>
@@ -148,7 +141,7 @@ export function InboxConversationPane({
 
       <div
         ref={threadScrollRef}
-        className='min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 lg:pr-[var(--inbox-panel-reserve)] xl:py-4'
+        className='min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 xl:py-4'
       >
         <ConversationThread emails={threadEmails} highlightedEmailId={highlightedEmailId} />
       </div>

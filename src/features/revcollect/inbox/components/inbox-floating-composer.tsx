@@ -168,7 +168,7 @@ export function InboxFloatingComposer({
     <div
       ref={overlayRef}
       className={cn(
-        'pointer-events-none absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-background via-background/70 to-transparent pt-2 lg:right-[var(--inbox-panel-reserve)]',
+        'pointer-events-none absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-background via-background/70 to-transparent pt-2',
         overlayClassName
       )}
     >
