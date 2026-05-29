@@ -48,6 +48,16 @@ export interface Customer {
   daysOverdue: number;
 }
 
+/** Extended context shown in the inbox right rail. */
+export interface CustomerInboxContext {
+  avgDsoDays: number;
+  lifetimeValueCents: number;
+  followUpsSent: number;
+  paymentTerms: string;
+  source: string;
+  aiInsight: string;
+}
+
 export interface Invoice {
   id: string;
   customerId: string;
@@ -75,6 +85,8 @@ export interface TimelineEvent {
   title: string;
   description: string;
   occurredAt: string;
+  /** When set, activity click scrolls to this thread email. */
+  threadEmailId?: string;
 }
 
 export interface AgentConfig {

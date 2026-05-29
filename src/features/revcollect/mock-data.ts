@@ -4,6 +4,7 @@ import type {
   AgingBucketSummary,
   CollectionStatus,
   Customer,
+  CustomerInboxContext,
   InboxMessage,
   IntegrationStatus,
   Invoice,
@@ -354,20 +355,29 @@ const invoiceSeeds: InvoiceSeed[] = [
   {
     id: 'inv-11',
     customerId: 'cust-6',
-    number: 'INV-5501',
-    amountCents: 2100000,
-    dueDate: '2026-02-10',
+    number: 'INV-5520',
+    amountCents: 2020000,
+    dueDate: '2026-03-23',
     status: 'overdue',
-    agingBucket: '61-90'
+    agingBucket: '90+'
   },
   {
     id: 'inv-12',
     customerId: 'cust-6',
-    number: 'INV-5520',
-    amountCents: 2020000,
-    dueDate: '2026-01-20',
+    number: 'INV-5488',
+    amountCents: 1240000,
+    dueDate: '2026-04-14',
     status: 'overdue',
-    agingBucket: '90+'
+    agingBucket: '61-90'
+  },
+  {
+    id: 'inv-12b',
+    customerId: 'cust-6',
+    number: 'INV-5402',
+    amountCents: 860000,
+    dueDate: '2026-04-26',
+    status: 'overdue',
+    agingBucket: '31-60'
   },
   {
     id: 'inv-13',
@@ -835,6 +845,69 @@ export const aiSummaryByThreadId: Record<string, string> = inboxThreadData.aiSum
 
 export const aiDraftByMessageId: Record<string, string> = inboxThreadData.aiDraftByMessageId;
 
+export const customerInboxContextByCustomerId: Record<string, CustomerInboxContext> = {
+  'cust-1': {
+    avgDsoDays: 44,
+    lifetimeValueCents: 14200000,
+    followUpsSent: 3,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight:
+      'Northwind typically pays within 45 days after a reminder. Sarah’s credit memo question may delay release until resolved.'
+  },
+  'cust-3': {
+    avgDsoDays: 36,
+    lifetimeValueCents: 9800000,
+    followUpsSent: 2,
+    paymentTerms: 'Net-45',
+    source: 'QuickBooks',
+    aiInsight:
+      'Harbor Foods disputes are usually documentation-driven. Providing shipping proof quickly has resolved similar cases in under a week.'
+  },
+  'cust-6': {
+    avgDsoDays: 58,
+    lifetimeValueCents: 18600000,
+    followUpsSent: 4,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight:
+      'Ridgeline has requested installment plans twice in the past year. Both times they honored the schedule. Approving the split is low risk based on payment history.'
+  },
+  'cust-9': {
+    avgDsoDays: 41,
+    lifetimeValueCents: 22400000,
+    followUpsSent: 5,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight:
+      'Summit Retail often pays in partials before the full balance. Fee waiver requests are common but they usually remit the remainder within two weeks.'
+  },
+  'cust-18': {
+    avgDsoDays: 52,
+    lifetimeValueCents: 12100000,
+    followUpsSent: 3,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight:
+      'Cold-chain disputes require POD and temperature logs. Once docs are attached, this customer has historically paid within ten business days.'
+  }
+};
+
+export const escalationInsightByCustomerId: Record<string, string> = {
+  'cust-3':
+    'Dispute opened on INV-3301. Customer is waiting on warehouse shipping docs before releasing payment.',
+  'cust-6':
+    'Escalation notice sent yesterday. Tom responded within 24 hours requesting a payment plan, which is a positive signal.',
+  'cust-10':
+    'PO mismatch is blocking payment. Internal escalation requested corrected PO from account owner.',
+  'cust-16':
+    '90+ day balance with installment request pending. Finance call booked to confirm payment plan.',
+  'cust-18':
+    'Active dispute on cold-chain delivery. Customer requested POD and temperature logs before payment release.',
+  'cust-23':
+    'Escalation package sent to new AP contact after contact change. Awaiting approval on overdue invoices.'
+};
+
 export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
   'cust-1': [
     {
@@ -869,7 +942,8 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
       type: 'email_received',
       title: 'Dispute opened',
       description: 'Quantity mismatch on INV-3301',
-      occurredAt: '2026-05-26T16:42:00Z'
+      occurredAt: '2026-05-26T16:42:00Z',
+      threadEmailId: 'msg-3-turn-2'
     },
     {
       id: 'tl-5',
@@ -895,17 +969,35 @@ export const timelineByCustomerId: Record<string, TimelineEvent[]> = {
       id: 'tl-7',
       customerId: 'cust-6',
       type: 'email_received',
-      title: 'Payment plan requested',
-      description: 'Asked to split balance into installments',
-      occurredAt: '2026-05-25T14:20:00Z'
+      title: 'Tom replied',
+      description: 'Requested installment plan',
+      occurredAt: '2026-05-29T10:14:00Z',
+      threadEmailId: 'msg-6-turn-2'
     },
     {
-      id: 'tl-8',
+      id: 'tl-7b',
       customerId: 'cust-6',
       type: 'email_sent',
-      title: 'Final notice sent',
-      description: 'Escalation email for 60+ day balance',
-      occurredAt: '2026-05-20T09:00:00Z'
+      title: 'Escalation sent',
+      description: 'Escalation notice with aging statement',
+      occurredAt: '2026-05-28T09:00:00Z',
+      threadEmailId: 'msg-6-turn-1'
+    },
+    {
+      id: 'tl-7c',
+      customerId: 'cust-6',
+      type: 'email_sent',
+      title: '3rd reminder sent',
+      description: 'Firm overdue notice for INV-5402',
+      occurredAt: '2026-05-15T10:00:00Z'
+    },
+    {
+      id: 'tl-7d',
+      customerId: 'cust-6',
+      type: 'email_sent',
+      title: '2nd reminder sent',
+      description: 'Friendly reminder for open balance',
+      occurredAt: '2026-05-08T10:00:00Z'
     }
   ],
   'cust-9': [
@@ -1126,6 +1218,31 @@ export function getMessagesForCustomer(customerId: string): InboxMessage[] {
 
 export function getTimelineForCustomer(customerId: string): TimelineEvent[] {
   return timelineByCustomerId[customerId] ?? [];
+}
+
+export function getEscalationInsightForCustomer(customerId: string): string | undefined {
+  return escalationInsightByCustomerId[customerId];
+}
+
+export function getCustomerInboxContext(
+  customerId: string,
+  customer: Customer
+): CustomerInboxContext {
+  const stored = customerInboxContextByCustomerId[customerId];
+  if (stored) return stored;
+
+  const followUpsSent = (timelineByCustomerId[customerId] ?? []).filter((event) =>
+    `${event.title} ${event.description}`.toLowerCase().includes('reminder')
+  ).length;
+
+  return {
+    avgDsoDays: Math.max(customer.daysOverdue, 0),
+    lifetimeValueCents: customer.balanceCents * 4,
+    followUpsSent: followUpsSent || 1,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight: ''
+  };
 }
 
 export function getAiDraftForMessage(messageId: string): string {

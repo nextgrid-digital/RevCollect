@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { agentConfig, getAiDraftForMessage } from '../../mock-data';
-import type { Customer, InboxMessage, ThreadEmail } from '../../types';
+import type {
+  Customer,
+  CustomerInboxContext,
+  InboxMessage,
+  ThreadEmail,
+  TimelineEvent
+} from '../../types';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { ConversationThread } from './conversation-thread';
 import { InboxFloatingComposer } from './inbox-floating-composer';
@@ -19,6 +25,12 @@ interface InboxConversationPaneProps {
   selectedMessage: InboxMessage;
   threadEmails: ThreadEmail[];
   threadSummary: string;
+  inboxContext?: CustomerInboxContext;
+  escalationInsight?: string;
+  timelineEvents: TimelineEvent[];
+  highlightedEmailId?: string | null;
+  scrollToEmailId?: string | null;
+  onActivityEmailClick?: (emailId: string) => void;
   isMobile: boolean;
   onBack: () => void;
   contextOpen: boolean;
@@ -30,6 +42,12 @@ export function InboxConversationPane({
   selectedMessage,
   threadEmails,
   threadSummary,
+  inboxContext,
+  escalationInsight,
+  timelineEvents,
+  highlightedEmailId,
+  scrollToEmailId,
+  onActivityEmailClick,
   isMobile,
   onBack,
   contextOpen,
@@ -38,6 +56,18 @@ export function InboxConversationPane({
   const paneRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const composerHeightRef = useRef(0);
+
+  useEffect(() => {
+    if (!scrollToEmailId || !threadScrollRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      const target = threadScrollRef.current?.querySelector(
+        `[data-thread-email-id="${scrollToEmailId}"]`
+      );
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [scrollToEmailId]);
 
   const handleComposerHeight = useCallback((height: number) => {
     paneRef.current?.style.setProperty('--inbox-composer-height', `${height}px`);
@@ -99,11 +129,18 @@ export function InboxConversationPane({
               <SheetHeader className='sr-only'>
                 <SheetTitle>{customer.name}</SheetTitle>
               </SheetHeader>
-              <CustomerContextPanel
-                customer={customer}
-                threadSubject={selectedMessage.subject}
-                threadSummary={threadSummary}
-              />
+              {inboxContext ? (
+                <CustomerContextPanel
+                  customer={customer}
+                  threadSubject={selectedMessage.subject}
+                  threadSummary={threadSummary}
+                  inboxContext={inboxContext}
+                  escalationInsight={escalationInsight}
+                  timelineEvents={timelineEvents}
+                  threadEmails={threadEmails}
+                  onActivityEmailClick={onActivityEmailClick}
+                />
+              ) : null}
             </SheetContent>
           </Sheet>
         </div>
@@ -113,7 +150,7 @@ export function InboxConversationPane({
         ref={threadScrollRef}
         className='min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 lg:pr-[var(--inbox-panel-reserve)] xl:py-4'
       >
-        <ConversationThread emails={threadEmails} />
+        <ConversationThread emails={threadEmails} highlightedEmailId={highlightedEmailId} />
       </div>
 
       <InboxFloatingComposer
@@ -121,7 +158,6 @@ export function InboxConversationPane({
         draft={getAiDraftForMessage(selectedMessage.id)}
         customerStatus={customer.status}
         defaultTone={agentConfig.tone}
-        overlayClassName='lg:pr-[var(--inbox-panel-reserve)]'
         onOverlayHeightChange={handleComposerHeight}
       />
     </div>

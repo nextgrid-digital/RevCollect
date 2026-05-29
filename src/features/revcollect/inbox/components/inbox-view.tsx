@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import { StatusPill } from '../../components/status-pill';
 import { InboxMessageListHeader } from './inbox-message-list-header';
@@ -9,14 +9,19 @@ import {
   CustomerContextPanelFloatingHeader
 } from '../../components/customer-context-panel';
 import { InboxConversationPane } from './inbox-conversation-pane';
-import { InboxThreadSummaryCard } from './inbox-thread-summary-card';
+import { InboxActivityCard } from './inbox-activity-card';
+import { InboxAiInsightCard } from './inbox-ai-insight-card';
+import { InboxEscalationCard } from './inbox-escalation-card';
 import { EmailThreadHeader } from './email-thread-header';
 import { formatRelativeDate } from '../../utils';
 import { filterInboxMessages, type InboxListFilter } from '../lib/filter-inbox-messages';
 import {
   getAiSummaryForThread,
   getCustomerById,
+  getCustomerInboxContext,
+  getEscalationInsightForCustomer,
   getThreadEmails,
+  getTimelineForCustomer,
   inboxMessages
 } from '../../mock-data';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -48,6 +53,8 @@ export function InboxView() {
   const [listFilter, setListFilter] = useState<InboxListFilter>('all');
   const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
   const [contextOpen, setContextOpen] = useState(false);
+  const [highlightedEmailId, setHighlightedEmailId] = useState<string | null>(null);
+  const [scrollToEmailId, setScrollToEmailId] = useState<string | null>(null);
 
   const allCount = inboxMessages.length;
   const overdueCount = useMemo(
@@ -82,7 +89,37 @@ export function InboxView() {
   const selectedMessage = inboxMessages.find((m) => m.id === selectedId);
   const customer = selectedMessage ? getCustomerById(selectedMessage.customerId) : undefined;
   const threadEmails = selectedMessage ? getThreadEmails(selectedMessage.id) : [];
+
+  useEffect(() => {
+    setHighlightedEmailId(null);
+    setScrollToEmailId(null);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!scrollToEmailId) return;
+    const timeoutId = window.setTimeout(() => {
+      setScrollToEmailId(null);
+      setHighlightedEmailId(null);
+    }, 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [scrollToEmailId]);
+
+  const handleActivityEmailClick = useCallback(
+    (emailId: string) => {
+      setHighlightedEmailId(emailId);
+      setScrollToEmailId(emailId);
+      if (isMobile) {
+        setMobilePane('thread');
+      }
+    },
+    [isMobile]
+  );
   const threadSummary = selectedMessage ? getAiSummaryForThread(selectedMessage.id) : '';
+  const inboxContext = customer ? getCustomerInboxContext(customer.id, customer) : undefined;
+  const escalationInsight = customer ? getEscalationInsightForCustomer(customer.id) : undefined;
+  const timelineEvents = customer ? getTimelineForCustomer(customer.id) : [];
+  const aiInsightText =
+    inboxContext?.aiInsight || (threadSummary && selectedMessage ? threadSummary : '');
   const latestEmail = threadEmails[threadEmails.length - 1];
 
   const showList = !isMobile || mobilePane === 'list';
@@ -199,13 +236,31 @@ export function InboxView() {
 
         <div className='relative flex min-h-0 min-w-0 flex-1 flex-col'>
           {customer && selectedMessage ? (
-            <div className='pointer-events-auto absolute top-0 right-0 z-20 hidden w-64 flex-col gap-2 px-3 pt-3 lg:flex'>
-              <div className='overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
-                <CustomerContextPanelFloatingBody customer={customer} />
-              </div>
-              {threadSummary ? (
-                <InboxThreadSummaryCard subject={selectedMessage.subject} summary={threadSummary} />
+            <div className='pointer-events-auto absolute top-0 right-0 z-20 hidden w-64 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pt-2 pb-4 lg:flex lg:max-h-[min(85vh,calc(100dvh-var(--header-height)-6rem))]'>
+              {inboxContext ? (
+                <CustomerContextPanelFloatingBody customer={customer} inboxContext={inboxContext} />
               ) : null}
+              {aiInsightText ? (
+                <div className='w-full shrink-0'>
+                  <InboxAiInsightCard text={aiInsightText} />
+                </div>
+              ) : null}
+              {escalationInsight ? (
+                <div className='w-full shrink-0'>
+                  <InboxEscalationCard text={escalationInsight} />
+                </div>
+              ) : null}
+              <div className='w-full shrink-0'>
+                <InboxActivityCard
+                  events={timelineEvents}
+                  threadEmails={threadEmails}
+                  onEventClick={handleActivityEmailClick}
+                />
+              </div>
+              <div
+                aria-hidden
+                className='w-full shrink-0 min-h-[calc(min(85vh,100dvh-var(--header-height)-6rem)/2)]'
+              />
             </div>
           ) : null}
 
@@ -215,6 +270,12 @@ export function InboxView() {
               selectedMessage={selectedMessage}
               threadEmails={threadEmails}
               threadSummary={threadSummary}
+              inboxContext={inboxContext}
+              escalationInsight={escalationInsight}
+              timelineEvents={timelineEvents}
+              highlightedEmailId={highlightedEmailId}
+              scrollToEmailId={scrollToEmailId}
+              onActivityEmailClick={handleActivityEmailClick}
               isMobile={isMobile}
               onBack={() => setMobilePane('list')}
               contextOpen={contextOpen}
