@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import InputBar from '@/components/chat/input-bar';
 import { ModeSelector } from '@/components/chat/mode-selector';
 import { ModelPicker } from '@/components/chat/model-picker';
@@ -46,6 +46,64 @@ function InboxDraftButton({ isLoading, onClick }: { isLoading: boolean; onClick:
   );
 }
 
+function makeDraftBody(draft: string, tone: CollectionTone, playbook: CollectionPlaybook): string {
+  return buildCollectionDraft({
+    baseDraft: draft,
+    tone,
+    playbook,
+    signature: agentConfig.signature
+  });
+}
+
+interface ComposerToolbarProps {
+  autoRun: boolean;
+  tone: CollectionTone;
+  playbook: CollectionPlaybook;
+  isDrafting: boolean;
+  onAutoRunChange: (checked: boolean) => void;
+  onToneChange: (toneId: string) => void;
+  onPlaybookChange: (playbookId: string) => void;
+  onDraftClick: () => void;
+}
+
+const ComposerToolbar = memo(function ComposerToolbar({
+  autoRun,
+  tone,
+  playbook,
+  isDrafting,
+  onAutoRunChange,
+  onToneChange,
+  onPlaybookChange,
+  onDraftClick
+}: ComposerToolbarProps) {
+  return (
+    <>
+      <InboxDraftButton isLoading={isDrafting} onClick={onDraftClick} />
+      <ModeSelector modes={COLLECTION_TONES} value={tone} onChange={onToneChange} />
+      <ModelPicker
+        models={COLLECTION_PLAYBOOKS}
+        value={playbook}
+        onChange={onPlaybookChange}
+        placeholder='Playbook'
+      />
+      <div className='border-border ml-0.5 flex shrink-0 items-center gap-1.5 border-l pl-2.5'>
+        <Switch
+          id='inbox-composer-auto-run'
+          checked={autoRun}
+          onCheckedChange={onAutoRunChange}
+          className='scale-90'
+        />
+        <Label
+          htmlFor='inbox-composer-auto-run'
+          className='text-muted-foreground cursor-pointer text-xs font-normal whitespace-nowrap'
+        >
+          Auto-run
+        </Label>
+      </div>
+    </>
+  );
+});
+
 interface InboxFloatingComposerProps {
   draft: string;
   customerStatus: CollectionStatus;
@@ -70,6 +128,17 @@ export function InboxFloatingComposer({
   const [autoRun, setAutoRun] = useState(false);
   const [isDrafting, startDrafting] = useTransition();
 
+  const draftRef = useRef(draft);
+  const toneRef = useRef(tone);
+  const playbookRef = useRef(playbook);
+  draftRef.current = draft;
+  toneRef.current = tone;
+  playbookRef.current = playbook;
+
+  const setBodyIfChanged = useCallback((next: string) => {
+    setBody((prev) => (prev === next ? prev : next));
+  }, []);
+
   const applyDraft = useCallback(
     (options?: {
       tone?: CollectionTone;
@@ -78,13 +147,12 @@ export function InboxFloatingComposer({
       showLoading?: boolean;
     }) => {
       const run = () => {
-        setBody(
-          buildCollectionDraft({
-            baseDraft: draft,
-            tone: options?.tone ?? tone,
-            playbook: options?.playbook ?? playbook,
-            signature: agentConfig.signature
-          })
+        setBodyIfChanged(
+          makeDraftBody(
+            draftRef.current,
+            options?.tone ?? toneRef.current,
+            options?.playbook ?? playbookRef.current
+          )
         );
         if (options?.notify) {
           toast.message('Draft ready — review and edit before sending');
@@ -97,72 +165,68 @@ export function InboxFloatingComposer({
         run();
       }
     },
-    [draft, tone, playbook]
+    [setBodyIfChanged]
   );
 
   useEffect(() => {
-    setTone(defaultTone);
-    setPlaybook(defaultPlaybookForStatus(customerStatus));
-  }, [draft, customerStatus, defaultTone]);
+    const nextTone = defaultTone;
+    const nextPlaybook = defaultPlaybookForStatus(customerStatus);
+    setTone(nextTone);
+    setPlaybook(nextPlaybook);
+    setAutoRun(false);
+    setBodyIfChanged('');
+  }, [draft, customerStatus, defaultTone, setBodyIfChanged]);
 
   useEffect(() => {
-    if (autoRun) {
-      setBody(
-        buildCollectionDraft({
-          baseDraft: draft,
-          tone: defaultTone,
-          playbook: defaultPlaybookForStatus(customerStatus),
-          signature: agentConfig.signature
-        })
-      );
-      return;
-    }
-    setBody('');
-  }, [draft, customerStatus, defaultTone]);
+    if (!autoRun) return;
+    setBodyIfChanged(makeDraftBody(draft, tone, playbook));
+  }, [autoRun, draft, tone, playbook, setBodyIfChanged]);
 
   const handleAutoRunChange = useCallback(
     (checked: boolean) => {
-      setAutoRun(checked);
-      if (checked) {
-        applyDraft();
+      setAutoRun((prev) => (prev === checked ? prev : checked));
+      if (!checked) {
+        setBodyIfChanged('');
       }
     },
-    [applyDraft]
+    [setBodyIfChanged]
   );
+
+  const onOverlayHeightChangeRef = useRef(onOverlayHeightChange);
+  const lastReportedHeightRef = useRef(0);
+
+  useEffect(() => {
+    onOverlayHeightChangeRef.current = onOverlayHeightChange;
+  }, [onOverlayHeightChange]);
 
   useEffect(() => {
     const el = overlayRef.current;
-    if (!el || !onOverlayHeightChange) return;
+    if (!el) return;
 
-    const report = () => onOverlayHeightChange(el.offsetHeight);
+    const report = () => {
+      const height = el.offsetHeight;
+      if (height === lastReportedHeightRef.current) return;
+      lastReportedHeightRef.current = height;
+      onOverlayHeightChangeRef.current?.(height);
+    };
 
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onOverlayHeightChange]);
+  }, []);
 
-  const handleToneChange = useCallback(
-    (toneId: string) => {
-      const nextTone = toneId as CollectionTone;
-      setTone(nextTone);
-      if (autoRun) {
-        applyDraft({ tone: nextTone });
-      }
-    },
-    [autoRun, applyDraft]
-  );
+  const handleToneChange = useCallback((toneId: string) => {
+    setTone(toneId as CollectionTone);
+  }, []);
 
-  const handlePlaybookChange = useCallback(
-    (playbookId: string) => {
-      const nextPlaybook = playbookId as CollectionPlaybook;
-      setPlaybook(nextPlaybook);
-      if (autoRun) {
-        applyDraft({ playbook: nextPlaybook });
-      }
-    },
-    [autoRun, applyDraft]
-  );
+  const handlePlaybookChange = useCallback((playbookId: string) => {
+    setPlaybook(playbookId as CollectionPlaybook);
+  }, []);
+
+  const handleDraftClick = useCallback(() => {
+    applyDraft({ notify: true, showLoading: true });
+  }, [applyDraft]);
 
   return (
     <div
@@ -183,33 +247,16 @@ export function InboxFloatingComposer({
           toast.success('Reply sent (mock)');
         }}
         leftActions={
-          <>
-            <InboxDraftButton
-              isLoading={isDrafting}
-              onClick={() => applyDraft({ notify: true, showLoading: true })}
-            />
-            <ModeSelector modes={COLLECTION_TONES} value={tone} onChange={handleToneChange} />
-            <ModelPicker
-              models={COLLECTION_PLAYBOOKS}
-              value={playbook}
-              onChange={handlePlaybookChange}
-              placeholder='Playbook'
-            />
-            <div className='border-border ml-0.5 flex shrink-0 items-center gap-1.5 border-l pl-2.5'>
-              <Switch
-                id='inbox-composer-auto-run'
-                checked={autoRun}
-                onCheckedChange={handleAutoRunChange}
-                className='scale-90'
-              />
-              <Label
-                htmlFor='inbox-composer-auto-run'
-                className='text-muted-foreground cursor-pointer text-xs font-normal whitespace-nowrap'
-              >
-                Auto-run
-              </Label>
-            </div>
-          </>
+          <ComposerToolbar
+            autoRun={autoRun}
+            tone={tone}
+            playbook={playbook}
+            isDrafting={isDrafting}
+            onAutoRunChange={handleAutoRunChange}
+            onToneChange={handleToneChange}
+            onPlaybookChange={handlePlaybookChange}
+            onDraftClick={handleDraftClick}
+          />
         }
       />
     </div>

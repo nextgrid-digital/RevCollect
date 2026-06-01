@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ThreadEmail, TimelineEvent } from '../../types';
 import { InboxActivityTimeline } from './inbox-activity-timeline';
 import { InboxContextRailSection } from './inbox-context-rail-section';
@@ -8,7 +9,11 @@ interface InboxActivityCardProps {
   onEventClick?: (emailId: string, event?: TimelineEvent) => void;
 }
 
-export function InboxActivityCard({ events, threadEmails, onEventClick }: InboxActivityCardProps) {
+function InboxActivityCardComponent({
+  events,
+  threadEmails,
+  onEventClick
+}: InboxActivityCardProps) {
   return (
     <InboxContextRailSection label='Activity' unstyled contentClassName='px-1 py-1'>
       <InboxActivityTimeline
@@ -19,3 +24,5 @@ export function InboxActivityCard({ events, threadEmails, onEventClick }: InboxA
     </InboxContextRailSection>
   );
 }
+
+export const InboxActivityCard = memo(InboxActivityCardComponent);

@@ -839,6 +839,10 @@ export const inboxMessages: InboxMessage[] = inboxThreadData.inboxMessages.sort(
   (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
 );
 
+export function getDefaultInboxMessageId(): string {
+  return inboxMessages.find((message) => message.unread)?.id ?? inboxMessages[0]?.id ?? '';
+}
+
 export const threadEmailsByThreadId: Record<string, ThreadEmail[]> =
   inboxThreadData.threadEmailsByThreadId;
 
@@ -1253,10 +1257,17 @@ export function getAiDraftForMessage(messageId: string): string {
   return aiDraftByMessageId[messageId] ?? '';
 }
 
+const sortedThreadEmailsCache = new Map<string, ThreadEmail[]>();
+
 export function getThreadEmails(threadId: string): ThreadEmail[] {
-  return (threadEmailsByThreadId[threadId] ?? []).sort(
+  const cached = sortedThreadEmailsCache.get(threadId);
+  if (cached) return cached;
+
+  const sorted = (threadEmailsByThreadId[threadId] ?? []).toSorted(
     (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
   );
+  sortedThreadEmailsCache.set(threadId, sorted);
+  return sorted;
 }
 
 /** @deprecated Use getThreadEmails */

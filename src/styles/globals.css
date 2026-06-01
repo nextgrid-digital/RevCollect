@@ -14,39 +14,44 @@
     @apply bg-background text-foreground;
   }
 
-  /* Auto-hide native scrollbars: fully hidden until scrolling */
+  /* Auto-hide scrollbar thumbs only — track width stays constant to avoid layout shift */
   * {
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
   }
 
   *[data-scrolling='true'] {
-    scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
 
   ::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  *[data-scrolling='true']::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
-  *[data-scrolling='true']::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  *[data-scrolling='true']::-webkit-scrollbar-thumb {
-    background-color: var(--border);
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent;
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
 
+  *[data-scrolling='true']::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+  }
+
   *[data-scrolling='true']::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
+  }
+}
+
+@layer utilities {
+  .scroll-stable {
+    scrollbar-gutter: stable;
   }
 }
 

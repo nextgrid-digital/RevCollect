@@ -60,5 +60,11 @@ export function enrichTimelineWithThreads(
     }
   }
 
+  for (const customerId of Object.keys(enriched)) {
+    enriched[customerId] = enriched[customerId]!.toSorted(
+      (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+    );
+  }
+
   return enriched;
 }

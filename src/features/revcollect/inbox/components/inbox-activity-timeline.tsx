@@ -31,14 +31,10 @@ export function InboxActivityTimeline({
     return <p className='text-muted-foreground text-sm'>No activity recorded yet.</p>;
   }
 
-  const sorted = events.toSorted(
-    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-  );
-
   return (
     <ol>
-      {sorted.map((event, index) => {
-        const isLast = index === sorted.length - 1;
+      {events.map((event, index) => {
+        const isLast = index === events.length - 1;
 
         const linkedEmailId = resolveTimelineThreadEmailId(event, threadEmails);
         const isClickable = Boolean(linkedEmailId && onEventClick);

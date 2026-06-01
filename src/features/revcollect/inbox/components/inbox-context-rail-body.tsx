@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Customer, CustomerInboxContext, Invoice } from '../../types';
 import { getInvoicesForCustomer } from '../../mock-data';
 import { InboxContextDetailsCard } from './inbox-context-details-card';
@@ -19,7 +20,7 @@ function sortInvoicesForRail(invoices: Invoice[]): Invoice[] {
   });
 }
 
-export function InboxContextRailBody({ customer, context }: InboxContextRailBodyProps) {
+function InboxContextRailBodyComponent({ customer, context }: InboxContextRailBodyProps) {
   const openInvoices = sortInvoicesForRail(
     getInvoicesForCustomer(customer.id).filter((invoice) => invoice.status !== 'current')
   ).slice(0, 3);
@@ -54,3 +55,5 @@ export function InboxContextRailBody({ customer, context }: InboxContextRailBody
     </div>
   );
 }
+
+export const InboxContextRailBody = memo(InboxContextRailBodyComponent);

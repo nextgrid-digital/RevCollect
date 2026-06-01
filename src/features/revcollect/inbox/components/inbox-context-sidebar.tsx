@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import {
   CustomerContextPanelFloatingBody,
@@ -21,7 +22,7 @@ interface InboxContextSidebarProps {
   onActivityEmailClick: (emailId: string) => void;
 }
 
-export function InboxContextSidebar({
+function InboxContextSidebarComponent({
   showHeader = true,
   customer,
   inboxContext,
@@ -42,8 +43,7 @@ export function InboxContextSidebar({
       ) : null}
       <div
         className={cn(
-          'flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4',
-          showHeader ? 'pt-2' : 'pt-2'
+          'scroll-stable flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4 pt-2'
         )}
       >
         <CustomerContextPanelFloatingBody customer={customer} inboxContext={inboxContext} />
@@ -64,11 +64,9 @@ export function InboxContextSidebar({
             onEventClick={onActivityEmailClick}
           />
         </div>
-        <div
-          aria-hidden
-          className='w-full shrink-0 min-h-[calc(min(85vh,100dvh-var(--header-height)-6rem)/2)]'
-        />
       </div>
     </div>
   );
 }
+
+export const InboxContextSidebar = memo(InboxContextSidebarComponent);

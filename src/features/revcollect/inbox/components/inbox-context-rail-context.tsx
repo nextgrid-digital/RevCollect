@@ -2,31 +2,48 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
   type SetStateAction
 } from 'react';
+import { getDefaultInboxMessageId } from '../../mock-data';
 import { cn } from '@/lib/utils';
+import { InboxContextRailContent } from './inbox-context-rail-content';
 
 interface InboxContextRailContextValue {
-  railContent: ReactNode | null;
-  setRailContent: Dispatch<SetStateAction<ReactNode | null>>;
+  selectedMessageId: string;
+  setSelectedMessageId: Dispatch<SetStateAction<string>>;
+  onActivityEmailClick: (emailId: string) => void;
+  registerActivityEmailClick: (handler: (emailId: string) => void) => void;
 }
 
 const InboxContextRailContext = createContext<InboxContextRailContextValue | null>(null);
 
 export function InboxContextRailProvider({ children }: { children: ReactNode }) {
-  const [railContent, setRailContent] = useState<ReactNode | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState(getDefaultInboxMessageId);
+  const activityEmailClickRef = useRef<(emailId: string) => void>(() => {});
+
+  const registerActivityEmailClick = useCallback((handler: (emailId: string) => void) => {
+    activityEmailClickRef.current = handler;
+  }, []);
+
+  const onActivityEmailClick = useCallback((emailId: string) => {
+    activityEmailClickRef.current(emailId);
+  }, []);
 
   const value = useMemo(
     () => ({
-      railContent,
-      setRailContent
+      selectedMessageId,
+      setSelectedMessageId,
+      onActivityEmailClick,
+      registerActivityEmailClick
     }),
-    [railContent]
+    [selectedMessageId, onActivityEmailClick, registerActivityEmailClick]
   );
 
   return (
@@ -43,8 +60,6 @@ export function useInboxContextRail() {
 }
 
 export function InboxContextRailMount({ className }: { className?: string }) {
-  const { railContent } = useInboxContextRail();
-
   return (
     <aside
       className={cn(
@@ -52,7 +67,7 @@ export function InboxContextRailMount({ className }: { className?: string }) {
         className
       )}
     >
-      {railContent}
+      <InboxContextRailContent />
     </aside>
   );
 }

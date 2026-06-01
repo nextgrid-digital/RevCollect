@@ -141,7 +141,7 @@ export function InboxConversationPane({
 
       <div
         ref={threadScrollRef}
-        className='min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 xl:py-4'
+        className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 xl:py-4'
       >
         <ConversationThread emails={threadEmails} highlightedEmailId={highlightedEmailId} />
       </div>
