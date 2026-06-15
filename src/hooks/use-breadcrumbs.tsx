@@ -13,15 +13,6 @@ const routeMapping: Record<string, BreadcrumbItem[]> = {
   '/customers': [{ title: 'Customers', link: '/customers' }],
   '/aging': [{ title: 'Aging', link: '/aging' }],
   '/agent': [{ title: 'Agent', link: '/agent' }],
-  '/settings': [{ title: 'Settings', link: '/settings' }],
-  '/settings/integrations': [
-    { title: 'Settings', link: '/settings' },
-    { title: 'Integrations', link: '/settings/integrations' }
-  ],
-  '/settings/billing': [
-    { title: 'Settings', link: '/settings' },
-    { title: 'Billing', link: '/settings/billing' }
-  ],
   '/onboarding': [{ title: 'Onboarding', link: '/onboarding' }]
 };
 
@@ -38,6 +29,14 @@ export function useBreadcrumbs() {
       return [
         { title: 'Customers', link: '/customers' },
         { title: 'Detail', link: pathname }
+      ];
+    }
+
+    const inboxMessageMatch = pathname.match(/^\/inbox\/([^/]+)$/);
+    if (inboxMessageMatch) {
+      return [
+        { title: 'Inbox', link: '/inbox' },
+        { title: 'Message', link: pathname }
       ];
     }
 

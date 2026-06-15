@@ -5,24 +5,27 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { CustomerAvatar } from '../../components/customer-avatar';
 import { StatusPill } from '../../components/status-pill';
-import { InvoiceCard } from '../../components/invoice-card';
+import { InvoicesTable } from '../../components/invoices-table';
 import { ActivityTimeline } from '../../components/activity-timeline';
 import { formatCurrency } from '../../utils';
-import { getCustomerById, getInvoicesForCustomer, getTimelineForCustomer } from '../../mock-data';
+import { useCustomer, useInvoicesForCustomer, useTimelineForCustomer } from '../../api/queries';
 
 interface CustomerDetailViewProps {
   customerId: string;
 }
 
 export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
-  const customer = getCustomerById(customerId);
+  const { data: customer, isPending } = useCustomer(customerId);
+  const { data: customerInvoices = [] } = useInvoicesForCustomer(customerId);
+  const { data: timeline = [] } = useTimelineForCustomer(customerId);
+
+  if (isPending) {
+    return <p className='text-muted-foreground text-sm'>Loading customer…</p>;
+  }
 
   if (!customer) {
     notFound();
   }
-
-  const customerInvoices = getInvoicesForCustomer(customerId);
-  const timeline = getTimelineForCustomer(customerId);
 
   return (
     <div className='space-y-8'>
@@ -38,34 +41,29 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
             </div>
           </div>
         </div>
-        <div className='mt-3 w-full text-left sm:mt-0 sm:w-auto sm:text-right'>
+        <div className='text-right'>
           <p className='text-muted-foreground text-sm'>Outstanding balance</p>
           <p className='text-2xl font-semibold tabular-nums'>
             {formatCurrency(customer.balanceCents)}
           </p>
+          {customer.daysOverdue > 0 ? (
+            <p className='text-muted-foreground text-sm'>{customer.daysOverdue} days overdue</p>
+          ) : null}
         </div>
       </div>
 
-      <div className='grid gap-8 lg:grid-cols-2'>
-        <section>
-          <h3 className='mb-4 text-lg font-medium'>Invoices</h3>
-          <div className='space-y-2'>
-            {customerInvoices.length === 0 ? (
-              <p className='text-muted-foreground text-sm'>No invoices on file.</p>
-            ) : (
-              customerInvoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} />)
-            )}
-          </div>
-        </section>
+      <section>
+        <h3 className='mb-4 text-lg font-medium'>Invoices</h3>
+        <InvoicesTable invoices={customerInvoices} />
+      </section>
 
-        <section>
-          <h3 className='mb-4 text-lg font-medium'>Activity</h3>
-          <ActivityTimeline events={timeline} />
-        </section>
-      </div>
+      <section>
+        <h3 className='mb-4 text-lg font-medium'>Activity</h3>
+        <ActivityTimeline events={timeline} />
+      </section>
 
       <Button asChild variant='outline'>
-        <Link href='/inbox'>Back to inbox</Link>
+        <Link href='/inbox'>View in inbox</Link>
       </Button>
     </div>
   );

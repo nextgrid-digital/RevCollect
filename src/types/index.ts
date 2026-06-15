@@ -18,6 +18,7 @@ export interface NavItem {
   label?: string;
   description?: string;
   isActive?: boolean;
+  settingsTab?: 'general' | 'integrations' | 'billing';
   items?: NavItem[];
   access?: PermissionCheck;
 }

@@ -1,18 +1,10 @@
 import React from 'react';
-import { Heading } from '../ui/heading';
-import type { InfobarContent } from '@/components/ui/infobar';
 import { cn } from '@/lib/utils';
 
 function PageSkeleton() {
   return (
-    <div className='flex flex-1 animate-pulse flex-col gap-4 p-4 md:px-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <div className='bg-muted mb-2 h-8 w-48 rounded' />
-          <div className='bg-muted h-4 w-96 rounded' />
-        </div>
-      </div>
-      <div className='bg-muted mt-6 h-40 w-full rounded-lg' />
+    <div className='flex flex-1 animate-pulse flex-col gap-4'>
+      <div className='bg-muted h-40 w-full rounded-lg' />
       <div className='bg-muted h-40 w-full rounded-lg' />
     </div>
   );
@@ -23,10 +15,6 @@ export default function PageContainer({
   isLoading = false,
   access = true,
   accessFallback,
-  pageTitle,
-  pageDescription,
-  infoContent,
-  pageHeaderAction,
   compactMobile = false,
   lockPageScroll = false,
   flushTop = false
@@ -35,10 +23,6 @@ export default function PageContainer({
   isLoading?: boolean;
   access?: boolean;
   accessFallback?: React.ReactNode;
-  pageTitle?: string;
-  pageDescription?: string;
-  infoContent?: InfobarContent;
-  pageHeaderAction?: React.ReactNode;
   compactMobile?: boolean;
   lockPageScroll?: boolean;
   flushTop?: boolean;
@@ -57,27 +41,19 @@ export default function PageContainer({
 
   const content = isLoading ? <PageSkeleton /> : children;
 
-  const hasHeader = pageTitle || pageHeaderAction;
-
   const pageClasses = compactMobile
     ? cn('flex flex-1 flex-col px-3 pb-3 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-1 md:pt-4')
     : cn('flex flex-1 flex-col px-4 pb-4 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-2 md:pt-4');
 
   return (
-    <div
-      className={lockPageScroll ? cn(pageClasses, 'min-h-0 flex-1 overflow-hidden') : pageClasses}
-    >
-      {hasHeader && (
-        <div className='mb-3 flex shrink-0 flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
-          <Heading
-            title={pageTitle ?? ''}
-            description={compactMobile ? '' : (pageDescription ?? '')}
-            infoContent={infoContent}
-          />
-          {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}
-        </div>
-      )}
-      <div className={lockPageScroll ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : undefined}>
+    <div className={cn(pageClasses, 'min-h-0 min-w-0 flex-1 overflow-hidden')}>
+      <div
+        className={
+          lockPageScroll
+            ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+            : 'min-h-0 flex-1 overflow-y-auto'
+        }
+      >
         {content}
       </div>
     </div>

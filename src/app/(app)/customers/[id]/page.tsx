@@ -9,7 +9,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const { id } = await params;
 
   return (
-    <PageContainer pageTitle='Customer' pageDescription='Account details and collection history.'>
+    <PageContainer>
       <CustomerDetailView customerId={id} />
     </PageContainer>
   );

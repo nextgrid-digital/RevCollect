@@ -1,22 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { agentConfig, getAiDraftForMessage } from '../../mock-data';
 import type {
+  AgentDraftMeta,
   Customer,
   CustomerInboxContext,
   InboxMessage,
+  LastActionInsight,
   ThreadEmail,
   TimelineEvent
 } from '../../types';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { ConversationThread } from './conversation-thread';
-import { InboxFloatingComposer } from './inbox-floating-composer';
-
-const DEFAULT_COMPOSER_RESERVE = '11rem';
+import { InboxAgentDraftPanel } from './inbox-agent-draft-panel';
+import { InboxThreadActionBar } from './inbox-thread-action-bar';
 
 interface InboxConversationPaneProps {
   customer: Customer;
@@ -24,11 +24,14 @@ interface InboxConversationPaneProps {
   threadEmails: ThreadEmail[];
   threadSummary: string;
   inboxContext?: CustomerInboxContext;
-  escalationInsight?: string;
+  deepAnalysisText?: string;
   timelineEvents: TimelineEvent[];
   highlightedEmailId?: string | null;
   scrollToEmailId?: string | null;
   onActivityEmailClick?: (emailId: string) => void;
+  agentDraftMeta?: AgentDraftMeta;
+  aiDraftBase?: string;
+  lastAction?: LastActionInsight;
   isMobile: boolean;
   onBack: () => void;
   contextOpen: boolean;
@@ -41,19 +44,28 @@ export function InboxConversationPane({
   threadEmails,
   threadSummary,
   inboxContext,
-  escalationInsight,
+  deepAnalysisText,
   timelineEvents,
   highlightedEmailId,
   scrollToEmailId,
   onActivityEmailClick,
+  agentDraftMeta,
+  aiDraftBase,
+  lastAction,
   isMobile,
   onBack,
   contextOpen,
   onContextOpenChange
 }: InboxConversationPaneProps) {
-  const paneRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
-  const composerHeightRef = useRef(0);
+  const [composerPad, setComposerPad] = useState(0);
+
+  const latestCustomerEmailId = useMemo(() => {
+    for (let i = threadEmails.length - 1; i >= 0; i -= 1) {
+      if (threadEmails[i]?.author === 'customer') return threadEmails[i]!.id;
+    }
+    return undefined;
+  }, [threadEmails]);
 
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
@@ -67,31 +79,21 @@ export function InboxConversationPane({
     return () => cancelAnimationFrame(frame);
   }, [scrollToEmailId]);
 
-  const handleComposerHeight = useCallback((height: number) => {
-    paneRef.current?.style.setProperty('--inbox-composer-height', `${height}px`);
-
-    const scrollEl = threadScrollRef.current;
-    if (!scrollEl) {
-      composerHeightRef.current = height;
-      return;
+  useEffect(() => {
+    if (!agentDraftMeta) {
+      setComposerPad(0);
     }
+  }, [agentDraftMeta]);
 
-    const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-    const wasNearBottom = composerHeightRef.current === 0 || distanceFromBottom < 64;
-
-    if (wasNearBottom) {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    }
-
-    composerHeightRef.current = height;
-  }, []);
+  const handleActivityEmailClick = useCallback(
+    (emailId: string) => {
+      onActivityEmailClick?.(emailId);
+    },
+    [onActivityEmailClick]
+  );
 
   return (
-    <div
-      ref={paneRef}
-      className='bg-background relative flex min-h-0 min-w-0 flex-1 flex-col'
-      style={{ '--inbox-composer-height': DEFAULT_COMPOSER_RESERVE } as CSSProperties}
-    >
+    <div className='bg-background relative flex min-h-0 min-w-0 flex-1 flex-col'>
       {isMobile ? (
         <div className='flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2 lg:hidden'>
           <Button
@@ -128,10 +130,10 @@ export function InboxConversationPane({
                   threadSubject={selectedMessage.subject}
                   threadSummary={threadSummary}
                   inboxContext={inboxContext}
-                  escalationInsight={escalationInsight}
+                  deepAnalysisText={deepAnalysisText}
                   timelineEvents={timelineEvents}
                   threadEmails={threadEmails}
-                  onActivityEmailClick={onActivityEmailClick}
+                  onActivityEmailClick={handleActivityEmailClick}
                 />
               ) : null}
             </SheetContent>
@@ -139,20 +141,39 @@ export function InboxConversationPane({
         </div>
       ) : null}
 
-      <div
-        ref={threadScrollRef}
-        className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scroll-padding-bottom:var(--inbox-composer-height)] px-4 py-3 md:pr-5 xl:py-4'
-      >
-        <ConversationThread emails={threadEmails} highlightedEmailId={highlightedEmailId} />
-      </div>
-
-      <InboxFloatingComposer
-        key={selectedMessage.id}
-        draft={getAiDraftForMessage(selectedMessage.id)}
-        customerStatus={customer.status}
-        defaultTone={agentConfig.tone}
-        onOverlayHeightChange={handleComposerHeight}
+      <InboxThreadActionBar
+        lastAction={lastAction}
+        outstandingCents={customer.balanceCents}
+        suggestedAction={selectedMessage.suggestedAction}
       />
+
+      <div className='relative flex min-h-0 flex-1 flex-col overflow-hidden'>
+        <div
+          ref={threadScrollRef}
+          className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 md:pr-5 xl:py-4'
+          style={composerPad > 0 ? { paddingBottom: composerPad } : undefined}
+        >
+          <ConversationThread
+            emails={threadEmails}
+            highlightedEmailId={highlightedEmailId}
+            customerName={customer.name}
+            customerCompany={customer.company}
+            customerAvatarUrl={customer.avatarUrl}
+            latestCustomerEmailId={latestCustomerEmailId}
+            replyIntentLabel={selectedMessage.replyIntentLabel}
+          />
+        </div>
+
+        {agentDraftMeta ? (
+          <InboxAgentDraftPanel
+            floating
+            draftMeta={agentDraftMeta}
+            customerStatus={customer.status}
+            baseDraft={aiDraftBase ?? ''}
+            onOverlayHeightChange={setComposerPad}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

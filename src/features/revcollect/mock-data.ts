@@ -1,5 +1,6 @@
 import type {
   AgentConfig,
+  AgentDraftMeta,
   AgingBucket,
   AgingBucketSummary,
   CollectionStatus,
@@ -8,12 +9,13 @@ import type {
   InboxMessage,
   IntegrationStatus,
   Invoice,
+  LastActionInsight,
   ThreadEmail,
   TimelineEvent
 } from './types';
 import { enrichTimelineWithThreads } from './inbox/lib/enrich-timeline-with-threads';
 import { createInboxThreadData } from './mock-inbox-threads';
-import { dicebearAvatar } from './utils';
+import { dicebearAvatar, formatRelativeDate } from './utils';
 
 type CustomerSeed = Omit<Customer, 'balanceCents'>;
 
@@ -850,6 +852,9 @@ export const aiSummaryByThreadId: Record<string, string> = inboxThreadData.aiSum
 
 export const aiDraftByMessageId: Record<string, string> = inboxThreadData.aiDraftByMessageId;
 
+export const agentDraftMetaByMessageId: Record<string, AgentDraftMeta> =
+  inboxThreadData.agentDraftMetaByMessageId;
+
 export const customerInboxContextByCustomerId: Record<string, CustomerInboxContext> = {
   'cust-1': {
     avgDsoDays: 44,
@@ -875,8 +880,9 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     followUpsSent: 4,
     paymentTerms: 'Net-30',
     source: 'QuickBooks',
-    aiInsight:
-      'Ridgeline has requested installment plans twice in the past year. Both times they honored the schedule. Approving the split is low risk based on payment history.'
+    aiInsight: 'Typically pays 20-25 days late. Payment velocity slowing over last 3 months.',
+    deepAnalysis:
+      'Ridgeline has requested installment plans twice in the past year. Both times they honored the full schedule within 5 days of each due date. Approving the split is low risk. The 3-month timeline matches their cash flow cycle (Q2 is historically tight for construction firms).'
   },
   'cust-9': {
     avgDsoDays: 41,
@@ -894,7 +900,19 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     paymentTerms: 'Net-30',
     source: 'QuickBooks',
     aiInsight:
-      'Cold-chain disputes require POD and temperature logs. Once docs are attached, this customer has historically paid within ten business days.'
+      'Cold-chain disputes require POD and temperature logs. Once docs are attached, this customer has historically paid within ten business days.',
+    deepAnalysis:
+      'Active dispute on cold-chain delivery. Customer requested POD and temperature logs before payment release.'
+  },
+  'cust-23': {
+    avgDsoDays: 44,
+    lifetimeValueCents: 15200000,
+    followUpsSent: 3,
+    paymentTerms: 'Net-30',
+    source: 'QuickBooks',
+    aiInsight: 'AP contact changes typically delay payment 2-3 weeks while new approver onboards.',
+    deepAnalysis:
+      'Escalation package sent to new AP contact after contact change. Resending with aging statement is low risk and may unblock overdue approvals without a call.'
   }
 };
 
@@ -1255,6 +1273,36 @@ export function getCustomerInboxContext(
 
 export function getAiDraftForMessage(messageId: string): string {
   return aiDraftByMessageId[messageId] ?? '';
+}
+
+export function getAgentDraftMetaForMessage(messageId: string): AgentDraftMeta | undefined {
+  return agentDraftMetaByMessageId[messageId];
+}
+
+export function countAgentDraftsReady(): number {
+  return inboxMessages.filter((message) => message.agentDraftReady).length;
+}
+
+export function getLastActionForCustomer(customerId: string): LastActionInsight | undefined {
+  const events = getTimelineForCustomer(customerId);
+  const outbound = events.find(
+    (event) =>
+      event.type === 'email_sent' ||
+      event.title.toLowerCase().includes('escalation') ||
+      event.title.toLowerCase().includes('reminder')
+  );
+  if (!outbound) return undefined;
+
+  return {
+    title: outbound.title,
+    occurredAtLabel: formatRelativeDate(outbound.occurredAt)
+  };
+}
+
+export function getOpenInvoiceNumbersForCustomer(customerId: string): string[] {
+  return getInvoicesForCustomer(customerId)
+    .filter((invoice) => invoice.status !== 'current')
+    .map((invoice) => invoice.number);
 }
 
 const sortedThreadEmailsCache = new Map<string, ThreadEmail[]>();

@@ -11,7 +11,9 @@ import {
   type ReactNode,
   type SetStateAction
 } from 'react';
-import { getDefaultInboxMessageId } from '../../mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { revcollectKeys } from '../../api/queries';
+import { getRevCollectService } from '../../api';
 import { cn } from '@/lib/utils';
 import { InboxContextRailContent } from './inbox-context-rail-content';
 
@@ -25,7 +27,13 @@ interface InboxContextRailContextValue {
 const InboxContextRailContext = createContext<InboxContextRailContextValue | null>(null);
 
 export function InboxContextRailProvider({ children }: { children: ReactNode }) {
-  const [selectedMessageId, setSelectedMessageId] = useState(getDefaultInboxMessageId);
+  const { data: defaultMessageId } = useQuery({
+    queryKey: [...revcollectKeys.inbox(), 'default-message-id'],
+    queryFn: () => getRevCollectService().getDefaultInboxMessageId(),
+    staleTime: Infinity
+  });
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const resolvedMessageId = selectedMessageId ?? defaultMessageId ?? '';
   const activityEmailClickRef = useRef<(emailId: string) => void>(() => {});
 
   const registerActivityEmailClick = useCallback((handler: (emailId: string) => void) => {
@@ -38,12 +46,17 @@ export function InboxContextRailProvider({ children }: { children: ReactNode }) 
 
   const value = useMemo(
     () => ({
-      selectedMessageId,
-      setSelectedMessageId,
+      selectedMessageId: resolvedMessageId,
+      setSelectedMessageId: (action: SetStateAction<string>) => {
+        setSelectedMessageId((prev) => {
+          const current = prev ?? defaultMessageId ?? '';
+          return typeof action === 'function' ? action(current) : action;
+        });
+      },
       onActivityEmailClick,
       registerActivityEmailClick
     }),
-    [selectedMessageId, onActivityEmailClick, registerActivityEmailClick]
+    [resolvedMessageId, defaultMessageId, onActivityEmailClick, registerActivityEmailClick]
   );
 
   return (

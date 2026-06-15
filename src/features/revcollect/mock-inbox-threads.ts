@@ -1,9 +1,12 @@
 import { COLLECTIONS_AGENT } from './constants';
 import type {
+  AgentDraftMeta,
+  AgentDraftTone,
   CollectionStatus,
   Customer,
   EmailAttachment,
   InboxMessage,
+  ReplyIntent,
   ThreadEmail
 } from './types';
 
@@ -31,6 +34,13 @@ type ScenarioTemplate = {
   summary: string;
   draft: string;
   turns: TurnInput[];
+  replyIntent?: ReplyIntent;
+  replyIntentLabel?: string;
+  agentDraftReady?: boolean;
+  suggestedAction?: string;
+  draftTitle?: string;
+  draftPreparedAtLabel?: string;
+  draftTone?: AgentDraftTone;
 };
 
 function agentBody(greeting: string, paragraphs: string[]): string {
@@ -364,66 +374,48 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
   'cust-6': {
     subject: 'Need payment plan options',
     preview: 'Cash flow is tight this quarter. Can we split the overdue balance...',
+    unread: true,
+    replyIntent: 'deflection',
+    replyIntentLabel: 'Deflection',
+    agentDraftReady: true,
+    suggestedAction: 'Send a follow-up addressing their installment request',
+    draftTitle: 'Approve installment plan with 3-month timeline',
+    draftPreparedAtLabel: '6:00 AM',
+    draftTone: 'professional',
     summary:
       'Tom requested a three-installment plan due to cash-flow constraints on a 60+ day balance. Escalation notice was previously sent.',
     draft:
-      'Hi Tom,\n\nThank you for reaching out. We can offer a three-installment plan on the overdue balance. I will send proposed dates and amounts for your approval shortly.',
+      "Hi Tom,\n\nThank you for reaching out. Based on our previous arrangements, we can offer a three-installment plan:\n\nInstallment 1: $15,000 by June 11\nInstallment 2: $15,000 by July 11\nInstallment 3: $11,200 by August 11\n\nBoth prior installment plans were completed on schedule, so we're confident this will work well. Please confirm and I'll prepare the formal agreement.",
     turns: [
       {
         author: 'agent',
-        hoursBeforeLatest: 336,
+        hoursBeforeLatest: 20,
         body: agentBody('Hi Tom,', [
-          'This is a friendly reminder that your account has an open balance past due.',
-          'Please let us know when payment can be released or if any invoices need clarification from our billing team.'
+          'Following up on the overdue balance of $41,200 across three invoices. Please advise when payment can be released.'
         ])
-      },
-      {
-        author: 'agent',
-        hoursBeforeLatest: 240,
-        body: agentBody('Hi Tom,', [
-          'Following up on the overdue balance on your account.',
-          'Invoice INV-5402 remains unpaid. Please advise on timing for remittance or share any issues blocking payment.'
-        ])
-      },
-      {
-        author: 'agent',
-        hoursBeforeLatest: 168,
-        body: agentBody('Hi Tom,', [
-          'This is a follow-up regarding the overdue balance on your account.',
-          'Please advise when payment can be released or if you need to discuss options.'
-        ]),
-        attachments: [
-          {
-            filename: 'escalation_notice.pdf',
-            mimeType: 'application/pdf',
-            sizeBytes: 198_400
-          }
-        ]
       },
       {
         author: 'customer',
-        hoursBeforeLatest: 24,
+        hoursBeforeLatest: 4,
         body: customerBody('Hi,', [
           'Cash flow is tight this quarter. Can we split the overdue balance into three installments?',
-          'We can commit to the first payment within ten business days if the schedule is workable.'
+          'We can commit to the first payment within ten business days.'
         ])
-      },
-      {
-        author: 'agent',
-        hoursBeforeLatest: 4,
-        body: agentBody('Hi Tom,', [
-          'Thank you for reaching out — we can review a three-installment structure.',
-          'I have attached a draft schedule for your finance team. Please reply with any requested changes.'
-        ]),
-        attachments: [
-          {
-            filename: 'installment_proposal.xlsx',
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            sizeBytes: 54_800
-          }
-        ]
       }
     ]
+  },
+  'cust-4': {
+    subject: 'Re: INV-4201 payment confirmation',
+    preview: 'We can honor payment by the committed date pending treasury approval...',
+    unread: false,
+    replyIntent: 'promise',
+    replyIntentLabel: 'Promise By May 30',
+    agentDraftReady: false,
+    suggestedAction: 'Monitor commitment — payment due May 30',
+    summary:
+      'James confirmed payment for INV-4201 by May 30 pending treasury approval. No follow-up needed unless date slips.',
+    draft:
+      'Hi James,\n\nThank you for confirming the payment commitment. I have noted May 30 on your account and will send an updated statement for your records.'
   },
   'cust-9': {
     subject: 'Partial payment sent for INV-9103',
@@ -525,6 +517,14 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
   'cust-23': {
     subject: 'AP contact change — overdue approvals',
     preview: 'Our new AP manager is now handling overdue invoice approvals...',
+    unread: true,
+    replyIntent: 'deflection',
+    replyIntentLabel: 'Deflection',
+    agentDraftReady: true,
+    suggestedAction: 'Resend escalation package to new AP contact',
+    draftTitle: 'Confirm receipt with new AP manager',
+    draftPreparedAtLabel: '6:00 AM',
+    draftTone: 'firm',
     summary:
       'Hannah shared a new AP contact. Escalation package with aging statement was sent to unblock overdue approvals.',
     draft:
@@ -676,16 +676,68 @@ function addHours(isoBase: string, hours: number): string {
   return date.toISOString();
 }
 
+/** Spread receivedAt across inbox date sections for dev/demo. */
+function daysAgoForInboxIndex(index: number): number {
+  if (index < 2) return 0;
+  if (index < 10) return 1 + ((index - 2) % 7);
+  if (index < 18) return 8 + ((index - 10) % 23);
+  const monthlyOffsets = [35, 38, 42, 45, 52, 58, 65, 72, 78, 88, 95, 105];
+  return monthlyOffsets[index - 18] ?? 45 + (index - 18) * 8;
+}
+
+function deriveStatusDefaults(
+  customer: Customer,
+  index: number,
+  template: ScenarioTemplate
+): Partial<ScenarioTemplate> {
+  if (template.replyIntent) {
+    return {};
+  }
+
+  switch (customer.status) {
+    case 'promised': {
+      const promiseDate = new Date();
+      promiseDate.setDate(promiseDate.getDate() + 14);
+      const monthDay = promiseDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        replyIntent: 'promise',
+        replyIntentLabel: `Promise By ${monthDay}`
+      };
+    }
+    case 'in_dispute':
+      return {
+        replyIntent: 'dispute',
+        replyIntentLabel: 'Dispute'
+      };
+    case 'overdue':
+      if (template.unread && index % 3 === 0) {
+        return {
+          replyIntent: 'deflection',
+          replyIntentLabel: 'Deflection',
+          agentDraftReady: true,
+          draftTitle: 'Send follow-up',
+          draftPreparedAtLabel: '6:00 AM',
+          draftTone: 'professional'
+        };
+      }
+      return {};
+    default:
+      return {};
+  }
+}
+
 function buildThreadsForCustomers(customers: Customer[]): {
   inboxMessages: InboxMessage[];
   threadEmailsByThreadId: Record<string, ThreadEmail[]>;
   aiSummaryByThreadId: Record<string, string>;
   aiDraftByMessageId: Record<string, string>;
+  agentDraftMetaByMessageId: Record<string, AgentDraftMeta>;
 } {
   const inboxMessages: InboxMessage[] = [];
   const threadEmailsByThreadId: Record<string, ThreadEmail[]> = {};
   const aiSummaryByThreadId: Record<string, string> = {};
   const aiDraftByMessageId: Record<string, string> = {};
+  const agentDraftMetaByMessageId: Record<string, AgentDraftMeta> = {};
   const agentFrom = COLLECTIONS_AGENT.email;
 
   customers.forEach((customer, index) => {
@@ -695,13 +747,21 @@ function buildThreadsForCustomers(customers: Customer[]): {
     const template = {
       ...baseTemplate,
       ...override,
+      ...deriveStatusDefaults(customer, index, {
+        ...baseTemplate,
+        ...override,
+        turns: override.turns ?? baseTemplate.turns
+      }),
       turns: override.turns ?? baseTemplate.turns
     };
 
     const receivedAt = new Date();
-    receivedAt.setDate(receivedAt.getDate() - template.daysAgo);
+    receivedAt.setDate(receivedAt.getDate() - daysAgoForInboxIndex(index));
     receivedAt.setHours(9 + (index % 6), 14, 0, 0);
     const receivedAtIso = receivedAt.toISOString();
+
+    const draftBody = `${template.draft}${SIGNATURE}`;
+    const agentDraftReady = template.agentDraftReady ?? index < 2;
 
     inboxMessages.push({
       id: threadId,
@@ -710,7 +770,11 @@ function buildThreadsForCustomers(customers: Customer[]): {
       preview: template.preview,
       receivedAt: receivedAtIso,
       unread: template.unread,
-      channel: 'email'
+      channel: 'email',
+      replyIntent: template.replyIntent,
+      replyIntentLabel: template.replyIntentLabel,
+      agentDraftReady,
+      suggestedAction: template.suggestedAction
     });
 
     threadEmailsByThreadId[threadId] = template.turns.map((turn, turnIndex) => {
@@ -733,14 +797,24 @@ function buildThreadsForCustomers(customers: Customer[]): {
     });
 
     aiSummaryByThreadId[threadId] = template.summary;
-    aiDraftByMessageId[threadId] = `${template.draft}${SIGNATURE}`;
+    aiDraftByMessageId[threadId] = draftBody;
+
+    if (agentDraftReady) {
+      agentDraftMetaByMessageId[threadId] = {
+        title: template.draftTitle ?? 'Send follow-up',
+        preparedAtLabel: template.draftPreparedAtLabel ?? '6:00 AM',
+        body: draftBody,
+        tone: template.draftTone ?? 'professional'
+      };
+    }
   });
 
   return {
     inboxMessages,
     threadEmailsByThreadId,
     aiSummaryByThreadId,
-    aiDraftByMessageId
+    aiDraftByMessageId,
+    agentDraftMetaByMessageId
   };
 }
 

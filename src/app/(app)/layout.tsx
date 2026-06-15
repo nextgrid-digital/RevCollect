@@ -1,6 +1,7 @@
 import KBar from '@/components/kbar';
 import AppSidebar from '@/components/layout/app-sidebar';
 import { AppChrome } from '@/components/layout/app-chrome';
+import { AppSettingsShell } from '@/components/layout/app-settings-shell';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
@@ -20,15 +21,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <KBar>
-      <SidebarProvider
-        defaultOpen={defaultOpen}
-        className='h-svh max-h-svh min-h-0 overflow-hidden'
-      >
-        <AppSidebar />
-        <SidebarInset className='flex min-h-0 flex-1 flex-col overflow-hidden'>
-          <AppChrome>{children}</AppChrome>
-        </SidebarInset>
-      </SidebarProvider>
+      <AppSettingsShell>
+        <SidebarProvider
+          defaultOpen={defaultOpen}
+          className='h-svh max-h-svh min-h-0 overflow-hidden'
+        >
+          <AppSidebar />
+          <SidebarInset className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+            <AppChrome>{children}</AppChrome>
+          </SidebarInset>
+        </SidebarProvider>
+      </AppSettingsShell>
     </KBar>
   );
 }

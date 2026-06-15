@@ -34,7 +34,7 @@ export function InboxMessageListHeader({
   ];
 
   return (
-    <div className='space-y-3'>
+    <div className='space-y-4 px-4 pt-4 pb-3'>
       <div className='relative'>
         <Icons.search className='text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2' />
         <Input
@@ -42,10 +42,11 @@ export function InboxMessageListHeader({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder='Search emails...'
-          className='h-9 pl-9 text-sm'
+          className='h-9 border-0 bg-muted/50 pl-9 text-sm shadow-none'
         />
       </div>
-      <div className='flex gap-1.5 overflow-x-auto pb-1 whitespace-nowrap'>
+
+      <div className='flex gap-1.5 overflow-x-auto pb-0.5 whitespace-nowrap'>
         {filterPills.map((pill) => {
           const isActive = filter === pill.id;
           return (
@@ -54,21 +55,14 @@ export function InboxMessageListHeader({
               type='button'
               onClick={() => onFilterChange(pill.id)}
               className={cn(
-                'inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors',
+                'inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors',
                 isActive
-                  ? 'border-accent bg-accent text-accent-foreground'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               )}
             >
               <span>{pill.label}</span>
-              <span
-                className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[11px]',
-                  isActive ? 'bg-black/10 dark:bg-white/15' : 'bg-muted'
-                )}
-              >
-                {pill.count}
-              </span>
+              <span className='text-muted-foreground tabular-nums'>{pill.count}</span>
             </button>
           );
         })}

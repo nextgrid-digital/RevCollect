@@ -1,6 +1,8 @@
+'use client';
+
 import { memo } from 'react';
 import type { Customer, CustomerInboxContext, Invoice } from '../../types';
-import { getInvoicesForCustomer } from '../../mock-data';
+import { useInvoicesForCustomer } from '../../api/queries';
 import { InboxContextDetailsCard } from './inbox-context-details-card';
 import { InboxContextInvoiceCard } from './inbox-context-invoice-card';
 import { InboxContextMetricsGrid } from './inbox-context-metrics-grid';
@@ -9,6 +11,7 @@ import { InboxContextRailSection } from './inbox-context-rail-section';
 interface InboxContextRailBodyProps {
   customer: Customer;
   context: CustomerInboxContext;
+  showDetails?: boolean;
 }
 
 function sortInvoicesForRail(invoices: Invoice[]): Invoice[] {
@@ -20,9 +23,14 @@ function sortInvoicesForRail(invoices: Invoice[]): Invoice[] {
   });
 }
 
-function InboxContextRailBodyComponent({ customer, context }: InboxContextRailBodyProps) {
+function InboxContextRailBodyComponent({
+  customer,
+  context,
+  showDetails = false
+}: InboxContextRailBodyProps) {
+  const { data: invoices = [] } = useInvoicesForCustomer(customer.id);
   const openInvoices = sortInvoicesForRail(
-    getInvoicesForCustomer(customer.id).filter((invoice) => invoice.status !== 'current')
+    invoices.filter((invoice) => invoice.status !== 'current')
   ).slice(0, 3);
 
   return (
@@ -46,12 +54,14 @@ function InboxContextRailBodyComponent({ customer, context }: InboxContextRailBo
         )}
       </InboxContextRailSection>
 
-      <InboxContextDetailsCard
-        contactName={customer.name}
-        paymentTerms={context.paymentTerms}
-        followUpsSent={context.followUpsSent}
-        source={context.source}
-      />
+      {showDetails ? (
+        <InboxContextDetailsCard
+          contactName={customer.name}
+          paymentTerms={context.paymentTerms}
+          followUpsSent={context.followUpsSent}
+          source={context.source}
+        />
+      ) : null}
     </div>
   );
 }

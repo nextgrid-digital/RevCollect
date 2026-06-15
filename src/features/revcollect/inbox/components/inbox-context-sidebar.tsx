@@ -2,48 +2,30 @@
 
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
-import {
-  CustomerContextPanelFloatingBody,
-  CustomerContextPanelFloatingHeader
-} from '../../components/customer-context-panel';
-import type { Customer, CustomerInboxContext, ThreadEmail, TimelineEvent } from '../../types';
-import { InboxActivityCard } from './inbox-activity-card';
+import { CustomerContextPanelFloatingBody } from '../../components/customer-context-panel';
+import type { Customer, CustomerInboxContext } from '../../types';
 import { InboxAiInsightCard } from './inbox-ai-insight-card';
-import { InboxEscalationCard } from './inbox-escalation-card';
+import { InboxContextActionsCard } from './inbox-context-actions-card';
+import { InboxDeepAnalysisCard } from './inbox-deep-analysis-card';
 
 interface InboxContextSidebarProps {
-  showHeader?: boolean;
   customer: Customer;
   inboxContext: CustomerInboxContext;
   aiInsightText: string;
-  escalationInsight?: string;
-  timelineEvents: TimelineEvent[];
-  threadEmails: ThreadEmail[];
-  onActivityEmailClick: (emailId: string) => void;
+  deepAnalysisText?: string;
 }
 
 function InboxContextSidebarComponent({
-  showHeader = true,
   customer,
   inboxContext,
   aiInsightText,
-  escalationInsight,
-  timelineEvents,
-  threadEmails,
-  onActivityEmailClick
+  deepAnalysisText
 }: InboxContextSidebarProps) {
   return (
     <div className='flex h-full min-h-0 w-full flex-col'>
-      {showHeader ? (
-        <div className='border-border/60 shrink-0 border-b px-3 py-3'>
-          <div className='overflow-hidden rounded-[16px] bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
-            <CustomerContextPanelFloatingHeader customer={customer} />
-          </div>
-        </div>
-      ) : null}
       <div
         className={cn(
-          'scroll-stable flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4 pt-2'
+          'scroll-stable flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4 pt-3'
         )}
       >
         <CustomerContextPanelFloatingBody customer={customer} inboxContext={inboxContext} />
@@ -52,18 +34,12 @@ function InboxContextSidebarComponent({
             <InboxAiInsightCard text={aiInsightText} />
           </div>
         ) : null}
-        {escalationInsight ? (
+        {deepAnalysisText ? (
           <div className='w-full shrink-0'>
-            <InboxEscalationCard text={escalationInsight} />
+            <InboxDeepAnalysisCard text={deepAnalysisText} />
           </div>
         ) : null}
-        <div className='w-full shrink-0'>
-          <InboxActivityCard
-            events={timelineEvents}
-            threadEmails={threadEmails}
-            onEventClick={onActivityEmailClick}
-          />
-        </div>
+        <InboxContextActionsCard contactName={customer.name} source={inboxContext.source} />
       </div>
     </div>
   );

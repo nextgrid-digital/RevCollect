@@ -2,11 +2,10 @@
 
 import { cn } from '@/lib/utils';
 import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
-import { StatusPill } from '../../components/status-pill';
 import type { Customer, InboxMessage } from '../../types';
-import { formatRelativeDate } from '../../utils';
 import type { InboxListFilter } from '../lib/filter-inbox-messages';
 import { InboxMessageListHeader } from './inbox-message-list-header';
+import { InboxMessageListRow } from './inbox-message-list-row';
 
 interface InboxMessageListSidebarProps {
   showHeader?: boolean;
@@ -84,34 +83,13 @@ export function InboxMessageListSidebar({
               if (!msgCustomer) return null;
 
               return (
-                <li key={message.id}>
-                  <button
-                    type='button'
-                    onClick={() => onSelectMessage(message.id)}
-                    className={cn(
-                      'hover:bg-muted/50 flex w-full gap-3 px-3 py-3 text-left transition-colors',
-                      selectedId === message.id && 'bg-muted'
-                    )}
-                  >
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex items-center justify-between gap-2'>
-                        <span className={cn('truncate text-sm', message.unread && 'font-semibold')}>
-                          {msgCustomer.company}
-                        </span>
-                        <time className='text-muted-foreground shrink-0 text-xs'>
-                          {formatRelativeDate(message.receivedAt)}
-                        </time>
-                      </div>
-                      <p className='truncate text-sm'>{message.subject}</p>
-                      <p className='text-muted-foreground mt-1 line-clamp-2 text-xs'>
-                        {message.preview}
-                      </p>
-                      <div className='mt-2'>
-                        <StatusPill status={msgCustomer.status} />
-                      </div>
-                    </div>
-                  </button>
-                </li>
+                <InboxMessageListRow
+                  key={message.id}
+                  message={message}
+                  customer={msgCustomer}
+                  selected={selectedId === message.id}
+                  onSelect={() => onSelectMessage(message.id)}
+                />
               );
             })}
           </ul>

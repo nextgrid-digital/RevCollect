@@ -3,10 +3,7 @@ import { CustomersTable } from '@/features/revcollect/customers/components/custo
 
 export default function CustomersPage() {
   return (
-    <PageContainer
-      pageTitle='Customers'
-      pageDescription='Accounts with open balances and collection status.'
-    >
+    <PageContainer>
       <CustomersTable />
     </PageContainer>
   );

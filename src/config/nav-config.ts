@@ -38,34 +38,6 @@ export const navGroups: NavGroup[] = [
     ]
   },
   {
-    label: 'Settings',
-    items: [
-      {
-        title: 'Settings',
-        url: '#',
-        icon: 'settings',
-        isActive: true,
-        items: [
-          {
-            title: 'General',
-            url: '/settings',
-            icon: 'settings'
-          },
-          {
-            title: 'Integrations',
-            url: '/settings/integrations',
-            icon: 'integrations'
-          },
-          {
-            title: 'Billing',
-            url: '/settings/billing',
-            icon: 'billing'
-          }
-        ]
-      }
-    ]
-  },
-  {
     label: '',
     items: [
       {

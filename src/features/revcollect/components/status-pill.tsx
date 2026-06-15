@@ -25,6 +25,10 @@ const statusConfig: Record<CollectionStatus, { label: string; className: string 
   }
 };
 
+export const collectionStatusOptions = (
+  Object.entries(statusConfig) as [CollectionStatus, (typeof statusConfig)[CollectionStatus]][]
+).map(([value, { label }]) => ({ value, label }));
+
 interface StatusPillProps {
   status: CollectionStatus;
   className?: string;

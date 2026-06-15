@@ -48,6 +48,10 @@ export interface Customer {
   daysOverdue: number;
 }
 
+export type ReplyIntent = 'deflection' | 'promise' | 'dispute' | 'payment_confirmation' | 'other';
+
+export type AgentDraftTone = 'professional' | 'friendly' | 'firm';
+
 /** Extended context shown in the inbox right rail. */
 export interface CustomerInboxContext {
   avgDsoDays: number;
@@ -56,6 +60,7 @@ export interface CustomerInboxContext {
   paymentTerms: string;
   source: string;
   aiInsight: string;
+  deepAnalysis?: string;
 }
 
 export interface Invoice {
@@ -76,6 +81,22 @@ export interface InboxMessage {
   receivedAt: string;
   unread: boolean;
   channel: MessageChannel;
+  replyIntent?: ReplyIntent;
+  replyIntentLabel?: string;
+  agentDraftReady?: boolean;
+  suggestedAction?: string;
+}
+
+export interface AgentDraftMeta {
+  title: string;
+  preparedAtLabel: string;
+  body: string;
+  tone: AgentDraftTone;
+}
+
+export interface LastActionInsight {
+  title: string;
+  occurredAtLabel: string;
 }
 
 export interface TimelineEvent {

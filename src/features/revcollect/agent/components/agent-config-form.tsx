@@ -14,12 +14,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { agentConfig as defaultAgentConfig } from '../../mock-data';
+import { useAgentConfig } from '../../api/queries';
 import type { AgentConfig } from '../../types';
 
-export function AgentConfigForm() {
+function AgentConfigFormInner({ defaultAgentConfig }: { defaultAgentConfig: AgentConfig }) {
   const form = useAppForm({
-    defaultValues: defaultAgentConfig as AgentConfig,
+    defaultValues: defaultAgentConfig,
     onSubmit: async () => {
       toast.success('Agent settings saved (mock)');
     }
@@ -41,13 +41,13 @@ export function AgentConfigForm() {
           <form.Field name='tone'>
             {(field) => (
               <div className='space-y-2'>
-                <Label>Tone</Label>
+                <Label>Default tone</Label>
                 <Select
                   value={field.state.value}
                   onValueChange={(value) => field.handleChange(value as AgentConfig['tone'])}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder='Select tone' />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value='professional'>Professional</SelectItem>
@@ -61,11 +61,11 @@ export function AgentConfigForm() {
 
           <form.Field name='autoSendEnabled'>
             {(field) => (
-              <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+              <div className='flex items-center justify-between gap-4'>
                 <div>
                   <Label>Auto-send drafts</Label>
                   <p className='text-muted-foreground text-sm'>
-                    Send AI drafts without manual approval (not recommended).
+                    Automatically send agent-approved drafts without manual review.
                   </p>
                 </div>
                 <Switch checked={field.state.value} onCheckedChange={field.handleChange} />
@@ -80,7 +80,7 @@ export function AgentConfigForm() {
                 <Textarea
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className='min-h-[100px]'
+                  rows={4}
                 />
               </div>
             )}
@@ -93,7 +93,7 @@ export function AgentConfigForm() {
                 <Textarea
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  className='min-h-[80px]'
+                  rows={3}
                 />
               </div>
             )}
@@ -103,5 +103,20 @@ export function AgentConfigForm() {
 
       <Button type='submit'>Save settings</Button>
     </form>
+  );
+}
+
+export function AgentConfigForm() {
+  const { data: defaultAgentConfig, isPending } = useAgentConfig();
+
+  if (isPending || !defaultAgentConfig) {
+    return <p className='text-muted-foreground text-sm'>Loading agent settings…</p>;
+  }
+
+  return (
+    <AgentConfigFormInner
+      key={defaultAgentConfig.signature}
+      defaultAgentConfig={defaultAgentConfig}
+    />
   );
 }

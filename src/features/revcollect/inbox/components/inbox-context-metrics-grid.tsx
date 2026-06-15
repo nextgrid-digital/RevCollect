@@ -9,25 +9,22 @@ interface InboxContextMetricsGridProps {
   className?: string;
 }
 
-function MetricCell({
-  value,
-  label,
-  valueClassName
-}: {
-  value: string;
+interface MetricRowProps {
   label: string;
+  value: string;
   valueClassName?: string;
-}) {
+}
+
+function MetricRow({ label, value, valueClassName }: MetricRowProps) {
   return (
-    <div className='min-w-0 rounded-xl bg-white px-2.5 py-2.5 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
-      <p
-        className={cn('truncate text-sm leading-tight font-semibold tabular-nums', valueClassName)}
-        title={value}
-      >
+    <tr className='border-border/60 border-b last:border-b-0'>
+      <th scope='row' className='text-muted-foreground py-2 pr-3 text-left text-[11px] font-medium'>
+        {label}
+      </th>
+      <td className={cn('py-2 text-right text-sm font-semibold tabular-nums', valueClassName)}>
         {value}
-      </p>
-      <p className='text-muted-foreground mt-1 text-[11px] leading-none'>{label}</p>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -41,15 +38,24 @@ export function InboxContextMetricsGrid({
   const accentValueClass = 'text-rose-700 dark:text-rose-400';
 
   return (
-    <div className={cn('grid grid-cols-2 gap-2', className)}>
-      <MetricCell
-        value={formatCurrencyWhole(outstandingCents)}
-        label='Outstanding'
-        valueClassName={accentValueClass}
-      />
-      <MetricCell value={`${avgDsoDays}d`} label='Avg DSO' valueClassName={accentValueClass} />
-      <MetricCell value={String(followUpsSent)} label='Follow-ups' />
-      <MetricCell value={formatCompactCurrency(lifetimeValueCents)} label='Lifetime' />
+    <div
+      className={cn(
+        'overflow-hidden rounded-xl bg-white px-3 py-1 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800',
+        className
+      )}
+    >
+      <table className='w-full border-collapse'>
+        <tbody>
+          <MetricRow
+            label='Outstanding'
+            value={formatCurrencyWhole(outstandingCents)}
+            valueClassName={accentValueClass}
+          />
+          <MetricRow label='Avg DSO' value={`${avgDsoDays}d`} valueClassName={accentValueClass} />
+          <MetricRow label='Follow-ups' value={String(followUpsSent)} />
+          <MetricRow label='Lifetime' value={formatCompactCurrency(lifetimeValueCents)} />
+        </tbody>
+      </table>
     </div>
   );
 }

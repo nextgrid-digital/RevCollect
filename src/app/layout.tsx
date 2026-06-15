@@ -2,19 +2,14 @@ import Providers from '@/components/layout/providers';
 import { Toaster } from '@/components/ui/sonner';
 import { fontVariables } from '@/components/themes/font.config';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
+import { META_THEME_COLORS } from '@/components/themes/theme-color-meta';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { cn } from '@/lib/utils';
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
-import Script from 'next/script';
 import NextTopLoader from 'nextjs-toploader';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import '../styles/globals.css';
-
-const META_THEME_COLORS = {
-  light: '#ffffff',
-  dark: '#09090b'
-};
 
 export const metadata: Metadata = {
   title: 'Next Shadcn',
@@ -44,17 +39,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           fontVariables
         )}
       >
-        <Script id='theme-color-init' strategy='beforeInteractive'>
-          {`try {
-  var isDark =
-    localStorage.theme === 'dark' ||
-    ((!('theme' in localStorage) || localStorage.theme === 'system') &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
-  if (isDark) {
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '${META_THEME_COLORS.dark}');
-  }
-} catch (_) {}`}
-        </Script>
         <NextTopLoader color='var(--primary)' showSpinner={false} />
         <NuqsAdapter>
           <ThemeProvider

@@ -1,9 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { integrationStatus } from '../../mock-data';
+import { useIntegrationStatus } from '../../api/queries';
 
 const integrations = [
   {
@@ -24,8 +26,14 @@ const integrations = [
 ];
 
 export function SettingsIntegrationsView() {
+  const { data: integrationStatus, isPending } = useIntegrationStatus();
+
+  if (isPending || !integrationStatus) {
+    return <p className='text-muted-foreground text-sm'>Loading integrations…</p>;
+  }
+
   return (
-    <div className='grid max-w-2xl gap-4'>
+    <div className='grid gap-4'>
       {integrations.map(({ key, href, icon: Icon }) => {
         const item = integrationStatus[key];
         return (

@@ -50,6 +50,8 @@ export type InputBarProps = {
   fillWidth?: boolean;
   /** Max textarea height in px before internal scroll. Default 280. */
   maxTextareaHeight?: number;
+  /** When true, hides the textarea while keeping the action toolbar visible. */
+  bodyCollapsed?: boolean;
 };
 
 const PaperclipIcon = ({ className = 'w-[18px] h-[18px]' }) => (
@@ -245,7 +247,8 @@ export const InputBar = memo(function InputBar({
   leftActions,
   rightActions,
   fillWidth = false,
-  maxTextareaHeight = 280
+  maxTextareaHeight = 280,
+  bodyCollapsed = false
 }: InputBarProps) {
   const [internalInput, setInternalInput] = useState('');
   const isControlled = controlledValue !== undefined;
@@ -359,23 +362,37 @@ export const InputBar = memo(function InputBar({
               ) : null}
             </div>
           </div>
-          <div className='pt-3 pr-3 pb-2 pl-3.5'>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={disabled}
-              rows={1}
-              className={cn(
-                'block w-full min-h-[1.6em] resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.6] text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500',
-                'overflow-hidden',
-                disabled && 'cursor-not-allowed opacity-50'
-              )}
-            />
+          <div
+            className={cn(
+              'grid transition-[grid-template-rows] duration-200 ease-out',
+              bodyCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+            )}
+          >
+            <div className='overflow-hidden'>
+              <div className='pt-3 pr-3 pb-2 pl-3.5'>
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  rows={1}
+                  className={cn(
+                    'block w-full min-h-[1.6em] resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.6] text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500',
+                    'overflow-hidden',
+                    disabled && 'cursor-not-allowed opacity-50'
+                  )}
+                />
+              </div>
+            </div>
           </div>
-          <div className='flex items-center justify-between gap-3 px-2 pt-1 pb-2'>
+          <div
+            className={cn(
+              'flex items-center justify-between gap-3 px-2 pb-2',
+              bodyCollapsed ? 'pt-2' : 'pt-1'
+            )}
+          >
             <div className='flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pb-0.5'>
               {onAttach ? <AttachmentButton onClick={onAttach} disabled={disabled} /> : null}
               {leftActions}

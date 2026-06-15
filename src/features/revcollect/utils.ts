@@ -88,6 +88,22 @@ export function formatInboxActivityTime(iso: string): string {
   return `${formatDate(iso)} ${time}`;
 }
 
+export function formatInboxListTimestamp(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfEvent = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.floor(
+    (startOfToday.getTime() - startOfEvent.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+}
+
 export function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
   const now = new Date();

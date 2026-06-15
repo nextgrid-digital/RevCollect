@@ -3,10 +3,7 @@ import { AgentConfigForm } from '@/features/revcollect/agent/components/agent-co
 
 export default function AgentPage() {
   return (
-    <PageContainer
-      pageTitle='Agent'
-      pageDescription='Configure how the AI collection agent drafts and escalates outreach.'
-    >
+    <PageContainer>
       <AgentConfigForm />
     </PageContainer>
   );

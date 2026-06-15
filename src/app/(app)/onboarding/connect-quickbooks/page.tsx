@@ -3,7 +3,7 @@ import { ConnectIntegrationView } from '@/features/revcollect/onboarding/compone
 
 export default function ConnectQuickBooksPage() {
   return (
-    <PageContainer pageTitle='Connect QuickBooks' pageDescription='Sync your AR data.'>
+    <PageContainer>
       <ConnectIntegrationView
         title='QuickBooks Online'
         description='Import open invoices, customers, and payment applications automatically.'

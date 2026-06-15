@@ -6,8 +6,8 @@ import { InboxContextRailSkeleton } from './inbox-context-rail-skeleton';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 
 export function InboxContextRailContent() {
-  const { selectedMessageId, onActivityEmailClick } = useInboxContextRail();
-  const data = useInboxSelectionData(selectedMessageId);
+  const { selectedMessageId } = useInboxContextRail();
+  const { data } = useInboxSelectionData(selectedMessageId);
 
   if (!selectedMessageId) {
     return null;
@@ -19,14 +19,10 @@ export function InboxContextRailContent() {
 
   return (
     <InboxContextSidebar
-      showHeader
       customer={data.customer}
       inboxContext={data.inboxContext}
       aiInsightText={data.aiInsightText}
-      escalationInsight={data.escalationInsight}
-      timelineEvents={data.timelineEvents}
-      threadEmails={data.threadEmails}
-      onActivityEmailClick={onActivityEmailClick}
+      deepAnalysisText={data.deepAnalysisText}
     />
   );
 }

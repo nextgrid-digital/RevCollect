@@ -9,7 +9,7 @@ export function SettingsBillingView() {
         <StatCard title='Seats' value='3' description='2 active users' />
         <StatCard title='AI drafts' value='248' description='This billing period' />
       </div>
-      <Card className='max-w-2xl'>
+      <Card>
         <CardHeader>
           <CardTitle>Payment method</CardTitle>
         </CardHeader>
