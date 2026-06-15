@@ -1,5 +1,10 @@
-import { redirect } from 'next/navigation';
+import PageContainer from '@/components/layout/page-container';
+import { SettingsPageLayout } from '@/features/revcollect/settings/components/settings-page-layout';
 
 export default function SettingsPage() {
-  redirect('/inbox?settings=general');
+  return (
+    <PageContainer>
+      <SettingsPageLayout tab='general' />
+    </PageContainer>
+  );
 }

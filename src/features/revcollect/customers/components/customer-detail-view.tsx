@@ -8,7 +8,12 @@ import { StatusPill } from '../../components/status-pill';
 import { InvoicesTable } from '../../components/invoices-table';
 import { ActivityTimeline } from '../../components/activity-timeline';
 import { formatCurrency } from '../../utils';
-import { useCustomer, useInvoicesForCustomer, useTimelineForCustomer } from '../../api/queries';
+import {
+  useCustomer,
+  useInboxThreadForCustomer,
+  useInvoicesForCustomer,
+  useTimelineForCustomer
+} from '../../api/queries';
 
 interface CustomerDetailViewProps {
   customerId: string;
@@ -18,6 +23,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
   const { data: customer, isPending } = useCustomer(customerId);
   const { data: customerInvoices = [] } = useInvoicesForCustomer(customerId);
   const { data: timeline = [] } = useTimelineForCustomer(customerId);
+  const { data: inboxThread } = useInboxThreadForCustomer(customerId);
 
   if (isPending) {
     return <p className='text-muted-foreground text-sm'>Loading customer…</p>;
@@ -26,6 +32,8 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
   if (!customer) {
     notFound();
   }
+
+  const inboxHref = inboxThread ? `/inbox/${inboxThread.id}` : '/inbox';
 
   return (
     <div className='space-y-8'>
@@ -63,7 +71,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
       </section>
 
       <Button asChild variant='outline'>
-        <Link href='/inbox'>View in inbox</Link>
+        <Link href={inboxHref}>{inboxThread ? 'View thread in inbox' : 'View in inbox'}</Link>
       </Button>
     </div>
   );

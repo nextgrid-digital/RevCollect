@@ -56,6 +56,8 @@ interface UseDataTableProps<TData>
   initialState?: Omit<Partial<TableState>, 'sorting'> & {
     sorting?: ExtendedColumnSort<TData>[];
   };
+  pageKey?: string;
+  perPageKey?: string;
   history?: 'push' | 'replace';
   debounceMs?: number;
   throttleMs?: number;
@@ -71,6 +73,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     columns,
     pageCount = -1,
     initialState,
+    pageKey = PAGE_KEY,
+    perPageKey = PER_PAGE_KEY,
     history = 'replace',
     debounceMs = DEBOUNCE_MS,
     throttleMs = THROTTLE_MS,
@@ -106,11 +110,11 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   );
 
   const [page, setPage] = useQueryState(
-    PAGE_KEY,
+    pageKey,
     parseAsInteger.withOptions(queryStateOptions).withDefault(1)
   );
   const [perPage, setPerPage] = useQueryState(
-    PER_PAGE_KEY,
+    perPageKey,
     parseAsInteger
       .withOptions(queryStateOptions)
       .withDefault(initialState?.pagination?.pageSize ?? 10)

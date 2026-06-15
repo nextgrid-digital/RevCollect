@@ -30,7 +30,7 @@ export function InboxMessageListHeader({
     { id: 'all', label: 'All', count: allCount },
     { id: 'overdue', label: 'Overdue', count: overdueCount },
     { id: 'due_soon', label: 'Due Soon', count: dueSoonCount },
-    { id: 'escalated', label: 'Escalated', count: escalatedCount }
+    { id: 'escalated', label: 'In dispute', count: escalatedCount }
   ];
 
   return (
@@ -42,6 +42,7 @@ export function InboxMessageListHeader({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder='Search emails...'
+          aria-label='Search emails'
           className='h-9 border-0 bg-muted/50 pl-9 text-sm shadow-none'
         />
       </div>
@@ -53,6 +54,7 @@ export function InboxMessageListHeader({
             <button
               key={pill.id}
               type='button'
+              aria-pressed={isActive}
               onClick={() => onFilterChange(pill.id)}
               className={cn(
                 'inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors',

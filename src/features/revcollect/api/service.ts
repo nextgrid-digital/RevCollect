@@ -3,6 +3,10 @@ import type {
   AgentDraftMeta,
   AgingBucket,
   AgingBucketSummary,
+  AgingChartBucketRow,
+  AgingCustomerBreakdownRow,
+  AgingReportFilters,
+  AgingReportSummary,
   Customer,
   InboxMessage,
   IntegrationStatus,
@@ -24,6 +28,7 @@ export interface RevCollectService {
 
   listInboxMessages(): Promise<InboxMessage[]>;
   getDefaultInboxMessageId(): Promise<string>;
+  getInboxThreadForCustomer(customerId: string): Promise<InboxMessage | undefined>;
   getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null>;
 
   listCustomers(): Promise<Customer[]>;
@@ -34,6 +39,9 @@ export interface RevCollectService {
   getInvoicesForCustomer(customerId: string): Promise<Invoice[]>;
   getInvoicesByBucket(bucket: AgingBucket): Promise<Invoice[]>;
   getAgingBuckets(): Promise<AgingBucketSummary[]>;
+  getAgingReportSummary(filters: AgingReportFilters): Promise<AgingReportSummary>;
+  getAgingChartBuckets(filters: AgingReportFilters): Promise<AgingChartBucketRow[]>;
+  getAgingCustomerBreakdown(filters: AgingReportFilters): Promise<AgingCustomerBreakdownRow[]>;
 
   getThreadEmails(threadId: string): Promise<ThreadEmail[]>;
   getTimelineForCustomer(customerId: string): Promise<TimelineEvent[]>;

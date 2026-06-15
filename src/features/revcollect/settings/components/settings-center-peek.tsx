@@ -58,6 +58,7 @@ export function SettingsCenterPeek() {
                   <button
                     type='button'
                     onClick={() => setTab(item.tab)}
+                    aria-current={tab === item.tab ? 'page' : undefined}
                     className={cn(
                       'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
                       tab === item.tab &&

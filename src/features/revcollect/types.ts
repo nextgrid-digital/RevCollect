@@ -135,3 +135,47 @@ export interface AgingBucketSummary {
   invoiceCount: number;
   totalCents: number;
 }
+
+export type AgingReportBucket = 'current' | '1-15' | '16-30' | '31-60' | '60+';
+
+export type AgingReportPeriod = 'this_month' | 'last_month' | 'all_time';
+
+export type AgingReportSort = 'amount_desc' | 'amount_asc' | 'customer_asc';
+
+export type AgingRiskLevel = 'low' | 'medium' | 'high';
+
+export interface AgingReportFilters {
+  customerId?: string;
+  period: AgingReportPeriod;
+  sort: AgingReportSort;
+}
+
+export interface AgingReportSummary {
+  totalArCents: number;
+  currentCents: number;
+  overdueCents: number;
+  weightedAvgDsoDays: number;
+  totalArDeltaPct: number;
+  currentDeltaPct: number;
+  overdueDeltaPct: number;
+  dsoDeltaDays: number;
+}
+
+export interface AgingChartBucketRow {
+  bucket: AgingReportBucket;
+  label: string;
+  invoiceCount: number;
+  totalCents: number;
+}
+
+export interface AgingCustomerBreakdownRow {
+  customerId: string;
+  company: string;
+  invoiceCount: number;
+  currentCents: number;
+  days1to30Cents: number;
+  days31to60Cents: number;
+  days60PlusCents: number;
+  totalCents: number;
+  risk: AgingRiskLevel;
+}

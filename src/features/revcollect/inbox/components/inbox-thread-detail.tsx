@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { InboxContextSidebar } from './inbox-context-sidebar';
-import { InboxAgentDraftPanel } from './inbox-agent-draft-panel';
 import { InboxThreadActionBar } from './inbox-thread-action-bar';
+import { InboxThreadComposer } from './inbox-thread-composer';
 import { InboxThreadHeader } from './inbox-thread-header';
 import { ConversationThread } from './conversation-thread';
 
@@ -64,12 +64,6 @@ export function InboxThreadDetail({
     });
   }, [messageId, selection]);
 
-  useEffect(() => {
-    if (!selection?.agentDraftMeta) {
-      setComposerPad(0);
-    }
-  }, [selection?.agentDraftMeta]);
-
   if (!selection) {
     return (
       <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
@@ -122,18 +116,20 @@ export function InboxThreadDetail({
             />
           </div>
 
-          {selection.agentDraftMeta ? (
-            <InboxAgentDraftPanel
-              floating
-              draftMeta={selection.agentDraftMeta}
-              customerStatus={customer.status}
-              baseDraft={selection.aiDraftBase}
-              onOverlayHeightChange={setComposerPad}
-            />
-          ) : null}
+          <InboxThreadComposer
+            agentDraftMeta={selection.agentDraftMeta}
+            aiDraftBase={selection.aiDraftBase}
+            customerStatus={customer.status}
+            onOverlayHeightChange={setComposerPad}
+          />
         </div>
 
-        <aside className='border-border/60 w-72 shrink-0 overflow-hidden border-l'>
+        <aside
+          className={cn(
+            'border-border/60 shrink-0 overflow-hidden border-l',
+            peekLayout === 'side' ? 'w-64' : 'w-72'
+          )}
+        >
           <InboxContextSidebar
             customer={customer}
             inboxContext={inboxContext}

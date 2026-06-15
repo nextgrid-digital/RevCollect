@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
 import { useCustomers, useInboxMessages } from '../../api/queries';
 import { useInboxOpenMode } from './inbox-open-mode-context';
 import { InboxMessageList } from './inbox-message-list';
@@ -21,7 +20,7 @@ function getListEmptyMessage(
   if (filter === 'all') return 'No emails';
   if (filter === 'overdue') return 'No overdue emails';
   if (filter === 'due_soon') return 'No due soon emails';
-  return 'No escalated emails';
+  return 'No in dispute emails';
 }
 
 export function InboxView() {
@@ -63,7 +62,7 @@ export function InboxView() {
     <>
       <div className='flex max-h-[calc(100dvh-var(--header-height)-1rem)] min-h-0 w-full flex-1 overflow-hidden'>
         <InboxMessageList
-          className={cn('min-h-0', sidePeekOpen ? 'w-[42%] shrink-0 border-r' : 'w-full flex-1')}
+          className='min-h-0 min-w-0 flex-1'
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           listFilter={listFilter}
@@ -78,11 +77,11 @@ export function InboxView() {
           getCustomerById={getCustomerById}
           emptyMessage={getListEmptyMessage(listFilter, searchQuery, filteredMessages.length > 0)}
         />
-      </div>
 
-      {sidePeekOpen && peekMessageId ? (
-        <InboxPeekSidePanel messageId={peekMessageId} onClose={closePeek} />
-      ) : null}
+        {sidePeekOpen && peekMessageId ? (
+          <InboxPeekSidePanel messageId={peekMessageId} onClose={closePeek} />
+        ) : null}
+      </div>
 
       <InboxPeekCenterDialog
         messageId={centerPeekOpen ? peekMessageId : null}

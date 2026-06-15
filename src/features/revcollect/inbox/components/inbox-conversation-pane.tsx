@@ -15,8 +15,8 @@ import type {
 } from '../../types';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { ConversationThread } from './conversation-thread';
-import { InboxAgentDraftPanel } from './inbox-agent-draft-panel';
 import { InboxThreadActionBar } from './inbox-thread-action-bar';
+import { InboxThreadComposer } from './inbox-thread-composer';
 
 interface InboxConversationPaneProps {
   customer: Customer;
@@ -78,12 +78,6 @@ export function InboxConversationPane({
     });
     return () => cancelAnimationFrame(frame);
   }, [scrollToEmailId]);
-
-  useEffect(() => {
-    if (!agentDraftMeta) {
-      setComposerPad(0);
-    }
-  }, [agentDraftMeta]);
 
   const handleActivityEmailClick = useCallback(
     (emailId: string) => {
@@ -164,15 +158,12 @@ export function InboxConversationPane({
           />
         </div>
 
-        {agentDraftMeta ? (
-          <InboxAgentDraftPanel
-            floating
-            draftMeta={agentDraftMeta}
-            customerStatus={customer.status}
-            baseDraft={aiDraftBase ?? ''}
-            onOverlayHeightChange={setComposerPad}
-          />
-        ) : null}
+        <InboxThreadComposer
+          agentDraftMeta={agentDraftMeta}
+          aiDraftBase={aiDraftBase ?? ''}
+          customerStatus={customer.status}
+          onOverlayHeightChange={setComposerPad}
+        />
       </div>
     </div>
   );

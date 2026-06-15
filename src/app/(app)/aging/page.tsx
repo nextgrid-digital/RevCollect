@@ -3,7 +3,7 @@ import { AgingView } from '@/features/revcollect/aging/components/aging-view';
 
 export default function AgingPage() {
   return (
-    <PageContainer>
+    <PageContainer compactMobile>
       <AgingView />
     </PageContainer>
   );

@@ -4,10 +4,14 @@ import {
   customers,
   getAgentDraftMetaForMessage,
   getAgingBuckets,
+  getAgingChartBuckets,
+  getAgingCustomerBreakdown,
+  getAgingReportSummary,
   getCustomerById,
   getCustomerInboxContext,
   getCustomerStatusSummary,
   getDefaultInboxMessageId,
+  getInboxThreadForCustomer,
   getInvoicesByBucket,
   getInvoicesForCustomer,
   getLastActionForCustomer,
@@ -45,6 +49,10 @@ export class MockRevCollectService implements RevCollectService {
 
   getDefaultInboxMessageId() {
     return resolveMock(getDefaultInboxMessageId());
+  }
+
+  getInboxThreadForCustomer(customerId: string) {
+    return resolveMock(getInboxThreadForCustomer(customerId));
   }
 
   async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
@@ -102,6 +110,20 @@ export class MockRevCollectService implements RevCollectService {
 
   getAgingBuckets() {
     return resolveMock(getAgingBuckets());
+  }
+
+  getAgingReportSummary(filters: Parameters<RevCollectService['getAgingReportSummary']>[0]) {
+    return resolveMock(getAgingReportSummary(filters));
+  }
+
+  getAgingChartBuckets(filters: Parameters<RevCollectService['getAgingChartBuckets']>[0]) {
+    return resolveMock(getAgingChartBuckets(filters));
+  }
+
+  getAgingCustomerBreakdown(
+    filters: Parameters<RevCollectService['getAgingCustomerBreakdown']>[0]
+  ) {
+    return resolveMock(getAgingCustomerBreakdown(filters));
   }
 
   getThreadEmails(threadId: string) {

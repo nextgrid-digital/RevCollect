@@ -3,6 +3,10 @@ import type {
   AgentDraftMeta,
   AgingBucket,
   AgingBucketSummary,
+  AgingChartBucketRow,
+  AgingCustomerBreakdownRow,
+  AgingReportFilters,
+  AgingReportSummary,
   CollectionStatus,
   Customer,
   CustomerInboxContext,
@@ -13,6 +17,12 @@ import type {
   ThreadEmail,
   TimelineEvent
 } from './types';
+import {
+  buildAgingChartBuckets,
+  buildAgingCustomerRows,
+  buildAgingReportSummary,
+  filterInvoicesForReport
+} from './aging/lib/aging-report';
 import { enrichTimelineWithThreads } from './inbox/lib/enrich-timeline-with-threads';
 import { createInboxThreadData } from './mock-inbox-threads';
 import { dicebearAvatar, formatRelativeDate } from './utils';
@@ -1361,4 +1371,18 @@ export function getAgingBuckets(): AgingBucketSummary[] {
 
 export function getInvoicesByBucket(bucket: AgingBucket): Invoice[] {
   return invoices.filter((i) => i.agingBucket === bucket);
+}
+
+export function getAgingReportSummary(filters: AgingReportFilters): AgingReportSummary {
+  return buildAgingReportSummary(invoices, filters);
+}
+
+export function getAgingChartBuckets(filters: AgingReportFilters): AgingChartBucketRow[] {
+  return buildAgingChartBuckets(filterInvoicesForReport(invoices, filters));
+}
+
+export function getAgingCustomerBreakdown(
+  filters: AgingReportFilters
+): AgingCustomerBreakdownRow[] {
+  return buildAgingCustomerRows(invoices, customers, filters);
 }

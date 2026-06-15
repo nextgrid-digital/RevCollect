@@ -18,13 +18,17 @@ interface DataTableProps<TData> extends React.ComponentProps<'div'> {
   table: TanstackTable<TData>;
   actionBar?: React.ReactNode;
   onRowClick?: (row: TData) => void;
+  getRowAriaLabel?: (row: TData) => string;
+  emptyMessage?: string;
 }
 
 export function DataTable<TData>({
   table,
   actionBar,
   children,
-  onRowClick
+  onRowClick,
+  getRowAriaLabel,
+  emptyMessage = 'No results.'
 }: DataTableProps<TData>) {
   return (
     <div className='flex flex-col space-y-4'>
@@ -57,8 +61,14 @@ export function DataTable<TData>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && 'selected'}
-                    className={cn(onRowClick && 'cursor-pointer')}
+                    className={cn(
+                      onRowClick &&
+                        'cursor-pointer focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none'
+                    )}
                     tabIndex={onRowClick ? 0 : undefined}
+                    aria-label={
+                      onRowClick && getRowAriaLabel ? getRowAriaLabel(row.original) : undefined
+                    }
                     onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                     onKeyDown={
                       onRowClick
@@ -86,7 +96,7 @@ export function DataTable<TData>({
               ) : (
                 <TableRow>
                   <TableCell colSpan={table.getAllColumns().length} className='h-24 text-center'>
-                    No results.
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
@@ -15,10 +16,22 @@ interface InboxPeekSidePanelProps {
 export function InboxPeekSidePanel({ messageId, onClose }: InboxPeekSidePanelProps) {
   const { data: selection } = useInboxSelectionData(messageId);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return (
     <aside
+      role='dialog'
+      aria-label='Email thread preview'
       className={cn(
-        'border-border/60 bg-background fixed top-0 right-0 z-30 flex h-svh w-[min(92vw,72rem)] flex-col overflow-hidden border-l shadow-xl',
+        'border-border/60 bg-background flex h-full w-[min(92vw,52rem)] shrink-0 flex-col overflow-hidden border-l shadow-xl',
         'animate-in slide-in-from-right fade-in-0 duration-300'
       )}
     >
@@ -47,6 +60,7 @@ export function InboxPeekSidePanel({ messageId, onClose }: InboxPeekSidePanelPro
         <InboxThreadDetail
           messageId={messageId}
           variant='peek'
+          peekLayout='side'
           hideHeader
           onClose={onClose}
           className='h-full'

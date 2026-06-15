@@ -5,10 +5,12 @@ import { useMemo, useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableSkeleton } from '@/components/ui/table/data-table-skeleton';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useDataTable } from '@/hooks/use-data-table';
 import { CustomerAvatar } from '../../components/customer-avatar';
+import { PageHeader } from '../../components/page-header';
 import { StatusPill } from '../../components/status-pill';
 import { formatCurrency } from '../../utils';
 import { useCustomers } from '../../api/queries';
@@ -87,13 +89,25 @@ const columns: ColumnDef<Customer>[] = [
   }
 ];
 
+function getCustomersEmptyMessage(
+  searchQuery: string,
+  statusFilters: CollectionStatus[],
+  hasCustomers: boolean
+): string {
+  if (!hasCustomers) return 'No customers yet.';
+  if (searchQuery.trim() || statusFilters.length > 0) {
+    return 'No customers match your filters.';
+  }
+  return 'No results.';
+}
+
 export function CustomersTable() {
   const router = useRouter();
   const { data: customers = [], isPending } = useCustomers();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilters, setStatusFilters] = useState<CollectionStatus[]>([]);
-  const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
-  const [perPage] = useQueryState('perPage', parseAsInteger.withDefault(10));
+  const [, setPage] = useQueryState('customersPage', parseAsInteger.withDefault(1));
+  const [perPage] = useQueryState('customersPerPage', parseAsInteger.withDefault(10));
 
   const filteredCustomers = useMemo(
     () =>
@@ -114,41 +128,56 @@ export function CustomersTable() {
     data: filteredCustomers,
     columns,
     pageCount,
+    pageKey: 'customersPage',
+    perPageKey: 'customersPerPage',
     shallow: true,
-    enableSorting: false,
-    initialState: {
-      pagination: { pageIndex: page - 1, pageSize: perPage }
-    }
+    enableSorting: false
   });
 
+  const emptyMessage = getCustomersEmptyMessage(searchQuery, statusFilters, customers.length > 0);
+
   if (isPending) {
-    return <p className='text-muted-foreground text-sm'>Loading customers…</p>;
+    return (
+      <div className='space-y-6'>
+        <PageHeader title='Customers' description='Search and filter your customer accounts.' />
+        <DataTableSkeleton columnCount={5} rowCount={8} filterCount={1} withViewOptions={false} />
+      </div>
+    );
   }
 
   return (
-    <DataTable table={table} onRowClick={(customer) => router.push(`/customers/${customer.id}`)}>
-      <div className='flex flex-wrap items-center gap-2'>
-        <div className='relative min-w-0 flex-1 sm:max-w-sm'>
-          <Icons.search className='text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2' />
-          <Input
-            type='search'
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+    <div className='space-y-6'>
+      <PageHeader title='Customers' description='Search and filter your customer accounts.' />
+      <DataTable
+        table={table}
+        emptyMessage={emptyMessage}
+        getRowAriaLabel={(customer) => `View customer ${customer.company}`}
+        onRowClick={(customer) => router.push(`/customers/${customer.id}`)}
+      >
+        <div className='flex flex-wrap items-center gap-2'>
+          <div className='relative min-w-0 flex-1 sm:max-w-sm'>
+            <Icons.search className='text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2' />
+            <Input
+              type='search'
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                void setPage(1);
+              }}
+              placeholder='Search customers...'
+              aria-label='Search customers'
+              className='h-9 pl-9'
+            />
+          </div>
+          <CustomersStatusFilter
+            selectedStatuses={statusFilters}
+            onSelectedStatusesChange={(statuses) => {
+              setStatusFilters(statuses);
               void setPage(1);
             }}
-            placeholder='Search customers...'
-            className='h-9 pl-9'
           />
         </div>
-        <CustomersStatusFilter
-          selectedStatuses={statusFilters}
-          onSelectedStatusesChange={(statuses) => {
-            setStatusFilters(statuses);
-            void setPage(1);
-          }}
-        />
-      </div>
-    </DataTable>
+      </DataTable>
+    </div>
   );
 }

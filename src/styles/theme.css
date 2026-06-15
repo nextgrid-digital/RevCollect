@@ -15,7 +15,13 @@ body {
 }
 
 :root {
-  --header-height: calc(var(--spacing, 0.25rem) * 12 + 1px);
+  --header-height: 4rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --header-height: 3.5rem;
+  }
 }
 
 /* Apply theme fonts to body for all themes */

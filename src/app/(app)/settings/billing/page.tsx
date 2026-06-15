@@ -1,5 +1,10 @@
-import { redirect } from 'next/navigation';
+import PageContainer from '@/components/layout/page-container';
+import { SettingsPageLayout } from '@/features/revcollect/settings/components/settings-page-layout';
 
 export default function SettingsBillingPage() {
-  redirect('/inbox?settings=billing');
+  return (
+    <PageContainer>
+      <SettingsPageLayout tab='billing' />
+    </PageContainer>
+  );
 }

@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { AgingBucket } from '../types';
+import type { AgingBucket, AgingReportFilters } from '../types';
 import { getRevCollectService } from './index';
 import type { DataAccessEvent, TenantId } from './types';
 
@@ -11,12 +11,23 @@ export const revcollectKeys = {
   inboxMessages: () => [...revcollectKeys.inbox(), 'messages'] as const,
   inboxSelection: (messageId: string) =>
     [...revcollectKeys.inbox(), 'selection', messageId] as const,
+  inboxThreadForCustomer: (customerId: string) =>
+    [...revcollectKeys.inbox(), 'customer', customerId] as const,
   customers: () => [...revcollectKeys.all, 'customers'] as const,
   customer: (id: string) => [...revcollectKeys.customers(), id] as const,
   invoices: () => [...revcollectKeys.all, 'invoices'] as const,
   invoicesForCustomer: (customerId: string) =>
     [...revcollectKeys.invoices(), 'customer', customerId] as const,
   agingBuckets: () => [...revcollectKeys.all, 'aging', 'buckets'] as const,
+  agingReport: (filters: AgingReportFilters) =>
+    [
+      ...revcollectKeys.all,
+      'aging',
+      'report',
+      filters.period,
+      filters.sort,
+      filters.customerId ?? 'all'
+    ] as const,
   invoicesByBucket: (bucket: AgingBucket) =>
     [...revcollectKeys.all, 'aging', 'bucket', bucket] as const,
   timeline: (customerId: string) => [...revcollectKeys.all, 'timeline', customerId] as const,
@@ -72,6 +83,22 @@ export function agingBucketsQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.agingBuckets(),
     queryFn: () => getRevCollectService().getAgingBuckets(),
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
+export function agingReportQueryOptions(filters: AgingReportFilters) {
+  return queryOptions({
+    queryKey: revcollectKeys.agingReport(filters),
+    queryFn: async () => {
+      const service = getRevCollectService();
+      const [summary, chartBuckets, customerBreakdown] = await Promise.all([
+        service.getAgingReportSummary(filters),
+        service.getAgingChartBuckets(filters),
+        service.getAgingCustomerBreakdown(filters)
+      ]);
+      return { summary, chartBuckets, customerBreakdown };
+    },
     staleTime: MOCK_STALE_TIME
   });
 }
@@ -142,6 +169,10 @@ export function useAgingBuckets() {
   return useQuery(agingBucketsQueryOptions());
 }
 
+export function useAgingReport(filters: AgingReportFilters) {
+  return useQuery(agingReportQueryOptions(filters));
+}
+
 export function useInvoicesByBucket(bucket: AgingBucket) {
   return useQuery(invoicesByBucketQueryOptions(bucket));
 }
@@ -150,6 +181,15 @@ export function useTimelineForCustomer(customerId: string | undefined) {
   return useQuery({
     ...timelineQueryOptions(customerId ?? ''),
     enabled: !!customerId
+  });
+}
+
+export function useInboxThreadForCustomer(customerId: string | undefined) {
+  return useQuery({
+    queryKey: revcollectKeys.inboxThreadForCustomer(customerId ?? ''),
+    queryFn: () => getRevCollectService().getInboxThreadForCustomer(customerId!),
+    enabled: !!customerId,
+    staleTime: MOCK_STALE_TIME
   });
 }
 

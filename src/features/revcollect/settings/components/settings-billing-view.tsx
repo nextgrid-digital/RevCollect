@@ -1,3 +1,4 @@
+import { MetricBlock } from '../../components/metric-block';
 import { SettingsSection } from './settings-section';
 
 const billingStats = [
@@ -11,11 +12,12 @@ export function SettingsBillingView() {
     <div className='divide-border divide-y'>
       <div className='grid gap-6 pb-6 sm:grid-cols-3'>
         {billingStats.map((stat) => (
-          <div key={stat.title}>
-            <p className='text-muted-foreground text-sm font-medium'>{stat.title}</p>
-            <p className='mt-2 text-2xl font-semibold tabular-nums'>{stat.value}</p>
-            <p className='text-muted-foreground mt-1 text-xs'>{stat.description}</p>
-          </div>
+          <MetricBlock
+            key={stat.title}
+            label={stat.title}
+            value={stat.value}
+            description={<p className='text-muted-foreground text-xs'>{stat.description}</p>}
+          />
         ))}
       </div>
 
