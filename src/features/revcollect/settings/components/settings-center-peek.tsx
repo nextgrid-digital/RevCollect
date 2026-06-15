@@ -39,7 +39,7 @@ export function SettingsCenterPeek() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeSettings()}>
-      <DialogContent className='flex h-[85vh] max-h-[85vh] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-5xl [&>button]:hidden'>
+      <DialogContent className='flex h-[85vh] max-h-[85vh] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-5xl'>
         <DialogHeader className='sr-only'>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Workspace and account preferences</DialogDescription>

@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIntegrationStatus } from '../../api/queries';
+import { SettingsSection } from './settings-section';
 
 const integrations = [
   {
@@ -33,29 +33,30 @@ export function SettingsIntegrationsView() {
   }
 
   return (
-    <div className='grid gap-4'>
-      {integrations.map(({ key, href, icon: Icon }) => {
+    <div className='divide-border divide-y'>
+      {integrations.map(({ key, href, icon: Icon }, index) => {
         const item = integrationStatus[key];
         return (
-          <Card key={key}>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='flex items-center gap-2 text-base'>
-                <Icon className='size-4' />
-                {item.label}
-              </CardTitle>
+          <SettingsSection
+            key={key}
+            title={item.label}
+            leading={<Icon className='size-4' />}
+            action={
               <Badge variant={item.connected ? 'default' : 'secondary'}>
                 {item.connected ? 'Connected' : 'Not connected'}
               </Badge>
-            </CardHeader>
-            <CardContent className='flex items-center justify-between gap-4'>
+            }
+            className={index === 0 ? 'pb-6' : index === integrations.length - 1 ? 'pt-6' : 'py-6'}
+          >
+            <div className='flex items-center justify-between gap-4'>
               <p className='text-muted-foreground text-sm'>{item.detail}</p>
               {!item.connected ? (
                 <Button asChild size='sm' variant='outline'>
                   <Link href={href}>Connect</Link>
                 </Button>
               ) : null}
-            </CardContent>
-          </Card>
+            </div>
+          </SettingsSection>
         );
       })}
     </div>

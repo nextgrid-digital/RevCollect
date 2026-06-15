@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useExportTenantData, useRequestTenantDeletion } from '../../api/queries';
+import { SettingsSection } from './settings-section';
 
 export function SettingsPrivacySection() {
   const exportMutation = useExportTenantData();
@@ -12,15 +12,12 @@ export function SettingsPrivacySection() {
   const tenantId = getRevCollectService().getTenantId() ?? MOCK_TENANT_ID;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Privacy and data</CardTitle>
-        <CardDescription>
-          Export your workspace data or request deletion. UK and EU customers can download our Data
-          Processing Agreement.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-4'>
+    <SettingsSection
+      title='Privacy and data'
+      description='Export your workspace data or request deletion. UK and EU customers can download our Data Processing Agreement.'
+      className='pt-6'
+    >
+      <div className='space-y-4'>
         <div className='flex flex-wrap gap-2'>
           <Button
             type='button'
@@ -63,7 +60,7 @@ export function SettingsPrivacySection() {
             </Link>
           </li>
         </ul>
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }

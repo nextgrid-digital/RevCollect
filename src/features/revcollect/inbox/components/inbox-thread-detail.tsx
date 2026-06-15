@@ -14,6 +14,7 @@ interface InboxThreadDetailProps {
   messageId: string;
   variant?: 'peek' | 'full';
   peekLayout?: 'side' | 'center';
+  hideHeader?: boolean;
   highlightedEmailId?: string | null;
   scrollToEmailId?: string | null;
   onClose?: () => void;
@@ -23,6 +24,7 @@ interface InboxThreadDetailProps {
 export function InboxThreadDetail({
   messageId,
   peekLayout = 'side',
+  hideHeader = false,
   highlightedEmailId,
   scrollToEmailId,
   className
@@ -88,13 +90,15 @@ export function InboxThreadDetail({
             peekLayout === 'center' ? 'min-w-[28rem] flex-[1.4]' : 'flex-1'
           )}
         >
-          <div className='border-border/60 shrink-0 border-b px-4 py-3'>
-            <InboxThreadHeader
-              customer={customer}
-              invoiceNumbers={selection.openInvoiceNumbers}
-              className='py-0'
-            />
-          </div>
+          {!hideHeader ? (
+            <div className='border-border/60 shrink-0 border-b px-4 py-3'>
+              <InboxThreadHeader
+                customer={customer}
+                invoiceNumbers={selection.openInvoiceNumbers}
+                className='py-0'
+              />
+            </div>
+          ) : null}
 
           <InboxThreadActionBar
             lastAction={selection.lastAction}

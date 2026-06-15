@@ -17,7 +17,7 @@ interface InboxPeekCenterDialogProps {
 export function InboxPeekCenterDialog({ messageId, onClose }: InboxPeekCenterDialogProps) {
   return (
     <Dialog open={messageId !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className='flex h-[min(92vh,56rem)] w-[min(96vw,88rem)] max-h-[min(92vh,56rem)] max-w-[min(96vw,88rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,88rem)] [&>button]:hidden'>
+      <DialogContent className='flex h-[min(92vh,56rem)] w-[min(96vw,88rem)] max-h-[min(92vh,56rem)] max-w-[min(96vw,88rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,88rem)]'>
         <DialogHeader className='sr-only'>
           <DialogTitle>Email thread</DialogTitle>
           <DialogDescription>Collection thread preview</DialogDescription>
