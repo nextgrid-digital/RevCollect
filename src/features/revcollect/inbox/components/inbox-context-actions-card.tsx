@@ -9,7 +9,7 @@ import { InboxContextRailSection } from './inbox-context-rail-section';
 
 interface InboxContextActionsCardProps {
   contactName: string;
-  source?: string;
+  attachedInvoiceCount?: number;
 }
 
 function getFirstName(fullName: string): string {
@@ -42,31 +42,39 @@ function ActionRow({
   );
 }
 
-export function InboxContextActionsCard({ contactName, source }: InboxContextActionsCardProps) {
+export function InboxContextActionsCard({
+  contactName,
+  attachedInvoiceCount = 0
+}: InboxContextActionsCardProps) {
   const firstName = getFirstName(contactName);
-  const integrationLabel = source ? `View in ${source}` : 'View in QuickBooks';
+
+  const handleAttachFollowUp = useCallback(() => {
+    toast.message(
+      attachedInvoiceCount > 0
+        ? `Attaching ${attachedInvoiceCount} invoices and drafting follow-up (mock)`
+        : 'Drafting follow-up (mock)'
+    );
+  }, [attachedInvoiceCount]);
 
   const handleCall = useCallback(() => {
     toast.message(`Calling ${firstName} (mock)`);
   }, [firstName]);
 
-  const handleViewIntegration = useCallback(() => {
-    toast.message(`Opening ${source ?? 'QuickBooks'} (mock)`);
-  }, [source]);
-
-  const handleMarkResolved = useCallback(() => {
-    toast.success('Marked resolved (mock)');
+  const handleSnooze = useCallback(() => {
+    toast.message('Snoozed for 3 days (mock)');
   }, []);
 
   return (
-    <InboxContextRailSection label='Actions' unstyled contentClassName='px-1'>
+    <InboxContextRailSection label='Quick actions' unstyled contentClassName='px-1'>
+      {attachedInvoiceCount > 0 ? (
+        <ActionRow
+          label={`Attach all ${attachedInvoiceCount} invoices & follow up`}
+          icon={Icons.paperclip}
+          onClick={handleAttachFollowUp}
+        />
+      ) : null}
       <ActionRow label={`Call ${firstName}`} icon={Icons.phone} onClick={handleCall} />
-      <ActionRow
-        label={integrationLabel}
-        icon={Icons.externalLink}
-        onClick={handleViewIntegration}
-      />
-      <ActionRow label='Mark resolved' icon={Icons.circleCheck} onClick={handleMarkResolved} />
+      <ActionRow label='Snooze 3 days' icon={Icons.clock} onClick={handleSnooze} />
     </InboxContextRailSection>
   );
 }

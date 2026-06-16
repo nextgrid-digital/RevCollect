@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { InboxOpenModeSwitcher } from './inbox-open-mode-switcher';
 
 function isInboxPath(pathname: string) {
@@ -9,8 +10,9 @@ function isInboxPath(pathname: string) {
 
 export function InboxHeaderActions() {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
 
-  if (!isInboxPath(pathname)) {
+  if (!isInboxPath(pathname) || !isMobile) {
     return null;
   }
 

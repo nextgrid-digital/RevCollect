@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { parseAsInteger, useQueryState } from 'nuqs';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableSkeleton } from '@/components/ui/table/data-table-skeleton';
 import { Input } from '@/components/ui/input';
@@ -12,8 +14,13 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { CustomerAvatar } from '../../components/customer-avatar';
 import { PageHeader } from '../../components/page-header';
 import { StatusPill } from '../../components/status-pill';
+import {
+  getInboxMessageIdForCustomer,
+  getSuggestedActionForCustomer,
+  getSuggestedActionLabel
+} from '../../lib/customer-actions';
 import { formatCurrency } from '../../utils';
-import { useCustomers } from '../../api/queries';
+import { useCustomers, useInboxMessages } from '../../api/queries';
 import type { CollectionStatus, Customer } from '../../types';
 import { CustomersStatusFilter } from './customers-status-filter';
 
@@ -33,62 +40,6 @@ function matchesCustomerStatus(customer: Customer, statusFilters: CollectionStat
   return statusFilters.includes(customer.status);
 }
 
-const columns: ColumnDef<Customer>[] = [
-  {
-    id: 'customer',
-    accessorKey: 'name',
-    enableSorting: false,
-    header: 'Customer',
-    cell: ({ row }) => (
-      <div className='flex items-center gap-3'>
-        <CustomerAvatar name={row.original.name} avatarUrl={row.original.avatarUrl} />
-        <div>
-          <p className='font-medium'>{row.original.name}</p>
-          <p className='text-muted-foreground text-sm'>{row.original.company}</p>
-        </div>
-      </div>
-    )
-  },
-  {
-    id: 'email',
-    accessorKey: 'email',
-    enableSorting: false,
-    header: 'Email',
-    cell: ({ row }) => (
-      <span className='text-muted-foreground block max-w-[12rem] truncate sm:max-w-xs'>
-        {row.original.email}
-      </span>
-    )
-  },
-  {
-    id: 'status',
-    accessorKey: 'status',
-    enableSorting: false,
-    header: 'Status',
-    cell: ({ row }) => <StatusPill status={row.original.status} />
-  },
-  {
-    id: 'balance',
-    accessorKey: 'balanceCents',
-    enableSorting: false,
-    header: 'Balance',
-    cell: ({ row }) => (
-      <span className='font-medium tabular-nums'>{formatCurrency(row.original.balanceCents)}</span>
-    )
-  },
-  {
-    id: 'daysOverdue',
-    accessorKey: 'daysOverdue',
-    enableSorting: false,
-    header: 'Days overdue',
-    cell: ({ row }) => (
-      <span className='text-muted-foreground text-sm tabular-nums'>
-        {row.original.daysOverdue > 0 ? `${row.original.daysOverdue}d overdue` : 'Current'}
-      </span>
-    )
-  }
-];
-
 function getCustomersEmptyMessage(
   searchQuery: string,
   statusFilters: CollectionStatus[],
@@ -104,10 +55,107 @@ function getCustomersEmptyMessage(
 export function CustomersTable() {
   const router = useRouter();
   const { data: customers = [], isPending } = useCustomers();
+  const { data: inboxMessages = [] } = useInboxMessages();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilters, setStatusFilters] = useState<CollectionStatus[]>([]);
   const [, setPage] = useQueryState('customersPage', parseAsInteger.withDefault(1));
   const [perPage] = useQueryState('customersPerPage', parseAsInteger.withDefault(10));
+
+  const columns = useMemo<ColumnDef<Customer>[]>(
+    () => [
+      {
+        id: 'customer',
+        accessorKey: 'name',
+        enableSorting: false,
+        header: 'Customer',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <CustomerAvatar name={row.original.name} avatarUrl={row.original.avatarUrl} />
+            <div>
+              <p className='font-medium'>{row.original.name}</p>
+              <p className='text-muted-foreground text-sm'>{row.original.company}</p>
+            </div>
+          </div>
+        )
+      },
+      {
+        id: 'email',
+        accessorKey: 'email',
+        enableSorting: false,
+        header: 'Email',
+        cell: ({ row }) => (
+          <span className='text-muted-foreground block max-w-[12rem] truncate sm:max-w-xs'>
+            {row.original.email}
+          </span>
+        )
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        enableSorting: false,
+        header: 'Status',
+        cell: ({ row }) => <StatusPill status={row.original.status} />
+      },
+      {
+        id: 'balance',
+        accessorKey: 'balanceCents',
+        enableSorting: false,
+        header: 'Balance',
+        cell: ({ row }) => (
+          <span className='font-medium tabular-nums'>{formatCurrency(row.original.balanceCents)}</span>
+        )
+      },
+      {
+        id: 'daysOverdue',
+        accessorKey: 'daysOverdue',
+        enableSorting: false,
+        header: 'Days overdue',
+        cell: ({ row }) => (
+          <span className='text-muted-foreground text-sm tabular-nums'>
+            {row.original.daysOverdue > 0 ? `${row.original.daysOverdue}d overdue` : 'Current'}
+          </span>
+        )
+      },
+      {
+        id: 'suggestedAction',
+        enableSorting: false,
+        header: 'Suggested action',
+        cell: ({ row }) => {
+          const suggested =
+            getSuggestedActionForCustomer(row.original.id, inboxMessages) ??
+            getSuggestedActionLabel(row.original);
+          const messageId = getInboxMessageIdForCustomer(row.original.id, inboxMessages);
+
+          return (
+            <div className='max-w-[12rem] space-y-1.5'>
+              <p className='text-muted-foreground line-clamp-2 text-xs leading-relaxed'>{suggested}</p>
+              {messageId ? (
+                <Button asChild size='sm' variant='outline' className='h-7 text-xs'>
+                  <Link href={`/inbox/${messageId}`} onClick={(event) => event.stopPropagation()}>
+                    Open inbox thread
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  className='h-7 text-xs'
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(`/customers/${row.original.id}`);
+                  }}
+                >
+                  View customer
+                </Button>
+              )}
+            </div>
+          );
+        }
+      }
+    ],
+    [inboxMessages, router]
+  );
 
   const filteredCustomers = useMemo(
     () =>
@@ -140,7 +188,7 @@ export function CustomersTable() {
     return (
       <div className='space-y-6'>
         <PageHeader title='Customers' description='Search and filter your customer accounts.' />
-        <DataTableSkeleton columnCount={5} rowCount={8} filterCount={1} withViewOptions={false} />
+        <DataTableSkeleton columnCount={6} rowCount={8} filterCount={1} withViewOptions={false} />
       </div>
     );
   }

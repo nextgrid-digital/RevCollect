@@ -59,7 +59,6 @@ function InboxContextRailBodyComponent({
           contactName={customer.name}
           paymentTerms={context.paymentTerms}
           followUpsSent={context.followUpsSent}
-          source={context.source}
         />
       ) : null}
     </div>

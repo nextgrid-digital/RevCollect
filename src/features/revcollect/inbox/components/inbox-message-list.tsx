@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { Customer, InboxMessage } from '../../types';
 import { groupInboxMessagesByDate } from '../lib/group-inbox-messages-by-date';
@@ -16,8 +15,9 @@ interface InboxMessageListProps {
   onFilterChange: (filter: InboxListFilter) => void;
   allCount: number;
   overdueCount: number;
-  dueSoonCount: number;
-  escalatedCount: number;
+  draftsCount: number;
+  repliedCount: number;
+  disputesCount: number;
   filteredMessages: InboxMessage[];
   selectedId: string | null;
   onSelectMessage: (messageId: string) => void;
@@ -33,8 +33,9 @@ export function InboxMessageList({
   onFilterChange,
   allCount,
   overdueCount,
-  dueSoonCount,
-  escalatedCount,
+  draftsCount,
+  repliedCount,
+  disputesCount,
   filteredMessages,
   selectedId,
   onSelectMessage,
@@ -42,10 +43,6 @@ export function InboxMessageList({
   emptyMessage
 }: InboxMessageListProps) {
   const groups = groupInboxMessagesByDate(filteredMessages);
-  const leadDraftMessageIds = useMemo(
-    () => new Set(filteredMessages.slice(0, 2).map((message) => message.id)),
-    [filteredMessages]
-  );
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)}>
@@ -56,8 +53,9 @@ export function InboxMessageList({
         onFilterChange={onFilterChange}
         allCount={allCount}
         overdueCount={overdueCount}
-        dueSoonCount={dueSoonCount}
-        escalatedCount={escalatedCount}
+        draftsCount={draftsCount}
+        repliedCount={repliedCount}
+        disputesCount={disputesCount}
       />
 
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
@@ -94,7 +92,6 @@ export function InboxMessageList({
                           message={message}
                           customer={msgCustomer}
                           selected={selectedId === message.id}
-                          showAgentDraftedLeadPill={leadDraftMessageIds.has(message.id)}
                           onSelect={() => onSelectMessage(message.id)}
                         />
                       );

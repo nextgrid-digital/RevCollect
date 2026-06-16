@@ -3,7 +3,7 @@ import { InboxView } from '@/features/revcollect/inbox/components/inbox-view';
 
 export default function InboxPage() {
   return (
-    <PageContainer compactMobile lockPageScroll flushTop>
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
       <InboxView />
     </PageContainer>
   );

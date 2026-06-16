@@ -17,7 +17,8 @@ export default function PageContainer({
   accessFallback,
   compactMobile = false,
   lockPageScroll = false,
-  flushTop = false
+  flushTop = false,
+  flushX = false
 }: {
   children: React.ReactNode;
   isLoading?: boolean;
@@ -26,6 +27,7 @@ export default function PageContainer({
   compactMobile?: boolean;
   lockPageScroll?: boolean;
   flushTop?: boolean;
+  flushX?: boolean;
 }) {
   if (!access) {
     return (
@@ -41,9 +43,11 @@ export default function PageContainer({
 
   const content = isLoading ? <PageSkeleton /> : children;
 
-  const pageClasses = compactMobile
-    ? cn('flex flex-1 flex-col px-3 pb-3 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-1 md:pt-4')
-    : cn('flex flex-1 flex-col px-4 pb-4 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-2 md:pt-4');
+  const pageClasses = flushX
+    ? cn('flex flex-1 flex-col p-0', flushTop ? 'pt-0' : undefined)
+    : compactMobile
+      ? cn('flex flex-1 flex-col px-3 pb-3 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-1 md:pt-4')
+      : cn('flex flex-1 flex-col px-4 pb-4 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-2 md:pt-4');
 
   return (
     <div className={cn(pageClasses, 'min-h-0 min-w-0 flex-1 overflow-hidden')}>

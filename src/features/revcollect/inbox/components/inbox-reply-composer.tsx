@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useId, useRef, useState, useTransition } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useId, useImperativeHandle, useRef, useState, useTransition } from 'react';
 import InputBar from '@/components/chat/input-bar';
 import { ModeSelector } from '@/components/chat/mode-selector';
 import { ModelPicker } from '@/components/chat/model-picker';
@@ -125,6 +125,11 @@ const ComposerToolbar = memo(function ComposerToolbar({
   );
 });
 
+export interface InboxReplyComposerHandle {
+  send: () => void;
+  focusEditor: () => void;
+}
+
 export interface InboxReplyComposerProps {
   baseDraft: string;
   customerStatus: CollectionStatus;
@@ -135,16 +140,21 @@ export interface InboxReplyComposerProps {
   className?: string;
 }
 
-export function InboxReplyComposer({
-  baseDraft,
-  customerStatus,
-  defaultTone,
-  initialBody,
-  defaultAutoRun = false,
-  bodyCollapsed = false,
-  className
-}: InboxReplyComposerProps) {
+export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxReplyComposerProps>(
+  function InboxReplyComposer(
+    {
+      baseDraft,
+      customerStatus,
+      defaultTone,
+      initialBody,
+      defaultAutoRun = false,
+      bodyCollapsed = false,
+      className
+    },
+    ref
+  ) {
   const autoRunId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
   const { data: agentConfig } = useAgentConfig();
   const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
   const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
@@ -263,8 +273,19 @@ export function InboxReplyComposer({
     toast.success('Reply sent (mock)');
   }, [body]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      send: handleSend,
+      focusEditor: () => {
+        rootRef.current?.querySelector('textarea')?.focus();
+      }
+    }),
+    [handleSend]
+  );
+
   return (
-    <div className={cn('space-y-0', className)}>
+    <div ref={rootRef} className={cn('space-y-0', className)}>
       <InputBar
         fillWidth
         maxTextareaHeight={360}
@@ -291,4 +312,4 @@ export function InboxReplyComposer({
       />
     </div>
   );
-}
+});

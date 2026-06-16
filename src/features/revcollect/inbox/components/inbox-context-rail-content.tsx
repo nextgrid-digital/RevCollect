@@ -21,8 +21,7 @@ export function InboxContextRailContent() {
     <InboxContextSidebar
       customer={data.customer}
       inboxContext={data.inboxContext}
-      aiInsightText={data.aiInsightText}
-      deepAnalysisText={data.deepAnalysisText}
+      aiInsightText={[data.aiInsightText, data.deepAnalysisText].filter(Boolean).join(' ')}
     />
   );
 }

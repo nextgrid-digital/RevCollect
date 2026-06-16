@@ -42,12 +42,16 @@ export function CustomerContextPanelFloatingHeader({ customer }: { customer: Cus
 
 export function CustomerContextPanelFloatingBody({
   customer,
-  inboxContext
+  inboxContext,
+  showDetails = false
 }: {
   customer: Customer;
   inboxContext: CustomerInboxContext;
+  showDetails?: boolean;
 }) {
-  return <InboxContextRailBody customer={customer} context={inboxContext} />;
+  return (
+    <InboxContextRailBody customer={customer} context={inboxContext} showDetails={showDetails} />
+  );
 }
 
 export function CustomerContextPanel({

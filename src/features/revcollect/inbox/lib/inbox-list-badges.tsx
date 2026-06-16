@@ -109,35 +109,15 @@ export function InboxListPill({ label, variant, className }: InboxListPillProps)
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+        'inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
         pillVariantClasses[variant],
         className
       )}
     >
+      {variant === 'draft' ? (
+        <Icons.squareCheck className='size-3 shrink-0 opacity-90' aria-hidden />
+      ) : null}
       {label}
-    </span>
-  );
-}
-
-interface InboxAgentDraftedPillProps {
-  className?: string;
-}
-
-export function InboxAgentDraftedPill({ className }: InboxAgentDraftedPillProps) {
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight',
-        'bg-violet-600 text-white shadow-sm ring-1 ring-violet-500/40',
-        'dark:bg-violet-500 dark:ring-violet-400/30',
-        className
-      )}
-      title='Agent prepared a reply — open to review and send'
-    >
-      <span className='bg-white/25 flex size-3.5 items-center justify-center rounded-full'>
-        <Icons.sparkles className='size-2.5' aria-hidden />
-      </span>
-      Agent drafted
     </span>
   );
 }

@@ -1,33 +1,37 @@
+import { cn } from '@/lib/utils';
 import { InboxContextRailSection } from './inbox-context-rail-section';
 
 interface InboxContextDetailsCardProps {
   contactName: string;
   paymentTerms: string;
   followUpsSent: number;
-  source: string;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className='flex items-center justify-between gap-3 py-1.5 text-sm'>
-      <span className='text-muted-foreground'>{label}</span>
-      <span className='text-right font-medium'>{value}</span>
-    </div>
+    <tr className='border-border/60 border-b last:border-b-0'>
+      <th scope='row' className='text-muted-foreground py-2 pr-3 text-left text-[11px] font-medium'>
+        {label}
+      </th>
+      <td className='py-2 text-right text-sm font-medium'>{value}</td>
+    </tr>
   );
 }
 
 export function InboxContextDetailsCard({
   contactName,
   paymentTerms,
-  followUpsSent,
-  source
+  followUpsSent
 }: InboxContextDetailsCardProps) {
   return (
-    <InboxContextRailSection label='Details' contentClassName='px-4 py-2'>
-      <DetailRow label='Contact' value={contactName} />
-      <DetailRow label='Terms' value={paymentTerms} />
-      <DetailRow label='Follow-ups' value={`${followUpsSent} sent`} />
-      <DetailRow label='Source' value={source} />
+    <InboxContextRailSection label='Details' contentClassName={cn('px-3 py-1')}>
+      <table className='w-full border-collapse'>
+        <tbody>
+          <DetailRow label='Contact' value={contactName} />
+          <DetailRow label='Terms' value={paymentTerms} />
+          <DetailRow label='Follow-ups sent' value={String(followUpsSent)} />
+        </tbody>
+      </table>
     </InboxContextRailSection>
   );
 }

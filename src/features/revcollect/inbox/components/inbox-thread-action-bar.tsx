@@ -8,6 +8,8 @@ interface InboxThreadActionBarProps {
   lastAction?: LastActionInsight;
   outstandingCents: number;
   suggestedAction?: string;
+  hasAgentDraft?: boolean;
+  onReviewDraft?: () => void;
   className?: string;
 }
 
@@ -36,8 +38,12 @@ export function InboxThreadActionBar({
   lastAction,
   outstandingCents,
   suggestedAction,
+  hasAgentDraft = false,
+  onReviewDraft,
   className
 }: InboxThreadActionBarProps) {
+  const suggestedText = suggestedAction ?? 'Review thread and decide next step';
+
   return (
     <div
       className={cn(
@@ -56,10 +62,23 @@ export function InboxThreadActionBar({
         value={formatCurrencyWhole(outstandingCents)}
         valueClassName='text-rose-700 dark:text-rose-400 tabular-nums'
       />
-      <InsightCell
-        label='Suggested'
-        value={suggestedAction ?? 'Review thread and decide next step'}
-      />
+      <div className='min-w-0 flex-1'>
+        <p className='text-muted-foreground text-[10px] font-medium tracking-wide uppercase'>
+          Suggested
+        </p>
+        <p className='mt-0.5 truncate text-xs font-medium' title={suggestedText}>
+          {suggestedText}
+        </p>
+        {hasAgentDraft && onReviewDraft ? (
+          <button
+            type='button'
+            onClick={onReviewDraft}
+            className='text-primary mt-1 text-xs font-medium hover:underline'
+          >
+            Review draft →
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

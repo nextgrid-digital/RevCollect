@@ -201,6 +201,14 @@ export function useIntegrationStatus() {
   return useQuery(integrationStatusQueryOptions());
 }
 
+export function useAgentDraftCount() {
+  return useQuery({
+    queryKey: revcollectKeys.agentDraftCount(),
+    queryFn: () => getRevCollectService().countAgentDraftsReady(),
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
 export function useLogDataAccess() {
   const service = getRevCollectService();
   return useMutation({

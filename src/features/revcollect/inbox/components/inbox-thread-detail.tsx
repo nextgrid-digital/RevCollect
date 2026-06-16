@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { InboxContextSidebar } from './inbox-context-sidebar';
-import { InboxThreadActionBar } from './inbox-thread-action-bar';
 import { InboxThreadComposer } from './inbox-thread-composer';
-import { InboxThreadHeader } from './inbox-thread-header';
+import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
 
 interface InboxThreadDetailProps {
@@ -24,7 +23,6 @@ interface InboxThreadDetailProps {
 export function InboxThreadDetail({
   messageId,
   peekLayout = 'side',
-  hideHeader = false,
   highlightedEmailId,
   scrollToEmailId,
   className
@@ -40,6 +38,10 @@ export function InboxThreadDetail({
     }
     return undefined;
   }, [selection]);
+
+  const scrollToDraft = () => {
+    document.getElementById('agent-draft-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
 
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
@@ -74,6 +76,9 @@ export function InboxThreadDetail({
 
   const { customer, message, threadEmails, inboxContext, deepAnalysisText, aiInsightText } =
     selection;
+  const hasAgentDraft = Boolean(selection.agentDraftMeta);
+  const attachedInvoiceCount = selection.openInvoiceNumbers.length;
+  const mergedInsightText = [aiInsightText, deepAnalysisText].filter(Boolean).join(' ');
 
   return (
     <div className={cn('bg-background flex min-h-0 min-w-0 flex-1 flex-col', className)}>
@@ -84,26 +89,17 @@ export function InboxThreadDetail({
             peekLayout === 'center' ? 'min-w-[28rem] flex-[1.4]' : 'flex-1'
           )}
         >
-          {!hideHeader ? (
-            <div className='border-border/60 shrink-0 border-b px-4 py-3'>
-              <InboxThreadHeader
-                customer={customer}
-                invoiceNumbers={selection.openInvoiceNumbers}
-                className='py-0'
-              />
-            </div>
-          ) : null}
-
-          <InboxThreadActionBar
-            lastAction={selection.lastAction}
-            outstandingCents={customer.balanceCents}
-            suggestedAction={message.suggestedAction}
+          <InboxThreadToolbar
+            customer={customer}
+            message={message}
+            invoiceNumbers={selection.openInvoiceNumbers}
+            onReply={scrollToDraft}
           />
 
           <div
             ref={threadScrollRef}
             className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3'
-            style={composerPad > 0 ? { paddingBottom: composerPad } : undefined}
+            style={!hasAgentDraft && composerPad > 0 ? { paddingBottom: composerPad } : undefined}
           >
             <ConversationThread
               emails={threadEmails}
@@ -120,6 +116,8 @@ export function InboxThreadDetail({
             agentDraftMeta={selection.agentDraftMeta}
             aiDraftBase={selection.aiDraftBase}
             customerStatus={customer.status}
+            dockedAgentDraft={hasAgentDraft}
+            attachedInvoiceCount={attachedInvoiceCount}
             onOverlayHeightChange={setComposerPad}
           />
         </div>
@@ -127,14 +125,16 @@ export function InboxThreadDetail({
         <aside
           className={cn(
             'border-border/60 shrink-0 overflow-hidden border-l',
-            peekLayout === 'side' ? 'w-64' : 'w-72'
+            peekLayout === 'center' ? 'w-72' : 'w-80'
           )}
         >
           <InboxContextSidebar
             customer={customer}
             inboxContext={inboxContext}
-            aiInsightText={aiInsightText}
-            deepAnalysisText={deepAnalysisText}
+            aiInsightText={mergedInsightText}
+            hasAgentDraft={hasAgentDraft}
+            attachedInvoiceCount={attachedInvoiceCount}
+            onDraftFollowUp={scrollToDraft}
           />
         </aside>
       </div>

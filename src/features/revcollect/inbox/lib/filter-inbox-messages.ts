@@ -1,6 +1,6 @@
 import type { Customer, InboxMessage } from '../../types';
 
-export type InboxListFilter = 'all' | 'overdue' | 'due_soon' | 'escalated';
+export type InboxListFilter = 'all' | 'overdue' | 'drafts' | 'replied' | 'escalated';
 
 function matchesSearch(
   message: InboxMessage,
@@ -38,7 +38,8 @@ export function filterInboxMessages(
     const matchesFilter =
       filter === 'all' ||
       (filter === 'overdue' && customer.status === 'overdue') ||
-      (filter === 'due_soon' && customer.status === 'due_soon') ||
+      (filter === 'drafts' && message.agentDraftReady) ||
+      (filter === 'replied' && !message.unread) ||
       (filter === 'escalated' && customer.status === 'in_dispute');
     if (!matchesFilter) return false;
 

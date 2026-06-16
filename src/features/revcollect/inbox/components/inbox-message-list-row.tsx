@@ -1,15 +1,14 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '../../utils';
 import type { Customer, InboxMessage } from '../../types';
-import { formatInboxListTimestamp } from '../../utils';
-import { getInboxListPills, InboxAgentDraftedPill, InboxListPill } from '../lib/inbox-list-badges';
+import { getInboxListPills, InboxListPill } from '../lib/inbox-list-badges';
 
 interface InboxMessageListRowProps {
   message: InboxMessage;
   customer: Customer;
   selected: boolean;
-  showAgentDraftedLeadPill?: boolean;
   onSelect: () => void;
 }
 
@@ -17,7 +16,6 @@ export function InboxMessageListRow({
   message,
   customer,
   selected,
-  showAgentDraftedLeadPill = false,
   onSelect
 }: InboxMessageListRowProps) {
   const showUnread = message.unread;
@@ -25,8 +23,7 @@ export function InboxMessageListRow({
     customer.daysOverdue,
     message.replyIntent,
     message.replyIntentLabel,
-    message.agentDraftReady && !showAgentDraftedLeadPill,
-    { excludeDraftPill: showAgentDraftedLeadPill }
+    message.agentDraftReady
   );
 
   return (
@@ -35,49 +32,43 @@ export function InboxMessageListRow({
         type='button'
         onClick={onSelect}
         className={cn(
-          'flex w-full items-center gap-3 border-l-2 px-4 py-2.5 text-left transition-colors',
-          showAgentDraftedLeadPill
+          'flex w-full border-l-2 px-4 py-3 text-left transition-colors',
+          selected
             ? 'border-l-violet-500 bg-violet-50/60 hover:bg-violet-50/80 dark:border-l-violet-400 dark:bg-violet-950/25 dark:hover:bg-violet-950/40'
-            : 'hover:bg-muted/40 border-l-transparent',
-          selected && !showAgentDraftedLeadPill && 'bg-muted/60',
-          selected && showAgentDraftedLeadPill && 'bg-violet-100/70 dark:bg-violet-950/45'
+            : 'hover:bg-muted/40 border-l-transparent'
         )}
       >
-        <div className='flex w-3 shrink-0 items-center justify-center'>
-          {showUnread ? (
-            <span className='bg-primary size-1.5 shrink-0 rounded-full' aria-hidden />
-          ) : (
-            <span className='size-1.5 shrink-0' aria-hidden />
-          )}
-        </div>
-
-        {showAgentDraftedLeadPill ? <InboxAgentDraftedPill className='shrink-0' /> : null}
-
-        <div className='flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden'>
-          <span className={cn('shrink-0 text-sm', showUnread ? 'font-semibold' : 'font-medium')}>
-            {customer.company}
-          </span>
-          <span className='text-muted-foreground min-w-0 truncate text-sm'>
-            <span className='text-foreground/80'>{message.subject}</span>
-            <span className='mx-1'>—</span>
-            {message.preview}
-          </span>
-        </div>
-
-        {pills.length > 0 ? (
-          <div className='flex shrink-0 items-center gap-1'>
-            {pills.map((pill) => (
-              <InboxListPill key={pill.label} label={pill.label} variant={pill.variant} />
-            ))}
+        <div className='min-w-0 flex-1'>
+          <div className='flex items-start justify-between gap-2'>
+            <p
+              className={cn(
+                'min-w-0 truncate text-sm',
+                showUnread ? 'font-semibold' : 'font-medium'
+              )}
+            >
+              {customer.company}
+            </p>
+            <span className='text-foreground shrink-0 text-sm font-semibold tabular-nums'>
+              {formatCurrency(customer.balanceCents)}
+            </span>
           </div>
-        ) : null}
 
-        <time
-          className='text-muted-foreground shrink-0 text-xs tabular-nums'
-          dateTime={message.receivedAt}
-        >
-          {formatInboxListTimestamp(message.receivedAt)}
-        </time>
+          <p className={cn('mt-0.5 truncate text-sm', showUnread ? 'font-medium' : 'font-normal')}>
+            {message.subject}
+          </p>
+
+          <p className='text-muted-foreground mt-0.5 truncate text-xs leading-relaxed'>
+            {message.preview}
+          </p>
+
+          {pills.length > 0 ? (
+            <div className='mt-1.5 flex flex-wrap items-center gap-1'>
+              {pills.map((pill) => (
+                <InboxListPill key={pill.label} label={pill.label} variant={pill.variant} />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </button>
     </li>
   );

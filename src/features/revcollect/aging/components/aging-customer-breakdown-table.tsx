@@ -1,10 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/table/data-table';
 import { useDataTable } from '@/hooks/use-data-table';
+import { useInboxMessages } from '../../api/queries';
+import { getInboxMessageIdForCustomer } from '../../lib/customer-actions';
 import { formatCurrency } from '../../utils';
 import type { AgingCustomerBreakdownRow } from '../../types';
 import { AgingRiskBadge } from './aging-risk-badge';
@@ -55,6 +59,7 @@ function exportRowsToCsv(rows: AgingCustomerBreakdownRow[]): void {
 
 export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTableProps) {
   const router = useRouter();
+  const { data: inboxMessages = [] } = useInboxMessages();
 
   const columns = useMemo<ColumnDef<AgingCustomerBreakdownRow>[]>(
     () => [
@@ -132,9 +137,40 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
         enableSorting: false,
         header: 'Risk',
         cell: ({ row }) => <AgingRiskBadge risk={row.original.risk} />
+      },
+      {
+        id: 'nextStep',
+        enableSorting: false,
+        header: 'Next step',
+        cell: ({ row }) => {
+          const messageId = getInboxMessageIdForCustomer(row.original.customerId, inboxMessages);
+          if (messageId) {
+            return (
+              <Button asChild size='sm' variant='outline' className='h-7 text-xs'>
+                <Link href={`/inbox/${messageId}`} onClick={(event) => event.stopPropagation()}>
+                  Follow up in inbox
+                </Link>
+              </Button>
+            );
+          }
+          return (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='h-7 text-xs'
+              onClick={(event) => {
+                event.stopPropagation();
+                router.push(`/customers/${row.original.customerId}`);
+              }}
+            >
+              View customer
+            </Button>
+          );
+        }
       }
     ],
-    []
+    [inboxMessages, router]
   );
 
   const { table } = useDataTable({

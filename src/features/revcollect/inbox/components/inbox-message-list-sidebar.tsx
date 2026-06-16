@@ -17,8 +17,9 @@ interface InboxMessageListSidebarProps {
   onFilterChange: (filter: InboxListFilter) => void;
   allCount: number;
   overdueCount: number;
-  dueSoonCount: number;
-  escalatedCount: number;
+  draftsCount: number;
+  repliedCount: number;
+  disputesCount: number;
   filteredMessages: InboxMessage[];
   selectedId: string;
   onSelectMessage: (messageId: string) => void;
@@ -36,8 +37,9 @@ export function InboxMessageListSidebar({
   onFilterChange,
   allCount,
   overdueCount,
-  dueSoonCount,
-  escalatedCount,
+  draftsCount,
+  repliedCount,
+  disputesCount,
   filteredMessages,
   selectedId,
   onSelectMessage,
@@ -68,8 +70,9 @@ export function InboxMessageListSidebar({
             onFilterChange={onFilterChange}
             allCount={allCount}
             overdueCount={overdueCount}
-            dueSoonCount={dueSoonCount}
-            escalatedCount={escalatedCount}
+            draftsCount={draftsCount}
+            repliedCount={repliedCount}
+            disputesCount={disputesCount}
           />
         </SidebarHeader>
       ) : null}
