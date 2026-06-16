@@ -14,7 +14,7 @@ export function OnboardingSteps() {
   if (isPending || !integrationStatus) {
     return (
       <WorkspaceCanvas className='flex-col'>
-        <WorkspacePageTitle title='Onboarding' className='shrink-0' />
+        <WorkspacePageTitle title='Onboarding' className='h-8 shrink-0' />
         <p className='text-muted-foreground text-sm'>Loading onboarding steps…</p>
       </WorkspaceCanvas>
     );
@@ -43,7 +43,7 @@ export function OnboardingSteps() {
 
   return (
     <WorkspaceCanvas className='flex-col'>
-      <WorkspacePageTitle title='Onboarding' className='shrink-0' />
+      <WorkspacePageTitle title='Onboarding' className='h-8 shrink-0' />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className='mx-auto flex w-full max-w-2xl flex-col gap-4 pb-6'>
           {steps.map((step) => (

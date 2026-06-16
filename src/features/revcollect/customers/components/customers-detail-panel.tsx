@@ -132,8 +132,15 @@ export function CustomersDetailPanel({
                     <div className='flex min-w-0 items-start gap-4'>
                       <CustomerAvatar name={customer.company} className='size-12 shrink-0' />
                       <div className='min-w-0'>
-                        <h2 className='text-xl font-semibold sm:text-2xl'>{customer.company}</h2>
-                        <p className='text-muted-foreground mt-1 text-sm'>
+                        {hideActivityAside ? null : (
+                          <h2 className='text-xl font-semibold sm:text-2xl'>{customer.company}</h2>
+                        )}
+                        <p
+                          className={cn(
+                            'text-muted-foreground text-sm',
+                            hideActivityAside ? undefined : 'mt-1'
+                          )}
+                        >
                           {customer.name} · {customer.email} · {paymentTerms}
                         </p>
                       </div>

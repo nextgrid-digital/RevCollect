@@ -233,7 +233,7 @@ export function AgentPage() {
 
   return (
     <WorkspaceCanvas className='flex-col'>
-      <WorkspacePageTitle title='Agent' className='shrink-0' />
+      <WorkspacePageTitle title='Agent' className='h-8 shrink-0' />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className='mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6'>
           <WorkspaceCard className='p-4 md:p-5'>

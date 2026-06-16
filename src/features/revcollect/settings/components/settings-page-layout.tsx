@@ -49,6 +49,11 @@ interface SettingsPageLayoutProps {
 
 export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
   const pathname = usePathname();
+  const activeNavItem = NAV_ITEMS.find((item) => item.tab === tab);
+  const mobileBreadcrumbs =
+    tab === 'general'
+      ? undefined
+      : [{ label: 'Settings', href: '/settings' }, { label: activeNavItem?.label ?? 'Settings' }];
 
   return (
     <WorkspaceCanvas className='flex-col md:flex-row'>
@@ -87,12 +92,14 @@ export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
         </WorkspaceCard>
       </div>
 
-      <div className='border-sidebar-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:hidden'>
-        <div className='border-sidebar-border shrink-0 border-b py-3'>
-          <WorkspacePageTitle title='Settings' />
-        </div>
+      <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden md:hidden'>
+        <WorkspacePageTitle
+          className='h-8 shrink-0'
+          title={tab === 'general' ? 'Settings' : undefined}
+          breadcrumbs={mobileBreadcrumbs}
+        />
         <nav
-          className='border-sidebar-border flex shrink-0 gap-1 overflow-x-auto border-b py-3 whitespace-nowrap'
+          className='border-sidebar-border flex shrink-0 gap-1 overflow-x-auto border-b pb-3 whitespace-nowrap'
           aria-label='Settings sections'
         >
           {NAV_ITEMS.map((item) => {

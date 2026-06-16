@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
-import { useCustomer, useCustomers } from '../../api/queries';
+import { useCustomer } from '../../api/queries';
 import { CustomersDetailPanel } from './customers-detail-panel';
 import { CustomersList } from './customers-list';
 import { CustomersListTitle } from './customers-list-header';
@@ -18,16 +16,8 @@ interface CustomersWorkspaceProps {
   customerId?: string | null;
 }
 
-function pickDefaultCustomerId(customers: { id: string; balanceCents: number }[]): string | null {
-  if (customers.length === 0) return null;
-  const sorted = [...customers].sort((a, b) => b.balanceCents - a.balanceCents);
-  return sorted[0]?.id ?? null;
-}
-
 export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProps) {
-  const router = useRouter();
   const isMobile = useIsMobile();
-  const { data: customers = [] } = useCustomers();
 
   const activeCustomerId = customerId ?? null;
   const showListOnMobile = isMobile && !activeCustomerId;
@@ -35,14 +25,6 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
 
   const { data: customer } = useCustomer(activeCustomerId ?? undefined);
   const customerCompany = customer?.company ?? '…';
-
-  useEffect(() => {
-    if (isMobile || activeCustomerId || customers.length === 0) return;
-    const defaultId = pickDefaultCustomerId(customers);
-    if (defaultId) {
-      router.replace(`/customers/${defaultId}`, { scroll: false });
-    }
-  }, [activeCustomerId, isMobile, customers, router]);
 
   const listContent = (showListTitle: boolean) => (
     <CustomersList

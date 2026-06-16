@@ -63,7 +63,7 @@ export function AgingView() {
           title='Aging'
           actions={toolbar}
           stackActionsBelow
-          className='shrink-0'
+          className='h-8 shrink-0'
         />
         <div
           className={cn('scroll-stable min-h-0 flex-1 overflow-y-auto', workspaceCenterMaxWidth)}
@@ -87,7 +87,12 @@ export function AgingView() {
 
   return (
     <WorkspaceCanvas className='flex-col'>
-      <WorkspacePageTitle title='Aging' actions={toolbar} stackActionsBelow className='shrink-0' />
+      <WorkspacePageTitle
+        title='Aging'
+        actions={toolbar}
+        stackActionsBelow
+        className='h-8 shrink-0'
+      />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className={cn(workspaceCenterMaxWidth, 'space-y-4 pb-4')}>
           <p className='text-muted-foreground text-sm'>

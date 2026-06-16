@@ -23,7 +23,10 @@ export function ConnectIntegrationView({
 
   return (
     <WorkspaceCanvas className='flex-col'>
-      <WorkspacePageTitle title={title} className='shrink-0' />
+      <WorkspacePageTitle
+        className='h-8 shrink-0'
+        breadcrumbs={[{ label: 'Onboarding', href: '/onboarding' }, { label: title }]}
+      />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <WorkspaceCard className='mx-auto w-full max-w-lg p-4 md:p-5'>
           <div className='flex flex-col gap-1'>
