@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { MarketingPageShell } from './marketing-page-shell';
 import { WaitlistForm } from './waitlist-form';
 
 const features = [
@@ -66,7 +65,7 @@ const steps = [
 
 export function LandingView() {
   return (
-    <MarketingPageShell>
+    <>
       <section className='relative overflow-hidden px-4 pt-16 pb-20 sm:px-6 sm:pt-24 sm:pb-28'>
         <div
           className='pointer-events-none absolute inset-0 -z-10 opacity-40'
@@ -80,7 +79,7 @@ export function LandingView() {
             Early access · AI-powered AR
           </p>
           <h1 className='text-foreground text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl'>
-            Collect faster without chasing invoices by hand
+            Collect faster without chasing invoices
           </h1>
           <p className='text-muted-foreground mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty sm:text-xl'>
             RevCollect turns overdue AR into a managed workflow: one inbox for customer replies,
@@ -171,6 +170,6 @@ export function LandingView() {
           </div>
         </div>
       </section>
-    </MarketingPageShell>
+    </>
   );
 }

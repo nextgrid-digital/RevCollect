@@ -8,7 +8,7 @@ interface LegalPageShellProps {
 
 export function LegalPageShell({ title, lastUpdated, children }: LegalPageShellProps) {
   return (
-    <div className='min-h-screen px-4 py-12 sm:px-6 lg:px-8'>
+    <div className='px-4 py-12 sm:px-6 lg:px-8'>
       <div className='mx-auto max-w-3xl space-y-8'>
         <h1 className='text-foreground text-3xl font-bold'>{title}</h1>
         {children}

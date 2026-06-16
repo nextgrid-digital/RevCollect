@@ -1,11 +1,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { MarketingPageShell } from './marketing-page-shell';
 
 export function AboutView() {
   return (
-    <MarketingPageShell>
-      <div className='mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24'>
+    <div className='mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24'>
         <p className='text-primary text-sm font-medium tracking-wide uppercase'>About</p>
         <h1 className='text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl'>
           Collections software for the firms who actually run AR
@@ -63,6 +61,5 @@ export function AboutView() {
           </Button>
         </div>
       </div>
-    </MarketingPageShell>
   );
 }

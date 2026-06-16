@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ChangelogTag } from '../data/changelog';
 import { changelogEntries } from '../data/changelog';
-import { MarketingPageShell } from './marketing-page-shell';
 
 const tagStyles: Record<ChangelogTag, string> = {
   feature: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
@@ -19,8 +18,7 @@ const tagLabels: Record<ChangelogTag, string> = {
 
 export function ChangelogView() {
   return (
-    <MarketingPageShell>
-      <div className='mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24'>
+    <div className='mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24'>
         <div className='max-w-2xl'>
           <p className='text-primary text-sm font-medium tracking-wide uppercase'>Changelog</p>
           <h1 className='text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl'>
@@ -75,6 +73,5 @@ export function ChangelogView() {
           </Button>
         </div>
       </div>
-    </MarketingPageShell>
   );
 }

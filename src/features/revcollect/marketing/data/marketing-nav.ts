@@ -1,5 +1,6 @@
 export const marketingNavLinks = [
   { label: 'Features', href: '/#features' },
+  { label: 'Manifesto', href: '/manifesto' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Changelog', href: '/changelog' },
   { label: 'About', href: '/about' },
@@ -8,6 +9,7 @@ export const marketingNavLinks = [
 
 export const marketingFooterLinks = [
   { label: 'About', href: '/about' },
+  { label: 'Manifesto', href: '/manifesto' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Changelog', href: '/changelog' },
   { label: 'Waitlist', href: '/waitlist' },

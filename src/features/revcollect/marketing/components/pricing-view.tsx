@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { MarketingPageShell } from './marketing-page-shell';
 
 const plans = [
   {
@@ -34,8 +33,7 @@ const plans = [
 
 export function PricingView() {
   return (
-    <MarketingPageShell>
-      <div className='mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24'>
+    <div className='mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24'>
         <div className='mx-auto max-w-2xl text-center'>
           <p className='text-primary text-sm font-medium tracking-wide uppercase'>Pricing</p>
           <h1 className='text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl'>
@@ -93,6 +91,5 @@ export function PricingView() {
           </a>
         </p>
       </div>
-    </MarketingPageShell>
   );
 }

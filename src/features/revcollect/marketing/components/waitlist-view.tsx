@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { MarketingPageShell } from './marketing-page-shell';
 import { WaitlistForm } from './waitlist-form';
 
 export function WaitlistView() {
   return (
-    <MarketingPageShell>
-      <div className='mx-auto max-w-lg px-4 py-16 sm:px-6 sm:py-24'>
+    <div className='mx-auto max-w-lg px-4 py-16 sm:px-6 sm:py-24'>
         <p className='text-primary text-sm font-medium tracking-wide uppercase'>Early access</p>
         <h1 className='text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl'>
           Join the RevCollect waitlist
@@ -26,6 +24,5 @@ export function WaitlistView() {
           </Link>
         </p>
       </div>
-    </MarketingPageShell>
   );
 }
