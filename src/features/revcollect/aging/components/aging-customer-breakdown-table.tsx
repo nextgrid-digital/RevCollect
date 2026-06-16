@@ -201,7 +201,7 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
           Export CSV
         </button>
       </div>
-      <div className='-mx-4 min-w-0 sm:mx-0'>
+      <div className='min-w-0 overflow-x-auto'>
         <DataTable
           table={table}
           emptyMessage='No customers match the selected filters.'

@@ -96,7 +96,7 @@ function InboxContextRailBodyComponent({
       </InboxContextRailSection>
 
       {openInvoices.length > 0 ? (
-        <section className='w-full shrink-0'>
+        <section className='w-full min-w-0 shrink-0'>
           <div className='flex items-center justify-between gap-2 px-1'>
             <InboxContextSectionLabel>Open invoices</InboxContextSectionLabel>
             {attachment && unattachedPreview.length > 0 ? (
@@ -115,7 +115,7 @@ function InboxContextRailBodyComponent({
               </Button>
             ) : null}
           </div>
-          <div className='mt-1.5 space-y-2 px-0.5'>
+          <div className='mt-1.5 min-w-0 space-y-2 px-0.5'>
             {previewInvoices.map((invoice) => (
               <InboxContextInvoiceCard
                 key={invoice.id}

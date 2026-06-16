@@ -99,7 +99,7 @@ export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
           breadcrumbs={mobileBreadcrumbs}
         />
         <nav
-          className='border-sidebar-border flex shrink-0 gap-1 overflow-x-auto border-b pb-3 whitespace-nowrap'
+          className='border-sidebar-border flex min-w-0 max-w-full shrink-0 gap-1 overflow-x-auto overscroll-x-contain border-b pb-3 whitespace-nowrap'
           aria-label='Settings sections'
         >
           {NAV_ITEMS.map((item) => {

@@ -18,7 +18,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <>
       <InfobarProvider defaultOpen={false}>
         <RevCollectPageTransition pathname={pathname} disabled>
-          <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>{children}</div>
+          <div className='flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-hidden'>
+            {children}
+          </div>
         </RevCollectPageTransition>
         <InfoSidebar side='right' />
       </InfobarProvider>

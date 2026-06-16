@@ -18,7 +18,7 @@ export function SettingsGeneralFooter({
   onSave
 }: SettingsGeneralFooterProps) {
   return (
-    <div className='border-border/60 bg-background/95 sticky bottom-0 -mx-4 mt-6 border-t px-4 py-4 backdrop-blur-sm md:-mx-0'>
+    <div className='border-border/60 bg-background/95 sticky bottom-0 mt-6 border-t py-4 backdrop-blur-sm'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end'>
         {hasUnsavedChanges ? (
           <p className='text-muted-foreground mr-auto text-sm'>You have unsaved changes.</p>

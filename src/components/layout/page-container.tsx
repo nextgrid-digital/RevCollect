@@ -50,12 +50,17 @@ export default function PageContainer({
       : cn('flex flex-1 flex-col px-4 pb-4 md:px-6', flushTop ? 'pt-0 md:pt-0' : 'pt-2 md:pt-4');
 
   return (
-    <div className={cn(pageClasses, 'min-h-0 min-w-0 flex-1 overflow-hidden')}>
+    <div
+      className={cn(
+        pageClasses,
+        'min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-hidden'
+      )}
+    >
       <div
         className={
           lockPageScroll
-            ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-            : 'min-h-0 flex-1 overflow-y-auto'
+            ? 'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-hidden'
+            : 'min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto'
         }
       >
         {content}

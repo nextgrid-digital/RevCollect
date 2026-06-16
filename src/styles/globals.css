@@ -50,8 +50,17 @@
 }
 
 @layer utilities {
-  .scroll-stable {
-    scrollbar-gutter: stable;
+  @media (min-width: 768px) {
+    .scroll-stable {
+      scrollbar-gutter: stable;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    overflow-x: hidden;
   }
 }
 

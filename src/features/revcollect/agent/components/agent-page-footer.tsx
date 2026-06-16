@@ -27,7 +27,7 @@ export function AgentPageFooter({
   onActivate
 }: AgentPageFooterProps) {
   return (
-    <div className='border-border/60 bg-background/95 sticky bottom-0 -mx-4 mt-8 border-t px-4 py-4 backdrop-blur-sm sm:-mx-0'>
+    <div className='border-border/60 bg-background/95 sticky bottom-0 mt-8 border-t py-4 backdrop-blur-sm'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
         <div className='min-w-0'>
           <p className='text-muted-foreground text-sm'>

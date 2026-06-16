@@ -207,7 +207,7 @@ function InfobarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            'group/infobar-wrapper flex min-h-0 w-full flex-1 overflow-hidden',
+            'group/infobar-wrapper flex min-h-0 w-full min-w-0 max-w-full flex-1 overflow-x-hidden overflow-hidden',
             className
           )}
           {...props}

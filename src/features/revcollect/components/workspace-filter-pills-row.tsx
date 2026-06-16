@@ -69,7 +69,13 @@ export function WorkspaceFilterPillsRow<T extends string>({
   }, [updateFade, pillCountsKey]);
 
   return (
-    <div className={cn('relative min-w-0', showTopPadding && 'pt-3', className)}>
+    <div
+      className={cn(
+        'relative min-w-0 max-w-full overflow-hidden',
+        showTopPadding && 'pt-3',
+        className
+      )}
+    >
       <div
         ref={scrollRef}
         className='flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-4 whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
