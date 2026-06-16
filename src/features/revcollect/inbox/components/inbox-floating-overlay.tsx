@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface InboxFloatingOverlayProps {
   children: ReactNode;
+  id?: string;
   className?: string;
   contentClassName?: string;
   onHeightChange?: (height: number) => void;
@@ -12,6 +13,7 @@ interface InboxFloatingOverlayProps {
 
 export function InboxFloatingOverlay({
   children,
+  id,
   className,
   contentClassName,
   onHeightChange
@@ -44,6 +46,7 @@ export function InboxFloatingOverlay({
   return (
     <div
       ref={overlayRef}
+      id={id}
       className={cn(
         'pointer-events-none absolute right-0 bottom-0 left-0 z-30 border-border/60 border-t bg-background pt-2',
         className

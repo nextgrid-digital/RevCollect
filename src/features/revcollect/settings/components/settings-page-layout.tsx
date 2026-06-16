@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SettingsBillingView } from './settings-billing-view';
@@ -21,7 +22,11 @@ function SettingsPageContent({ tab }: { tab: SettingsTab }) {
     case 'integrations':
       return <SettingsIntegrationsView />;
     case 'billing':
-      return <SettingsBillingView />;
+      return (
+        <Suspense fallback={<p className='text-muted-foreground text-sm'>Loading billing…</p>}>
+          <SettingsBillingView />
+        </Suspense>
+      );
     default: {
       const _exhaustive: never = tab;
       return _exhaustive;

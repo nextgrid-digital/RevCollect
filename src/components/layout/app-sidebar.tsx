@@ -26,13 +26,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
 import { Icons } from '../icons';
-import { useSettingsPeek } from '@/features/revcollect/settings/components/settings-peek-context';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isOpen } = useMediaQuery();
   const filteredGroups = useFilteredNavGroups(navGroups);
-  const { isOpen: settingsOpen, openSettings } = useSettingsPeek();
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
@@ -87,12 +85,14 @@ export default function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              asChild
               tooltip='Settings'
-              isActive={settingsOpen}
-              onClick={() => openSettings()}
+              isActive={pathname.startsWith('/settings')}
             >
-              <Icons.settings />
-              <span>Settings</span>
+              <Link href='/settings'>
+                <Icons.settings />
+                <span>Settings</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

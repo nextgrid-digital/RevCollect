@@ -22,6 +22,8 @@ export function InboxContextRailContent() {
       customer={data.customer}
       inboxContext={data.inboxContext}
       aiInsightText={[data.aiInsightText, data.deepAnalysisText].filter(Boolean).join(' ')}
+      hasAgentDraft={Boolean(data.agentDraftMeta)}
+      attachedInvoiceCount={data.openInvoiceNumbers.length}
     />
   );
 }

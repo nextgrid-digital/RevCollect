@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SettingsAppearanceSection } from './settings-appearance-section';
+import { SettingsInboxLayoutSection } from './settings-inbox-layout-section';
 import { SettingsPrivacySection } from './settings-privacy-section';
 import { SettingsSection } from './settings-section';
 
@@ -24,6 +25,8 @@ export function SettingsGeneralView() {
       </SettingsSection>
 
       <SettingsAppearanceSection />
+
+      <SettingsInboxLayoutSection />
 
       <SettingsPrivacySection />
     </div>

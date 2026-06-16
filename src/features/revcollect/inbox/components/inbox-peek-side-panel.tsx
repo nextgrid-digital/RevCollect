@@ -31,19 +31,12 @@ export function InboxPeekSidePanel({ messageId, onClose }: InboxPeekSidePanelPro
       role='dialog'
       aria-label='Email thread preview'
       className={cn(
-        'border-border/60 bg-background flex h-full w-[min(92vw,52rem)] shrink-0 flex-col overflow-hidden border-l shadow-xl',
-        'animate-in slide-in-from-right fade-in-0 duration-300'
+        'border-border/60 bg-background flex h-full w-[min(92vw,52rem)] shrink-0 flex-col overflow-hidden border-l shadow-xl'
       )}
     >
       <div className='border-border/60 flex shrink-0 items-center gap-3 border-b px-3 py-2'>
         <div className='min-w-0 flex-1'>
-          {selection ? (
-            <InboxThreadHeader
-              customer={selection.customer}
-              invoiceNumbers={selection.openInvoiceNumbers}
-              className='py-0'
-            />
-          ) : null}
+          {selection ? <InboxThreadHeader customer={selection.customer} className='py-0' /> : null}
         </div>
         <Button
           type='button'

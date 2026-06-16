@@ -1,5 +1,6 @@
 import {
-  agentConfig,
+  agentAddonStatus as initialAgentAddonStatus,
+  agentConfig as initialAgentConfig,
   countAgentDraftsReady,
   customers,
   getAgentDraftMetaForMessage,
@@ -24,6 +25,8 @@ import {
   getAiSummaryForThread,
   getAiDraftForMessage
 } from '../mock-data';
+import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
+import type { AgentActivationResult, AgentAddonStatus, AgentConfig } from '../types';
 import type { RevCollectService } from './service';
 import type {
   DataAccessEvent,
@@ -37,6 +40,9 @@ import { MOCK_TENANT_ID as TENANT_ID } from './types';
 function resolveMock<T>(value: T): Promise<T> {
   return Promise.resolve(value);
 }
+
+let mutableAgentConfig: AgentConfig = structuredClone(initialAgentConfig);
+let mutableAgentAddonStatus: AgentAddonStatus = { ...initialAgentAddonStatus };
 
 export class MockRevCollectService implements RevCollectService {
   getTenantId(): TenantId {
@@ -143,7 +149,29 @@ export class MockRevCollectService implements RevCollectService {
   }
 
   getAgentConfig() {
-    return resolveMock(agentConfig);
+    return resolveMock({ ...mutableAgentConfig });
+  }
+
+  updateAgentConfig(config: AgentConfig) {
+    mutableAgentConfig = syncAgentConfigTone({ ...config });
+    return resolveMock({ ...mutableAgentConfig });
+  }
+
+  getAgentAddonStatus() {
+    return resolveMock({ ...mutableAgentAddonStatus });
+  }
+
+  subscribeAgentAddon() {
+    mutableAgentAddonStatus = { ...mutableAgentAddonStatus, subscribed: true };
+    return resolveMock({ ...mutableAgentAddonStatus });
+  }
+
+  activateAgent(): Promise<AgentActivationResult> {
+    if (!mutableAgentAddonStatus.subscribed) {
+      return resolveMock({ active: false, needsBilling: true });
+    }
+    mutableAgentConfig = { ...mutableAgentConfig, isActive: true };
+    return resolveMock({ active: true });
   }
 
   getIntegrationStatus() {
@@ -161,7 +189,7 @@ export class MockRevCollectService implements RevCollectService {
       inboxMessages: [...inboxMessages],
       threadEmails: threadEmailLists.flat(),
       timelineEvents: customers.flatMap((c) => getTimelineForCustomer(c.id)),
-      agentConfig: { ...agentConfig },
+      agentConfig: { ...mutableAgentConfig },
       integrationStatus: { ...integrationStatus }
     };
   }

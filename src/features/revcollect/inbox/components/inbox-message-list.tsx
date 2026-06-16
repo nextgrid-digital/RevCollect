@@ -5,9 +5,13 @@ import type { Customer, InboxMessage } from '../../types';
 import { groupInboxMessagesByDate } from '../lib/group-inbox-messages-by-date';
 import { InboxMessageListHeader } from './inbox-message-list-header';
 import { InboxMessageListRow } from './inbox-message-list-row';
+import { InboxNotionListRow } from './inbox-notion-list-row';
 import type { InboxListFilter } from '../lib/filter-inbox-messages';
 
+export type InboxMessageListVariant = 'workspace' | 'notion';
+
 interface InboxMessageListProps {
+  variant?: InboxMessageListVariant;
   className?: string;
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -26,6 +30,7 @@ interface InboxMessageListProps {
 }
 
 export function InboxMessageList({
+  variant = 'workspace',
   className,
   searchQuery,
   onSearchChange,
@@ -47,6 +52,7 @@ export function InboxMessageList({
   return (
     <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)}>
       <InboxMessageListHeader
+        variant={variant}
         search={searchQuery}
         onSearchChange={onSearchChange}
         filter={listFilter}
@@ -60,7 +66,14 @@ export function InboxMessageList({
 
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         {filteredMessages.length === 0 ? (
-          <p className='text-muted-foreground px-4 py-12 text-center text-sm'>{emptyMessage}</p>
+          <p
+            className={cn(
+              'px-4 py-12 text-center text-sm',
+              variant === 'workspace' ? 'text-sidebar-foreground/70' : 'text-muted-foreground'
+            )}
+          >
+            {emptyMessage}
+          </p>
         ) : (
           <div className='pb-4'>
             {groups.map((group, groupIndex) => {
@@ -72,11 +85,21 @@ export function InboxMessageList({
                   {group.label ? (
                     <div
                       className={cn(
-                        'border-border/60 sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm',
+                        'sticky top-0 z-10 border-b backdrop-blur-sm',
+                        variant === 'workspace'
+                          ? 'border-sidebar-border bg-sidebar/95'
+                          : 'border-border/60 bg-background/95',
                         isFirstGroup ? 'pt-2' : followsToday ? 'pt-10' : 'pt-12'
                       )}
                     >
-                      <h2 className='text-muted-foreground px-4 pb-3.5 text-xs font-medium'>
+                      <h2
+                        className={cn(
+                          'px-4 pb-3.5 text-xs font-medium',
+                          variant === 'workspace'
+                            ? 'text-sidebar-foreground/70'
+                            : 'text-muted-foreground'
+                        )}
+                      >
                         {group.label}
                       </h2>
                     </div>
@@ -86,8 +109,10 @@ export function InboxMessageList({
                       const msgCustomer = getCustomerById(message.customerId);
                       if (!msgCustomer) return null;
 
+                      const Row = variant === 'notion' ? InboxNotionListRow : InboxMessageListRow;
+
                       return (
-                        <InboxMessageListRow
+                        <Row
                           key={message.id}
                           message={message}
                           customer={msgCustomer}

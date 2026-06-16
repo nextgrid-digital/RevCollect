@@ -1,50 +1,25 @@
 'use client';
 
-import { useCallback } from 'react';
-import type { ComponentType } from 'react';
-import { Icons } from '@/components/icons';
-import { cn } from '@/lib/utils';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { InboxContextRailSection } from './inbox-context-rail-section';
+import { SuggestedAction } from '../../components/suggested-action';
 
 interface InboxContextActionsCardProps {
   contactName: string;
   attachedInvoiceCount?: number;
+  hasAgentDraft?: boolean;
+  heroActionPresent?: boolean;
 }
 
 function getFirstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
-function ActionRow({
-  label,
-  icon: Icon,
-  onClick,
-  className
-}: {
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type='button'
-      onClick={onClick}
-      className={cn(
-        'text-foreground hover:bg-muted/50 -mx-1 flex w-full items-center gap-2 rounded-md px-1 py-2 text-left text-sm transition-colors',
-        className
-      )}
-    >
-      <Icon className='text-muted-foreground size-4 shrink-0' aria-hidden />
-      <span>{label}</span>
-    </button>
-  );
-}
-
 export function InboxContextActionsCard({
   contactName,
-  attachedInvoiceCount = 0
+  attachedInvoiceCount = 0,
+  hasAgentDraft = false,
+  heroActionPresent = false
 }: InboxContextActionsCardProps) {
   const firstName = getFirstName(contactName);
 
@@ -60,21 +35,54 @@ export function InboxContextActionsCard({
     toast.message(`Calling ${firstName} (mock)`);
   }, [firstName]);
 
-  const handleSnooze = useCallback(() => {
-    toast.message('Snoozed for 3 days (mock)');
-  }, []);
+  const suggestion = useMemo(() => {
+    if (heroActionPresent) {
+      return {
+        description: `Reach ${firstName} about outstanding balance`,
+        actionLabel: `Call ${firstName}`,
+        onAction: handleCall
+      };
+    }
+
+    if (hasAgentDraft) {
+      return null;
+    }
+
+    if (attachedInvoiceCount > 0) {
+      return {
+        description: `Attach ${attachedInvoiceCount} open ${attachedInvoiceCount === 1 ? 'invoice' : 'invoices'} and send a follow-up`,
+        actionLabel: 'Attach & follow up',
+        onAction: handleAttachFollowUp
+      };
+    }
+
+    return {
+      description: `Reach ${firstName} about outstanding balance`,
+      actionLabel: `Call ${firstName}`,
+      onAction: handleCall
+    };
+  }, [
+    attachedInvoiceCount,
+    firstName,
+    handleAttachFollowUp,
+    handleCall,
+    hasAgentDraft,
+    heroActionPresent
+  ]);
+
+  if (!suggestion) {
+    return null;
+  }
 
   return (
-    <InboxContextRailSection label='Quick actions' unstyled contentClassName='px-1'>
-      {attachedInvoiceCount > 0 ? (
-        <ActionRow
-          label={`Attach all ${attachedInvoiceCount} invoices & follow up`}
-          icon={Icons.paperclip}
-          onClick={handleAttachFollowUp}
-        />
-      ) : null}
-      <ActionRow label={`Call ${firstName}`} icon={Icons.phone} onClick={handleCall} />
-      <ActionRow label='Snooze 3 days' icon={Icons.clock} onClick={handleSnooze} />
-    </InboxContextRailSection>
+    <div className='px-1'>
+      <SuggestedAction
+        compact
+        label='Suggested action'
+        description={suggestion.description}
+        actionLabel={suggestion.actionLabel}
+        onAction={suggestion.onAction}
+      />
+    </div>
   );
 }

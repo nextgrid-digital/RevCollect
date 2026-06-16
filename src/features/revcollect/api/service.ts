@@ -1,4 +1,6 @@
 import type {
+  AgentActivationResult,
+  AgentAddonStatus,
   AgentConfig,
   AgentDraftMeta,
   AgingBucket,
@@ -49,6 +51,10 @@ export interface RevCollectService {
   countAgentDraftsReady(): Promise<number>;
 
   getAgentConfig(): Promise<AgentConfig>;
+  updateAgentConfig(config: AgentConfig): Promise<AgentConfig>;
+  getAgentAddonStatus(): Promise<AgentAddonStatus>;
+  subscribeAgentAddon(): Promise<AgentAddonStatus>;
+  activateAgent(): Promise<AgentActivationResult>;
   getIntegrationStatus(): Promise<IntegrationStatus>;
 
   exportTenantData(tenantId: TenantId): Promise<TenantDataExport>;

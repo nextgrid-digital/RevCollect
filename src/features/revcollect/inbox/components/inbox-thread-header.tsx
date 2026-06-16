@@ -7,13 +7,10 @@ import type { Customer } from '../../types';
 
 interface InboxThreadHeaderProps {
   customer: Customer;
-  invoiceNumbers: string[];
   className?: string;
 }
 
-export function InboxThreadHeader({ customer, invoiceNumbers, className }: InboxThreadHeaderProps) {
-  const invoiceLine = invoiceNumbers.length > 0 ? invoiceNumbers.join(', ') : null;
-
+export function InboxThreadHeader({ customer, className }: InboxThreadHeaderProps) {
   return (
     <header className={cn('bg-background w-full min-w-0 shrink-0', className)}>
       <Link
@@ -29,10 +26,7 @@ export function InboxThreadHeader({ customer, invoiceNumbers, className }: Inbox
           <p className='text-foreground group-hover:underline text-sm font-semibold leading-snug underline-offset-2'>
             {customer.company}
           </p>
-          <p className='text-muted-foreground mt-0.5 text-xs leading-snug'>
-            {customer.name}
-            {invoiceLine ? ` · ${invoiceLine}` : null}
-          </p>
+          <p className='text-muted-foreground mt-0.5 text-xs leading-snug'>{customer.name}</p>
         </div>
       </Link>
     </header>

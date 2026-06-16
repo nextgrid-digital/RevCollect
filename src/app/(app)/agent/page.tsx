@@ -1,10 +1,10 @@
 import PageContainer from '@/components/layout/page-container';
-import { AgentConfigForm } from '@/features/revcollect/agent/components/agent-config-form';
+import { AgentPage } from '@/features/revcollect/agent/components/agent-page';
 
-export default function AgentPage() {
+export default function AgentPageRoute() {
   return (
     <PageContainer>
-      <AgentConfigForm />
+      <AgentPage />
     </PageContainer>
   );
 }

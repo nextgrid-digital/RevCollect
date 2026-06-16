@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { InboxOpenModeSwitcher } from './inbox-open-mode-switcher';
+import { InboxOpenModeMenu } from './inbox-open-mode-menu';
 
 function isInboxPath(pathname: string) {
   return pathname === '/inbox' || pathname.startsWith('/inbox/');
@@ -16,5 +16,5 @@ export function InboxHeaderActions() {
     return null;
   }
 
-  return <InboxOpenModeSwitcher />;
+  return <InboxOpenModeMenu />;
 }

@@ -1,5 +1,5 @@
 import PageContainer from '@/components/layout/page-container';
-import { InboxWorkspace } from '@/features/revcollect/inbox/components/inbox-workspace';
+import { InboxMessagePageClient } from '@/features/revcollect/inbox/components/inbox-message-page-client';
 
 interface InboxMessagePageProps {
   params: Promise<{ messageId: string }>;
@@ -10,7 +10,7 @@ export default async function InboxMessagePage({ params }: InboxMessagePageProps
 
   return (
     <PageContainer compactMobile lockPageScroll flushTop flushX>
-      <InboxWorkspace messageId={messageId} />
+      <InboxMessagePageClient messageId={messageId} />
     </PageContainer>
   );
 }

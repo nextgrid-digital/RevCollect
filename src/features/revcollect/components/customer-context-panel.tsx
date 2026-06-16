@@ -1,7 +1,7 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { CustomerAvatar } from './customer-avatar';
 import { InboxActivityCard } from '../inbox/components/inbox-activity-card';
-import { InboxAiInsightCard } from '../inbox/components/inbox-ai-insight-card';
 import { InboxContextRailBody } from '../inbox/components/inbox-context-rail-body';
 import { InboxDeepAnalysisCard } from '../inbox/components/inbox-deep-analysis-card';
 import type { Customer, CustomerInboxContext, ThreadEmail, TimelineEvent } from '../types';
@@ -17,7 +17,13 @@ interface CustomerContextPanelProps {
   onActivityEmailClick?: (emailId: string) => void;
 }
 
-export function CustomerContextPanelFloatingHeader({ customer }: { customer: Customer }) {
+export function CustomerContextPanelFloatingHeader({
+  customer,
+  actions
+}: {
+  customer: Customer;
+  actions?: ReactNode;
+}) {
   return (
     <div className='space-y-2'>
       <div className='flex items-center gap-3'>
@@ -35,6 +41,7 @@ export function CustomerContextPanelFloatingHeader({ customer }: { customer: Cus
           </Link>
           <p className='text-muted-foreground truncate text-sm'>{customer.name}</p>
         </div>
+        {actions ? <div className='shrink-0 self-start'>{actions}</div> : null}
       </div>
     </div>
   );
@@ -43,14 +50,21 @@ export function CustomerContextPanelFloatingHeader({ customer }: { customer: Cus
 export function CustomerContextPanelFloatingBody({
   customer,
   inboxContext,
+  aiInsightText = '',
   showDetails = false
 }: {
   customer: Customer;
   inboxContext: CustomerInboxContext;
+  aiInsightText?: string;
   showDetails?: boolean;
 }) {
   return (
-    <InboxContextRailBody customer={customer} context={inboxContext} showDetails={showDetails} />
+    <InboxContextRailBody
+      customer={customer}
+      context={inboxContext}
+      aiInsightText={aiInsightText}
+      showDetails={showDetails}
+    />
   );
 }
 
@@ -84,8 +98,12 @@ export function CustomerContextPanel({
       </div>
 
       <div className='flex-1 space-y-4 overflow-auto px-3 pb-4'>
-        <InboxContextRailBody customer={customer} context={inboxContext} showDetails />
-        {aiInsightText ? <InboxAiInsightCard text={aiInsightText} /> : null}
+        <InboxContextRailBody
+          customer={customer}
+          context={inboxContext}
+          aiInsightText={aiInsightText}
+          showDetails
+        />
         {analysisText ? <InboxDeepAnalysisCard text={analysisText} /> : null}
         <InboxActivityCard
           events={timelineEvents}

@@ -4,7 +4,7 @@ import { InboxContextRailSection } from './inbox-context-rail-section';
 interface InboxContextDetailsCardProps {
   contactName: string;
   paymentTerms: string;
-  followUpsSent: number;
+  hideLabel?: boolean;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -21,17 +21,24 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export function InboxContextDetailsCard({
   contactName,
   paymentTerms,
-  followUpsSent
+  hideLabel = false
 }: InboxContextDetailsCardProps) {
+  const table = (
+    <table className='w-full border-collapse'>
+      <tbody>
+        <DetailRow label='Contact' value={contactName} />
+        <DetailRow label='Terms' value={paymentTerms} />
+      </tbody>
+    </table>
+  );
+
+  if (hideLabel) {
+    return <div className={cn('px-3 py-1')}>{table}</div>;
+  }
+
   return (
     <InboxContextRailSection label='Details' contentClassName={cn('px-3 py-1')}>
-      <table className='w-full border-collapse'>
-        <tbody>
-          <DetailRow label='Contact' value={contactName} />
-          <DetailRow label='Terms' value={paymentTerms} />
-          <DetailRow label='Follow-ups sent' value={String(followUpsSent)} />
-        </tbody>
-      </table>
+      {table}
     </InboxContextRailSection>
   );
 }

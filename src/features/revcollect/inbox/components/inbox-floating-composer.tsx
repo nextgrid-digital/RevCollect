@@ -21,15 +21,21 @@ export function InboxFloatingComposer({
 }: InboxFloatingComposerProps) {
   return (
     <InboxFloatingOverlay
-      className={overlayClassName}
+      id='inbox-thread-composer'
+      className={
+        overlayClassName ??
+        'border-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-6'
+      }
       onHeightChange={onOverlayHeightChange}
       contentClassName='px-0 pb-0'
     >
-      <InboxReplyComposer
-        baseDraft={draft}
-        customerStatus={customerStatus}
-        defaultTone={defaultTone}
-      />
+      <div className='px-4 pb-3'>
+        <InboxReplyComposer
+          baseDraft={draft}
+          customerStatus={customerStatus}
+          defaultTone={defaultTone}
+        />
+      </div>
     </InboxFloatingOverlay>
   );
 }

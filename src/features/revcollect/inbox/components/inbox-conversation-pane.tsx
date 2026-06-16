@@ -14,6 +14,7 @@ import type {
   TimelineEvent
 } from '../../types';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
+import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
 import { ConversationThread } from './conversation-thread';
 import { InboxThreadActionBar } from './inbox-thread-action-bar';
 import { InboxThreadComposer } from './inbox-thread-composer';
@@ -60,12 +61,17 @@ export function InboxConversationPane({
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const [composerPad, setComposerPad] = useState(0);
 
-  const latestCustomerEmailId = useMemo(() => {
-    for (let i = threadEmails.length - 1; i >= 0; i -= 1) {
-      if (threadEmails[i]?.author === 'customer') return threadEmails[i]!.id;
-    }
-    return undefined;
-  }, [threadEmails]);
+  const replyToEmail = useMemo(() => getLatestCustomerEmail(threadEmails), [threadEmails]);
+
+  useEffect(() => {
+    if (!composerPad || !replyToEmail) return;
+    const frame = requestAnimationFrame(() => {
+      threadScrollRef.current
+        ?.querySelector(`[data-thread-email-id="${replyToEmail.id}"]`)
+        ?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [composerPad, replyToEmail]);
 
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
@@ -150,10 +156,11 @@ export function InboxConversationPane({
           <ConversationThread
             emails={threadEmails}
             highlightedEmailId={highlightedEmailId}
+            replyTargetEmailId={composerPad > 0 ? replyToEmail?.id : null}
             customerName={customer.name}
             customerCompany={customer.company}
             customerAvatarUrl={customer.avatarUrl}
-            latestCustomerEmailId={latestCustomerEmailId}
+            latestCustomerEmailId={replyToEmail?.id}
             replyIntentLabel={selectedMessage.replyIntentLabel}
           />
         </div>

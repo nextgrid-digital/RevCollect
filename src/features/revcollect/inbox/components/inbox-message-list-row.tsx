@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '../../utils';
 import type { Customer, InboxMessage } from '../../types';
-import { getInboxListPills, InboxListPill } from '../lib/inbox-list-badges';
+import { getPrimaryListPill, InboxListPill } from '../lib/inbox-list-badges';
 
 interface InboxMessageListRowProps {
   message: InboxMessage;
@@ -19,12 +19,13 @@ export function InboxMessageListRow({
   onSelect
 }: InboxMessageListRowProps) {
   const showUnread = message.unread;
-  const pills = getInboxListPills(
+  const pill = getPrimaryListPill(
     customer.daysOverdue,
     message.replyIntent,
     message.replyIntentLabel,
     message.agentDraftReady
   );
+  const amountIsOverdue = customer.daysOverdue > 0;
 
   return (
     <li>
@@ -34,8 +35,8 @@ export function InboxMessageListRow({
         className={cn(
           'flex w-full border-l-2 px-4 py-3 text-left transition-colors',
           selected
-            ? 'border-l-violet-500 bg-violet-50/60 hover:bg-violet-50/80 dark:border-l-violet-400 dark:bg-violet-950/25 dark:hover:bg-violet-950/40'
-            : 'hover:bg-muted/40 border-l-transparent'
+            ? 'border-l-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent'
+            : 'hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground border-l-transparent'
         )}
       >
         <div className='min-w-0 flex-1'>
@@ -48,24 +49,25 @@ export function InboxMessageListRow({
             >
               {customer.company}
             </p>
-            <span className='text-foreground shrink-0 text-sm font-semibold tabular-nums'>
+            <span
+              className={cn(
+                'shrink-0 text-sm tabular-nums',
+                amountIsOverdue
+                  ? 'font-semibold text-red-700 dark:text-red-400'
+                  : 'font-medium text-foreground'
+              )}
+            >
               {formatCurrency(customer.balanceCents)}
             </span>
           </div>
 
-          <p className={cn('mt-0.5 truncate text-sm', showUnread ? 'font-medium' : 'font-normal')}>
-            {message.subject}
-          </p>
-
-          <p className='text-muted-foreground mt-0.5 truncate text-xs leading-relaxed'>
+          <p className='text-sidebar-foreground/70 mt-0.5 truncate text-sm leading-relaxed'>
             {message.preview}
           </p>
 
-          {pills.length > 0 ? (
+          {pill ? (
             <div className='mt-1.5 flex flex-wrap items-center gap-1'>
-              {pills.map((pill) => (
-                <InboxListPill key={pill.label} label={pill.label} variant={pill.variant} />
-              ))}
+              <InboxListPill label={pill.label} variant={pill.variant} />
             </div>
           ) : null}
         </div>

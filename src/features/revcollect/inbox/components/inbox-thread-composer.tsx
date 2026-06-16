@@ -8,8 +8,6 @@ interface InboxThreadComposerProps {
   agentDraftMeta?: AgentDraftMeta;
   aiDraftBase: string;
   customerStatus: CollectionStatus;
-  dockedAgentDraft?: boolean;
-  attachedInvoiceCount?: number;
   onOverlayHeightChange?: (height: number) => void;
 }
 
@@ -17,22 +15,8 @@ export function InboxThreadComposer({
   agentDraftMeta,
   aiDraftBase,
   customerStatus,
-  dockedAgentDraft = false,
-  attachedInvoiceCount = 0,
   onOverlayHeightChange
 }: InboxThreadComposerProps) {
-  if (agentDraftMeta && dockedAgentDraft) {
-    return (
-      <InboxAgentDraftPanel
-        docked
-        draftMeta={agentDraftMeta}
-        customerStatus={customerStatus}
-        baseDraft={aiDraftBase}
-        attachedInvoiceCount={attachedInvoiceCount}
-      />
-    );
-  }
-
   if (agentDraftMeta) {
     return (
       <InboxAgentDraftPanel

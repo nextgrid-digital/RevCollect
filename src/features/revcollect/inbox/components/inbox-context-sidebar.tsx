@@ -7,8 +7,8 @@ import {
   CustomerContextPanelFloatingHeader
 } from '../../components/customer-context-panel';
 import type { Customer, CustomerInboxContext } from '../../types';
-import { InboxAiInsightCard } from './inbox-ai-insight-card';
 import { InboxContextActionsCard } from './inbox-context-actions-card';
+import { InboxOpenModeMenu } from './inbox-open-mode-menu';
 
 interface InboxContextSidebarProps {
   customer: Customer;
@@ -16,7 +16,7 @@ interface InboxContextSidebarProps {
   aiInsightText: string;
   hasAgentDraft?: boolean;
   attachedInvoiceCount?: number;
-  onDraftFollowUp?: () => void;
+  heroActionPresent?: boolean;
 }
 
 function InboxContextSidebarComponent({
@@ -25,7 +25,7 @@ function InboxContextSidebarComponent({
   aiInsightText,
   hasAgentDraft = false,
   attachedInvoiceCount = 0,
-  onDraftFollowUp
+  heroActionPresent = false
 }: InboxContextSidebarProps) {
   return (
     <div className='flex h-full min-h-0 w-full flex-col'>
@@ -34,24 +34,19 @@ function InboxContextSidebarComponent({
           'scroll-stable flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4 pt-3'
         )}
       >
-        <CustomerContextPanelFloatingHeader customer={customer} />
+        <CustomerContextPanelFloatingHeader customer={customer} actions={<InboxOpenModeMenu />} />
         <CustomerContextPanelFloatingBody
           customer={customer}
           inboxContext={inboxContext}
-          showDetails
+          aiInsightText={aiInsightText}
+          showDetails={false}
         />
         <InboxContextActionsCard
           contactName={customer.name}
           attachedInvoiceCount={attachedInvoiceCount}
+          hasAgentDraft={hasAgentDraft}
+          heroActionPresent={heroActionPresent}
         />
-        {aiInsightText ? (
-          <div className='w-full shrink-0'>
-            <InboxAiInsightCard
-              text={aiInsightText}
-              onDraftFollowUp={hasAgentDraft ? onDraftFollowUp : undefined}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   );

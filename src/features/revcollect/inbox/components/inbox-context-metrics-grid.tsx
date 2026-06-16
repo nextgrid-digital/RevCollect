@@ -6,6 +6,7 @@ interface InboxContextMetricsGridProps {
   avgDsoDays: number;
   followUpsSent: number;
   lifetimeValueCents: number;
+  isOverdue?: boolean;
   className?: string;
 }
 
@@ -33,9 +34,10 @@ export function InboxContextMetricsGrid({
   avgDsoDays,
   followUpsSent,
   lifetimeValueCents,
+  isOverdue = false,
   className
 }: InboxContextMetricsGridProps) {
-  const accentValueClass = 'text-rose-700 dark:text-rose-400';
+  const overdueValueClass = 'text-red-700 dark:text-red-400';
 
   return (
     <div
@@ -49,9 +51,9 @@ export function InboxContextMetricsGrid({
           <MetricRow
             label='Outstanding'
             value={formatCurrencyWhole(outstandingCents)}
-            valueClassName={accentValueClass}
+            valueClassName={isOverdue ? overdueValueClass : undefined}
           />
-          <MetricRow label='Avg DSO' value={`${avgDsoDays}d`} valueClassName={accentValueClass} />
+          <MetricRow label='Avg DSO' value={`${avgDsoDays}d`} />
           <MetricRow label='Follow-ups' value={String(followUpsSent)} />
           <MetricRow label='Lifetime' value={formatCompactCurrency(lifetimeValueCents)} />
         </tbody>

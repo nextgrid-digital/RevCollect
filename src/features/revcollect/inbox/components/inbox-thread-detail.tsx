@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
+import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
 import { InboxContextSidebar } from './inbox-context-sidebar';
 import { InboxThreadComposer } from './inbox-thread-composer';
+import { InboxThreadHeroAction } from './inbox-thread-hero-action';
 import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
 
@@ -31,17 +33,33 @@ export function InboxThreadDetail({
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const [composerPad, setComposerPad] = useState(0);
 
-  const latestCustomerEmailId = useMemo(() => {
-    if (!selection) return undefined;
-    for (let i = selection.threadEmails.length - 1; i >= 0; i -= 1) {
-      if (selection.threadEmails[i]?.author === 'customer') return selection.threadEmails[i]!.id;
-    }
-    return undefined;
-  }, [selection]);
+  const replyToEmail = useMemo(
+    () => (selection ? getLatestCustomerEmail(selection.threadEmails) : undefined),
+    [selection]
+  );
 
   const scrollToDraft = () => {
-    document.getElementById('agent-draft-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document
+      .getElementById('agent-draft-panel')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
+
+  const scrollToComposer = useCallback(() => {
+    const draftPanel = document.getElementById('agent-draft-panel');
+    if (draftPanel) {
+      draftPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    document
+      .getElementById('inbox-thread-composer')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    requestAnimationFrame(() => {
+      const textarea = document.querySelector<HTMLElement>(
+        '#inbox-thread-composer textarea, #inbox-thread-composer [contenteditable="true"]'
+      );
+      textarea?.focus();
+    });
+  }, []);
 
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
@@ -54,6 +72,16 @@ export function InboxThreadDetail({
     });
     return () => cancelAnimationFrame(frame);
   }, [scrollToEmailId]);
+
+  useEffect(() => {
+    if (!composerPad || !replyToEmail) return;
+    const frame = requestAnimationFrame(() => {
+      threadScrollRef.current
+        ?.querySelector(`[data-thread-email-id="${replyToEmail.id}"]`)
+        ?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [composerPad, replyToEmail]);
 
   useEffect(() => {
     if (!selection) return;
@@ -77,7 +105,6 @@ export function InboxThreadDetail({
   const { customer, message, threadEmails, inboxContext, deepAnalysisText, aiInsightText } =
     selection;
   const hasAgentDraft = Boolean(selection.agentDraftMeta);
-  const attachedInvoiceCount = selection.openInvoiceNumbers.length;
   const mergedInsightText = [aiInsightText, deepAnalysisText].filter(Boolean).join(' ');
 
   return (
@@ -89,25 +116,28 @@ export function InboxThreadDetail({
             peekLayout === 'center' ? 'min-w-[28rem] flex-[1.4]' : 'flex-1'
           )}
         >
-          <InboxThreadToolbar
-            customer={customer}
-            message={message}
-            invoiceNumbers={selection.openInvoiceNumbers}
-            onReply={scrollToDraft}
+          <InboxThreadToolbar customer={customer} message={message} />
+
+          <InboxThreadHeroAction
+            companyName={customer.company}
+            agentDraftMeta={selection.agentDraftMeta}
+            unread={message.unread}
+            onPrimaryAction={hasAgentDraft ? scrollToDraft : scrollToComposer}
           />
 
           <div
             ref={threadScrollRef}
             className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3'
-            style={!hasAgentDraft && composerPad > 0 ? { paddingBottom: composerPad } : undefined}
+            style={composerPad > 0 ? { paddingBottom: composerPad } : undefined}
           >
             <ConversationThread
               emails={threadEmails}
               highlightedEmailId={highlightedEmailId}
+              replyTargetEmailId={composerPad > 0 ? replyToEmail?.id : null}
               customerName={customer.name}
               customerCompany={customer.company}
               customerAvatarUrl={customer.avatarUrl}
-              latestCustomerEmailId={latestCustomerEmailId}
+              latestCustomerEmailId={replyToEmail?.id}
               replyIntentLabel={message.replyIntentLabel}
             />
           </div>
@@ -116,8 +146,6 @@ export function InboxThreadDetail({
             agentDraftMeta={selection.agentDraftMeta}
             aiDraftBase={selection.aiDraftBase}
             customerStatus={customer.status}
-            dockedAgentDraft={hasAgentDraft}
-            attachedInvoiceCount={attachedInvoiceCount}
             onOverlayHeightChange={setComposerPad}
           />
         </div>
@@ -133,8 +161,8 @@ export function InboxThreadDetail({
             inboxContext={inboxContext}
             aiInsightText={mergedInsightText}
             hasAgentDraft={hasAgentDraft}
-            attachedInvoiceCount={attachedInvoiceCount}
-            onDraftFollowUp={scrollToDraft}
+            attachedInvoiceCount={selection.openInvoiceNumbers.length}
+            heroActionPresent
           />
         </aside>
       </div>

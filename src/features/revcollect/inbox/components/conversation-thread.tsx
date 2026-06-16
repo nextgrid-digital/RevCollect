@@ -10,6 +10,7 @@ import { EmailTurnDivider } from './email-turn-divider';
 interface ConversationThreadProps {
   emails: ThreadEmail[];
   highlightedEmailId?: string | null;
+  replyTargetEmailId?: string | null;
   customerName: string;
   customerCompany: string;
   customerAvatarUrl?: string;
@@ -20,6 +21,7 @@ interface ConversationThreadProps {
 export function ConversationThread({
   emails,
   highlightedEmailId,
+  replyTargetEmailId,
   customerName,
   customerCompany,
   customerAvatarUrl,
@@ -27,13 +29,18 @@ export function ConversationThread({
   replyIntentLabel
 }: ConversationThreadProps) {
   const endRef = useRef<HTMLDivElement>(null);
+  const replyTargetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
+      if (latestCustomerEmailId && replyTargetRef.current) {
+        replyTargetRef.current.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        return;
+      }
       endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [emails]);
+  }, [emails, latestCustomerEmailId]);
 
   return (
     <div className='flex flex-col gap-3'>
@@ -44,14 +51,20 @@ export function ConversationThread({
           const senderName = isCustomer ? customerName : 'You';
           const senderCompany = isCustomer ? customerCompany : undefined;
           const showIntent = isCustomer && email.id === latestCustomerEmailId && !!replyIntentLabel;
+          const isReplyTarget = email.id === replyTargetEmailId;
+          const isHighlighted = highlightedEmailId === email.id || isReplyTarget;
 
           return (
             <div
               key={email.id}
+              ref={email.id === latestCustomerEmailId ? replyTargetRef : undefined}
               data-thread-email-id={email.id}
               className={cn(
                 'scroll-mt-24 rounded-xl transition-shadow',
-                highlightedEmailId === email.id && 'ring-primary/60 shadow-sm ring-2'
+                isHighlighted &&
+                  (isReplyTarget
+                    ? 'ring-primary/40 shadow-sm ring-2'
+                    : 'ring-primary/60 shadow-sm ring-2')
               )}
             >
               {index > 0 ? <EmailTurnDivider sentAt={email.sentAt} /> : null}

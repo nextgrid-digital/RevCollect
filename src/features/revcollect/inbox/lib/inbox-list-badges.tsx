@@ -4,13 +4,7 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { ReplyIntent } from '../../types';
 
-export type InboxListPillVariant =
-  | 'overdue'
-  | 'overdue-mild'
-  | 'intent'
-  | 'promise'
-  | 'promise-date'
-  | 'draft';
+export type InboxListPillVariant = 'danger' | 'neutral' | 'draft';
 
 export interface InboxListPillItem {
   label: string;
@@ -18,55 +12,34 @@ export interface InboxListPillItem {
 }
 
 const pillVariantClasses: Record<InboxListPillVariant, string> = {
-  overdue: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
-  'overdue-mild': 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300',
-  intent: 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300',
-  promise: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-  'promise-date': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-  draft: 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300'
+  danger: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
+  neutral: 'bg-muted text-muted-foreground',
+  draft: 'bg-muted text-muted-foreground ring-1 ring-border'
 };
-
-export function getOverdueBadgeClass(daysOverdue: number): InboxListPillVariant {
-  if (daysOverdue >= 30) {
-    return 'overdue';
-  }
-  return 'overdue-mild';
-}
 
 function capitalizeIntent(intent: ReplyIntent): string {
   return intent.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function getInboxIntentPills(
+function getIntentLabel(
   replyIntent: ReplyIntent | undefined,
   replyIntentLabel: string | undefined
-): InboxListPillItem[] {
+): string | null {
   if (!replyIntent) {
-    return replyIntentLabel ? [{ label: replyIntentLabel, variant: 'intent' }] : [];
+    return replyIntentLabel ?? null;
   }
 
   switch (replyIntent) {
     case 'deflection':
-      return [{ label: replyIntentLabel ?? 'Deflection', variant: 'intent' }];
-    case 'promise': {
-      const label = replyIntentLabel ?? 'Promise';
-      const byMatch = label.match(/^Promise\s+(.+)$/i);
-      if (byMatch) {
-        return [
-          { label: 'Promise', variant: 'promise' },
-          { label: byMatch[1], variant: 'promise-date' }
-        ];
-      }
-      return [{ label, variant: 'promise' }];
-    }
+      return replyIntentLabel ?? 'Deflection';
+    case 'promise':
+      return replyIntentLabel ?? 'Promise';
     case 'dispute':
-      return [{ label: replyIntentLabel ?? 'Dispute', variant: 'intent' }];
+      return replyIntentLabel ?? 'Dispute';
     case 'payment_confirmation':
-      return [{ label: replyIntentLabel ?? 'Payment confirmation', variant: 'promise' }];
+      return replyIntentLabel ?? 'Payment confirmation';
     case 'other':
-      return replyIntentLabel
-        ? [{ label: replyIntentLabel, variant: 'intent' }]
-        : [{ label: capitalizeIntent(replyIntent), variant: 'intent' }];
+      return replyIntentLabel ?? capitalizeIntent(replyIntent);
     default: {
       const _exhaustive: never = replyIntent;
       return _exhaustive;
@@ -74,29 +47,27 @@ export function getInboxIntentPills(
   }
 }
 
-export function getInboxListPills(
+/** Returns at most one list pill: draft > overdue > intent. */
+export function getPrimaryListPill(
   daysOverdue: number,
   replyIntent: ReplyIntent | undefined,
   replyIntentLabel: string | undefined,
-  agentDraftReady: boolean | undefined,
-  options?: { excludeDraftPill?: boolean }
-): InboxListPillItem[] {
-  const pills: InboxListPillItem[] = [];
+  agentDraftReady: boolean | undefined
+): InboxListPillItem | null {
+  if (agentDraftReady) {
+    return { label: 'Draft', variant: 'draft' };
+  }
 
   if (daysOverdue > 0) {
-    pills.push({
-      label: `${daysOverdue}d overdue`,
-      variant: getOverdueBadgeClass(daysOverdue)
-    });
+    return { label: `${daysOverdue}d overdue`, variant: 'danger' };
   }
 
-  pills.push(...getInboxIntentPills(replyIntent, replyIntentLabel));
-
-  if (agentDraftReady && !options?.excludeDraftPill) {
-    pills.push({ label: 'Draft', variant: 'draft' });
+  const intentLabel = getIntentLabel(replyIntent, replyIntentLabel);
+  if (intentLabel) {
+    return { label: intentLabel, variant: 'neutral' };
   }
 
-  return pills;
+  return null;
 }
 
 interface InboxListPillProps {

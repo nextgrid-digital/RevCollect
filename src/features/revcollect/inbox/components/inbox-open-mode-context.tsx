@@ -11,17 +11,14 @@ import {
   type ReactNode
 } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  INBOX_OPEN_MODE_CHANGE_EVENT,
+  readInboxOpenMode,
+  writeInboxOpenMode,
+  type InboxOpenMode
+} from '../lib/inbox-open-mode-config';
 
-export type InboxOpenMode = 'side' | 'center' | 'full';
-
-const STORAGE_KEY = 'revcollect-inbox-open-mode';
-
-function readStoredMode(): InboxOpenMode {
-  if (typeof window === 'undefined') return 'full';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'side' || stored === 'center' || stored === 'full') return stored;
-  return 'full';
-}
+export type { InboxOpenMode } from '../lib/inbox-open-mode-config';
 
 function getFullPageMessageId(pathname: string): string | null {
   const match = pathname.match(/^\/inbox\/([^/]+)$/);
@@ -42,13 +39,25 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const [mode, setModeState] = useState<InboxOpenMode>('full');
+  const [mode, setModeState] = useState<InboxOpenMode>('side');
   const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
 
   const fullPageMessageId = getFullPageMessageId(pathname);
 
   useEffect(() => {
-    setModeState(readStoredMode());
+    setModeState(readInboxOpenMode());
+  }, []);
+
+  useEffect(() => {
+    const onModeChange = (event: Event) => {
+      const nextMode = (event as CustomEvent<InboxOpenMode>).detail;
+      if (nextMode) {
+        setModeState(nextMode);
+      }
+    };
+
+    window.addEventListener(INBOX_OPEN_MODE_CHANGE_EVENT, onModeChange);
+    return () => window.removeEventListener(INBOX_OPEN_MODE_CHANGE_EVENT, onModeChange);
   }, []);
 
   useEffect(() => {
@@ -61,10 +70,20 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
   const setMode = useCallback(
     (nextMode: InboxOpenMode) => {
       setModeState(nextMode);
-      localStorage.setItem(STORAGE_KEY, nextMode);
+      writeInboxOpenMode(nextMode);
 
       const activeId = peekMessageId ?? fullPageMessageId;
       if (!activeId) return;
+
+      if (nextMode === 'workspace') {
+        setPeekMessageId(null);
+        if (activeId) {
+          router.push(`/inbox/${activeId}`);
+        } else {
+          router.replace('/inbox');
+        }
+        return;
+      }
 
       if (nextMode === 'full') {
         setPeekMessageId(null);
@@ -87,9 +106,13 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
 
   const openMessage = useCallback(
     (messageId: string) => {
-      const effectiveMode = isMobile ? 'full' : mode;
+      if (isMobile) {
+        setPeekMessageId(null);
+        router.push(`/inbox/${messageId}`);
+        return;
+      }
 
-      if (effectiveMode === 'full') {
+      if (mode === 'workspace' || mode === 'full') {
         setPeekMessageId(null);
         router.push(`/inbox/${messageId}`);
         return;
@@ -106,13 +129,13 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      mode: isMobile ? ('full' as const) : mode,
+      mode,
       setMode,
       peekMessageId,
       openMessage,
       closePeek
     }),
-    [closePeek, isMobile, mode, openMessage, peekMessageId, setMode]
+    [closePeek, mode, openMessage, peekMessageId, setMode]
   );
 
   return <InboxOpenModeContext.Provider value={value}>{children}</InboxOpenModeContext.Provider>;

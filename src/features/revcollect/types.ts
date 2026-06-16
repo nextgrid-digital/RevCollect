@@ -110,8 +110,55 @@ export interface TimelineEvent {
   threadEmailId?: string;
 }
 
+export type AgentFollowUpStyle = 'gentle' | 'balanced' | 'assertive';
+
+export interface AgentRiskThresholds {
+  healthyDays: [number, number];
+  watchDays: [number, number];
+  urgentDays: [number, number];
+  criticalDaysMin: number;
+}
+
+export interface AgentCustomerOverride {
+  customerId: string;
+  style: AgentFollowUpStyle;
+  note: string;
+}
+
+export interface AgentBehaviors {
+  earlyPaymentDiscount: boolean;
+  autoClassifyEmails: boolean;
+  promiseTracking: boolean;
+  dailyDigest: boolean;
+  autoDraftFollowUps: boolean;
+  escalationAlerts: boolean;
+  digestHour: number;
+}
+
+export interface AgentDigestPreview {
+  dateLabel: string;
+  bullets: string[];
+}
+
+export interface AgentAddonStatus {
+  subscribed: boolean;
+  priceMonthlyCents: number;
+  estimatedAiCostMonthlyCents: number;
+}
+
+export interface AgentActivationResult {
+  active: boolean;
+  needsBilling?: boolean;
+}
+
 export interface AgentConfig {
   tone: 'professional' | 'friendly' | 'firm';
+  followUpStyle: AgentFollowUpStyle;
+  isActive: boolean;
+  riskThresholds: AgentRiskThresholds;
+  customerOverrides: AgentCustomerOverride[];
+  behaviors: AgentBehaviors;
+  digestPreview: AgentDigestPreview;
   autoSendEnabled: boolean;
   escalationRules: string;
   signature: string;

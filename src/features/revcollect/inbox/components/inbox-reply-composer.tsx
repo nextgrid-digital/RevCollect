@@ -1,6 +1,16 @@
 'use client';
 
-import { forwardRef, memo, useCallback, useEffect, useId, useImperativeHandle, useRef, useState, useTransition } from 'react';
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useTransition
+} from 'react';
 import InputBar from '@/components/chat/input-bar';
 import { ModeSelector } from '@/components/chat/mode-selector';
 import { ModelPicker } from '@/components/chat/model-picker';
@@ -137,6 +147,7 @@ export interface InboxReplyComposerProps {
   initialBody?: string;
   defaultAutoRun?: boolean;
   bodyCollapsed?: boolean;
+  variant?: 'default' | 'agent-draft';
   className?: string;
 }
 
@@ -149,167 +160,172 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       initialBody,
       defaultAutoRun = false,
       bodyCollapsed = false,
+      variant = 'default',
       className
     },
     ref
   ) {
-  const autoRunId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const { data: agentConfig } = useAgentConfig();
-  const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
-  const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
+    const isAgentDraft = variant === 'agent-draft';
+    const autoRunId = useId();
+    const rootRef = useRef<HTMLDivElement>(null);
+    const { data: agentConfig } = useAgentConfig();
+    const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
+    const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
 
-  const [tone, setTone] = useState<CollectionTone>(resolvedDefaultTone);
-  const [playbook, setPlaybook] = useState<CollectionPlaybook>(() =>
-    defaultPlaybookForStatus(customerStatus)
-  );
-  const [body, setBody] = useState(initialBody ?? '');
-  const [autoRun, setAutoRun] = useState(defaultAutoRun);
-  const [isDrafting, startDrafting] = useTransition();
+    const [tone, setTone] = useState<CollectionTone>(resolvedDefaultTone);
+    const [playbook, setPlaybook] = useState<CollectionPlaybook>(() =>
+      defaultPlaybookForStatus(customerStatus)
+    );
+    const [body, setBody] = useState(initialBody ?? '');
+    const [autoRun, setAutoRun] = useState(defaultAutoRun);
+    const [isDrafting, startDrafting] = useTransition();
 
-  const isDrafted = body.trim().length > 0;
-  const placeholder = 'Write your reply...';
+    const isDrafted = body.trim().length > 0;
+    const placeholder = 'Write your reply...';
 
-  const baseDraftRef = useRef(baseDraft);
-  const toneRef = useRef(tone);
-  const playbookRef = useRef(playbook);
-  const signatureRef = useRef(signature);
-  const skipNextAutoRunRef = useRef(Boolean(initialBody));
+    const baseDraftRef = useRef(baseDraft);
+    const toneRef = useRef(tone);
+    const playbookRef = useRef(playbook);
+    const signatureRef = useRef(signature);
+    const skipNextAutoRunRef = useRef(Boolean(initialBody));
 
-  baseDraftRef.current = baseDraft;
-  toneRef.current = tone;
-  playbookRef.current = playbook;
-  signatureRef.current = signature;
+    baseDraftRef.current = baseDraft;
+    toneRef.current = tone;
+    playbookRef.current = playbook;
+    signatureRef.current = signature;
 
-  const setBodyIfChanged = useCallback((next: string) => {
-    setBody((prev) => (prev === next ? prev : next));
-  }, []);
+    const setBodyIfChanged = useCallback((next: string) => {
+      setBody((prev) => (prev === next ? prev : next));
+    }, []);
 
-  const applyDraft = useCallback(
-    (options?: {
-      tone?: CollectionTone;
-      playbook?: CollectionPlaybook;
-      notify?: boolean;
-      showLoading?: boolean;
-    }) => {
-      const run = () => {
-        setBodyIfChanged(
-          makeDraftBody(
-            baseDraftRef.current,
-            options?.tone ?? toneRef.current,
-            options?.playbook ?? playbookRef.current,
-            signatureRef.current
-          )
-        );
-        if (options?.notify) {
-          toast.message('Draft ready — review and edit before sending');
+    const applyDraft = useCallback(
+      (options?: {
+        tone?: CollectionTone;
+        playbook?: CollectionPlaybook;
+        notify?: boolean;
+        showLoading?: boolean;
+      }) => {
+        const run = () => {
+          setBodyIfChanged(
+            makeDraftBody(
+              baseDraftRef.current,
+              options?.tone ?? toneRef.current,
+              options?.playbook ?? playbookRef.current,
+              signatureRef.current
+            )
+          );
+          if (options?.notify) {
+            toast.message('Draft ready — review and edit before sending');
+          }
+        };
+
+        if (options?.showLoading) {
+          startDrafting(run);
+        } else {
+          run();
         }
-      };
+      },
+      [setBodyIfChanged]
+    );
 
-      if (options?.showLoading) {
-        startDrafting(run);
+    useEffect(() => {
+      const nextTone = resolvedDefaultTone;
+      const nextPlaybook = defaultPlaybookForStatus(customerStatus);
+      setTone(nextTone);
+      setPlaybook(nextPlaybook);
+      setAutoRun(defaultAutoRun);
+      skipNextAutoRunRef.current = Boolean(initialBody);
+      if (initialBody) {
+        setBodyIfChanged(initialBody);
       } else {
-        run();
+        setBodyIfChanged('');
       }
-    },
-    [setBodyIfChanged]
-  );
+    }, [
+      baseDraft,
+      customerStatus,
+      resolvedDefaultTone,
+      initialBody,
+      defaultAutoRun,
+      setBodyIfChanged
+    ]);
 
-  useEffect(() => {
-    const nextTone = resolvedDefaultTone;
-    const nextPlaybook = defaultPlaybookForStatus(customerStatus);
-    setTone(nextTone);
-    setPlaybook(nextPlaybook);
-    setAutoRun(defaultAutoRun);
-    skipNextAutoRunRef.current = Boolean(initialBody);
-    if (initialBody) {
-      setBodyIfChanged(initialBody);
-    } else {
-      setBodyIfChanged('');
-    }
-  }, [
-    baseDraft,
-    customerStatus,
-    resolvedDefaultTone,
-    initialBody,
-    defaultAutoRun,
-    setBodyIfChanged
-  ]);
-
-  useEffect(() => {
-    if (!autoRun) return;
-    if (skipNextAutoRunRef.current) {
-      skipNextAutoRunRef.current = false;
-      return;
-    }
-    setBodyIfChanged(makeDraftBody(baseDraft, tone, playbook, signature));
-  }, [autoRun, baseDraft, tone, playbook, signature, setBodyIfChanged]);
-
-  const handleAutoRunChange = useCallback(
-    (checked: boolean) => {
-      setAutoRun((prev) => (prev === checked ? prev : checked));
-      if (!checked) {
-        setBodyIfChanged(initialBody ?? '');
+    useEffect(() => {
+      if (!autoRun) return;
+      if (skipNextAutoRunRef.current) {
+        skipNextAutoRunRef.current = false;
+        return;
       }
-    },
-    [initialBody, setBodyIfChanged]
-  );
+      setBodyIfChanged(makeDraftBody(baseDraft, tone, playbook, signature));
+    }, [autoRun, baseDraft, tone, playbook, signature, setBodyIfChanged]);
 
-  const handleToneChange = useCallback((toneId: string) => {
-    setTone(toneId as CollectionTone);
-  }, []);
-
-  const handlePlaybookChange = useCallback((playbookId: string) => {
-    setPlaybook(playbookId as CollectionPlaybook);
-  }, []);
-
-  const handleDraftClick = useCallback(() => {
-    applyDraft({ notify: true, showLoading: true });
-  }, [applyDraft]);
-
-  const handleSend = useCallback(() => {
-    if (!body.trim()) return;
-    appendCanSpamFooter(body);
-    toast.success('Reply sent (mock)');
-  }, [body]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      send: handleSend,
-      focusEditor: () => {
-        rootRef.current?.querySelector('textarea')?.focus();
-      }
-    }),
-    [handleSend]
-  );
-
-  return (
-    <div ref={rootRef} className={cn('space-y-0', className)}>
-      <InputBar
-        fillWidth
-        maxTextareaHeight={360}
-        bodyCollapsed={bodyCollapsed}
-        className='px-0 pt-0 pb-0'
-        value={body}
-        onChange={setBody}
-        placeholder={placeholder}
-        onSend={handleSend}
-        leftActions={
-          <ComposerToolbar
-            autoRunId={autoRunId}
-            autoRun={autoRun}
-            tone={tone}
-            playbook={playbook}
-            isDrafting={isDrafting}
-            isDrafted={isDrafted}
-            onAutoRunChange={handleAutoRunChange}
-            onToneChange={handleToneChange}
-            onPlaybookChange={handlePlaybookChange}
-            onDraftClick={handleDraftClick}
-          />
+    const handleAutoRunChange = useCallback(
+      (checked: boolean) => {
+        setAutoRun((prev) => (prev === checked ? prev : checked));
+        if (!checked) {
+          setBodyIfChanged(initialBody ?? '');
         }
-      />
-    </div>
-  );
-});
+      },
+      [initialBody, setBodyIfChanged]
+    );
+
+    const handleToneChange = useCallback((toneId: string) => {
+      setTone(toneId as CollectionTone);
+    }, []);
+
+    const handlePlaybookChange = useCallback((playbookId: string) => {
+      setPlaybook(playbookId as CollectionPlaybook);
+    }, []);
+
+    const handleDraftClick = useCallback(() => {
+      applyDraft({ notify: true, showLoading: true });
+    }, [applyDraft]);
+
+    const handleSend = useCallback(() => {
+      if (!body.trim()) return;
+      appendCanSpamFooter(body);
+      toast.success('Reply sent (mock)');
+    }, [body]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        send: handleSend,
+        focusEditor: () => {
+          rootRef.current?.querySelector('textarea')?.focus();
+        }
+      }),
+      [handleSend]
+    );
+
+    return (
+      <div ref={rootRef} className={cn('space-y-0', className)}>
+        <InputBar
+          fillWidth
+          maxTextareaHeight={360}
+          bodyCollapsed={bodyCollapsed}
+          className='px-0 pt-0 pb-0'
+          value={body}
+          onChange={setBody}
+          placeholder={placeholder}
+          onSend={handleSend}
+          leftActions={
+            isAgentDraft ? undefined : (
+              <ComposerToolbar
+                autoRunId={autoRunId}
+                autoRun={autoRun}
+                tone={tone}
+                playbook={playbook}
+                isDrafting={isDrafting}
+                isDrafted={isDrafted}
+                onAutoRunChange={handleAutoRunChange}
+                onToneChange={handleToneChange}
+                onPlaybookChange={handlePlaybookChange}
+                onDraftClick={handleDraftClick}
+              />
+            )
+          }
+        />
+      </div>
+    );
+  }
+);

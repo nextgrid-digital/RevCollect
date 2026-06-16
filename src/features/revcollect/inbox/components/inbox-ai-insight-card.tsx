@@ -1,22 +1,26 @@
-import { Button } from '@/components/ui/button';
+import { Icons } from '@/components/icons';
 import { InboxContextRailSection } from './inbox-context-rail-section';
 
 interface InboxAiInsightCardProps {
   text: string;
-  onDraftFollowUp?: () => void;
+  hideLabel?: boolean;
 }
 
-export function InboxAiInsightCard({ text, onDraftFollowUp }: InboxAiInsightCardProps) {
+export function InboxAiInsightCard({ text, hideLabel = false }: InboxAiInsightCardProps) {
+  const content = (
+    <div className='flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5'>
+      <Icons.sparkles className='text-muted-foreground mt-0.5 size-3.5 shrink-0' aria-hidden />
+      <p className='text-foreground text-sm leading-relaxed'>{text}</p>
+    </div>
+  );
+
+  if (hideLabel) {
+    return content;
+  }
+
   return (
     <InboxContextRailSection label='AI insight' unstyled>
-      <p className='text-foreground rounded-lg bg-violet-50/90 px-3 py-2.5 text-sm leading-relaxed ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900/50'>
-        {text}
-      </p>
-      {onDraftFollowUp ? (
-        <Button type='button' size='sm' variant='outline' className='mt-2 w-full' onClick={onDraftFollowUp}>
-          Draft follow-up
-        </Button>
-      ) : null}
+      {content}
     </InboxContextRailSection>
   );
 }

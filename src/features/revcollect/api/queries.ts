@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { AgingBucket, AgingReportFilters } from '../types';
+import type { AgentConfig, AgingBucket, AgingReportFilters } from '../types';
 import { getRevCollectService } from './index';
 import type { DataAccessEvent, TenantId } from './types';
 
@@ -32,6 +32,7 @@ export const revcollectKeys = {
     [...revcollectKeys.all, 'aging', 'bucket', bucket] as const,
   timeline: (customerId: string) => [...revcollectKeys.all, 'timeline', customerId] as const,
   agentConfig: () => [...revcollectKeys.all, 'agent', 'config'] as const,
+  agentAddon: () => [...revcollectKeys.all, 'agent', 'addon'] as const,
   integrationStatus: () => [...revcollectKeys.all, 'integrations'] as const,
   agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const
 };
@@ -127,6 +128,14 @@ export function agentConfigQueryOptions() {
   });
 }
 
+export function agentAddonQueryOptions() {
+  return queryOptions({
+    queryKey: revcollectKeys.agentAddon(),
+    queryFn: () => getRevCollectService().getAgentAddonStatus(),
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
 export function integrationStatusQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.integrationStatus(),
@@ -195,6 +204,46 @@ export function useInboxThreadForCustomer(customerId: string | undefined) {
 
 export function useAgentConfig() {
   return useQuery(agentConfigQueryOptions());
+}
+
+export function useAgentAddonStatus() {
+  return useQuery(agentAddonQueryOptions());
+}
+
+export function useUpdateAgentConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (config: AgentConfig) => getRevCollectService().updateAgentConfig(config),
+    onSuccess: (data) => {
+      queryClient.setQueryData(revcollectKeys.agentConfig(), data);
+    }
+  });
+}
+
+export function useSubscribeAgentAddon() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => getRevCollectService().subscribeAgentAddon(),
+    onSuccess: (data) => {
+      queryClient.setQueryData(revcollectKeys.agentAddon(), data);
+      toast.success('Collections Agent add-on subscribed');
+    },
+    onError: () => {
+      toast.error('Could not subscribe to add-on');
+    }
+  });
+}
+
+export function useActivateAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => getRevCollectService().activateAgent(),
+    onSuccess: (result) => {
+      if (result.needsBilling) return;
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.agentConfig() });
+      toast.success('Agent activated');
+    }
+  });
 }
 
 export function useIntegrationStatus() {

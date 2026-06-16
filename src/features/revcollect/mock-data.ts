@@ -1,4 +1,5 @@
 import type {
+  AgentAddonStatus,
   AgentConfig,
   AgentDraftMeta,
   AgingBucket,
@@ -1220,10 +1221,64 @@ export const timelineByCustomerId = enrichTimelineWithThreads(
 
 export const agentConfig: AgentConfig = {
   tone: 'professional',
+  followUpStyle: 'balanced',
+  isActive: false,
+  riskThresholds: {
+    healthyDays: [0, 7],
+    watchDays: [8, 15],
+    urgentDays: [16, 30],
+    criticalDaysMin: 30
+  },
+  customerOverrides: [
+    {
+      customerId: 'cust-6',
+      style: 'assertive',
+      note: 'Usually pays late — firmer tone suggested'
+    },
+    {
+      customerId: 'cust-1',
+      style: 'assertive',
+      note: 'Often delays payment — firmer tone suggested'
+    },
+    {
+      customerId: 'cust-4',
+      style: 'gentle',
+      note: 'Reliable payer — gentle tone suggested'
+    },
+    {
+      customerId: 'cust-9',
+      style: 'gentle',
+      note: 'Pays on time — gentle tone suggested'
+    }
+  ],
+  behaviors: {
+    earlyPaymentDiscount: false,
+    autoClassifyEmails: true,
+    promiseTracking: true,
+    dailyDigest: true,
+    autoDraftFollowUps: true,
+    escalationAlerts: true,
+    digestHour: 7
+  },
+  digestPreview: {
+    dateLabel: 'May 28, 2026',
+    bullets: [
+      'INV-1042 (Ridgeline Builders) is 67 days overdue — AI draft ready for your review',
+      'Northwind Logistics promised payment by Friday — follow up if not received',
+      '2 new customer replies need classification',
+      'Summit Retail partial payment received — $4,200 remaining'
+    ]
+  },
   autoSendEnabled: false,
   escalationRules:
     'Escalate to human review when balance exceeds $25,000, customer is in dispute, or no reply after 3 touches.',
   signature: 'Best regards,\nRevCollect Collections Team'
+};
+
+export const agentAddonStatus: AgentAddonStatus = {
+  subscribed: false,
+  priceMonthlyCents: 3900,
+  estimatedAiCostMonthlyCents: 400
 };
 
 export const integrationStatus: IntegrationStatus = {
