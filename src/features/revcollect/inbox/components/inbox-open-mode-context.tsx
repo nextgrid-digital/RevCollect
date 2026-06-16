@@ -15,6 +15,7 @@ import {
   INBOX_OPEN_MODE_CHANGE_EVENT,
   readInboxOpenMode,
   writeInboxOpenMode,
+  DEFAULT_INBOX_OPEN_MODE,
   type InboxOpenMode
 } from '../lib/inbox-open-mode-config';
 
@@ -39,7 +40,7 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const [mode, setModeState] = useState<InboxOpenMode>('side');
+  const [mode, setModeState] = useState<InboxOpenMode>(DEFAULT_INBOX_OPEN_MODE);
   const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
 
   const fullPageMessageId = getFullPageMessageId(pathname);

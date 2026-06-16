@@ -26,7 +26,7 @@ import {
 } from './aging/lib/aging-report';
 import { enrichTimelineWithThreads } from './inbox/lib/enrich-timeline-with-threads';
 import { createInboxThreadData } from './mock-inbox-threads';
-import { dicebearAvatar, formatRelativeDate } from './utils';
+import { formatRelativeDate } from './utils';
 
 type CustomerSeed = Omit<Customer, 'balanceCents'>;
 
@@ -836,14 +836,12 @@ const balanceByCustomerId = invoices.reduce<Record<string, number>>((acc, invoic
 
 export const customers: Customer[] = customerSeeds.map((seed) => ({
   ...seed,
-  avatarUrl: dicebearAvatar(seed.id),
   balanceCents: balanceByCustomerId[seed.id] ?? 0
 }));
 
 const inboxThreadData = createInboxThreadData(
   customerSeeds.map((seed) => ({
     ...seed,
-    avatarUrl: dicebearAvatar(seed.id),
     balanceCents: balanceByCustomerId[seed.id] ?? 0
   }))
 );

@@ -1,16 +1,3 @@
-export function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-export function dicebearAvatar(seed: string): string {
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
-}
-
 export function formatCurrency(cents: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

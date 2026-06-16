@@ -74,7 +74,6 @@ function InboxContextRailBodyComponent({
     writeInboxInsightsDetailsExpanded(value === 'details');
   };
 
-  const previewNumbers = previewInvoices.map((invoice) => invoice.number);
   const unattachedPreview = previewInvoices.filter(
     (invoice) => !attachment?.isAttached(invoice.number)
   );
@@ -117,7 +116,7 @@ function InboxContextRailBodyComponent({
                 key={invoice.id}
                 invoice={invoice}
                 isAttached={attachment?.isAttached(invoice.number) ?? false}
-                onAttach={attachment ? () => attachment.attachInvoices(previewNumbers) : undefined}
+                onAttach={attachment ? () => attachment.attachInvoice(invoice.number) : undefined}
               />
             ))}
             {hasMoreInvoices ? (

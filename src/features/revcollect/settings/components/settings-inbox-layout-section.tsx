@@ -9,12 +9,13 @@ import {
   INBOX_OPEN_MODES,
   readInboxOpenMode,
   writeInboxOpenMode,
+  DEFAULT_INBOX_OPEN_MODE,
   type InboxOpenMode
 } from '@/features/revcollect/inbox/lib/inbox-open-mode-config';
 import { SettingsSection } from './settings-section';
 
 export function SettingsInboxLayoutSection() {
-  const [mode, setMode] = useState<InboxOpenMode>('workspace');
+  const [mode, setMode] = useState<InboxOpenMode>(DEFAULT_INBOX_OPEN_MODE);
 
   useEffect(() => {
     setMode(readInboxOpenMode());

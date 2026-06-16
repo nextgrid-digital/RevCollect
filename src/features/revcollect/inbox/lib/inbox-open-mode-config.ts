@@ -5,6 +5,7 @@ export type InboxOpenMode = 'workspace' | 'side' | 'center' | 'full';
 
 export const INBOX_OPEN_MODE_STORAGE_KEY = 'revcollect-inbox-open-mode';
 export const INBOX_OPEN_MODE_CHANGE_EVENT = 'revcollect-inbox-open-mode-change';
+export const DEFAULT_INBOX_OPEN_MODE: InboxOpenMode = 'workspace';
 
 export interface InboxOpenModeOption {
   id: InboxOpenMode;
@@ -45,10 +46,10 @@ export function isInboxOpenMode(value: string): value is InboxOpenMode {
 }
 
 export function readInboxOpenMode(): InboxOpenMode {
-  if (typeof window === 'undefined') return 'side';
+  if (typeof window === 'undefined') return DEFAULT_INBOX_OPEN_MODE;
   const stored = localStorage.getItem(INBOX_OPEN_MODE_STORAGE_KEY);
   if (stored && isInboxOpenMode(stored)) return stored;
-  return 'side';
+  return DEFAULT_INBOX_OPEN_MODE;
 }
 
 export function writeInboxOpenMode(mode: InboxOpenMode): void {
