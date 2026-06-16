@@ -8,8 +8,6 @@ import { EmailTurnDivider } from './email-turn-divider';
 
 interface ConversationThreadProps {
   emails: ThreadEmail[];
-  highlightedEmailId?: string | null;
-  replyTargetEmailId?: string | null;
   customerName: string;
   customerCompany: string;
   customerAvatarUrl?: string;
@@ -19,8 +17,6 @@ interface ConversationThreadProps {
 
 export function ConversationThread({
   emails,
-  highlightedEmailId,
-  replyTargetEmailId,
   customerName,
   customerCompany,
   customerAvatarUrl,

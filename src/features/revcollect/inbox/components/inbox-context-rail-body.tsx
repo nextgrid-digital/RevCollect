@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { memo, useEffect, useState } from 'react';
+import { Icons } from '@/components/icons';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
@@ -19,6 +21,8 @@ import { InboxContextDetailsCard } from './inbox-context-details-card';
 import { InboxContextInvoiceCard } from './inbox-context-invoice-card';
 import { InboxContextMetricsGrid } from './inbox-context-metrics-grid';
 import { InboxContextRailSection } from './inbox-context-rail-section';
+import { InboxContextSectionLabel } from './inbox-context-section-label';
+import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 
 interface InboxContextRailBodyProps {
   customer: Customer;
@@ -44,6 +48,7 @@ function InboxContextRailBodyComponent({
   aiInsightText = '',
   showDetails = false
 }: InboxContextRailBodyProps) {
+  const attachment = useOptionalInboxThreadAttachment();
   const { data: invoices = [] } = useInvoicesForCustomer(customer.id);
   const openInvoices = sortInvoicesForRail(
     invoices.filter((invoice) => invoice.status !== 'current')
@@ -69,6 +74,11 @@ function InboxContextRailBodyComponent({
     writeInboxInsightsDetailsExpanded(value === 'details');
   };
 
+  const previewNumbers = previewInvoices.map((invoice) => invoice.number);
+  const unattachedPreview = previewInvoices.filter(
+    (invoice) => !attachment?.isAttached(invoice.number)
+  );
+
   return (
     <div className='flex w-full shrink-0 flex-col gap-3'>
       <InboxContextRailSection unstyled contentClassName='px-0.5'>
@@ -82,19 +92,44 @@ function InboxContextRailBodyComponent({
       </InboxContextRailSection>
 
       {openInvoices.length > 0 ? (
-        <InboxContextRailSection label='Open invoices' unstyled contentClassName='space-y-2 px-0.5'>
-          {previewInvoices.map((invoice) => (
-            <InboxContextInvoiceCard key={invoice.id} invoice={invoice} />
-          ))}
-          {hasMoreInvoices ? (
-            <Link
-              href={`/customers/${customer.id}`}
-              className='text-muted-foreground hover:text-foreground block px-1 text-xs underline-offset-2 hover:underline'
-            >
-              View all {openInvoices.length} invoices
-            </Link>
-          ) : null}
-        </InboxContextRailSection>
+        <section className='w-full shrink-0'>
+          <div className='flex items-center justify-between gap-2 px-1'>
+            <InboxContextSectionLabel>Open invoices</InboxContextSectionLabel>
+            {attachment && unattachedPreview.length > 0 ? (
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='text-muted-foreground hover:text-foreground size-6'
+                onClick={() =>
+                  attachment.attachInvoices(unattachedPreview.map((invoice) => invoice.number))
+                }
+                aria-label={`Attach all ${unattachedPreview.length} invoices`}
+                title='Attach all invoices'
+              >
+                <Icons.add className='size-3.5' />
+              </Button>
+            ) : null}
+          </div>
+          <div className='mt-1.5 space-y-2 px-0.5'>
+            {previewInvoices.map((invoice) => (
+              <InboxContextInvoiceCard
+                key={invoice.id}
+                invoice={invoice}
+                isAttached={attachment?.isAttached(invoice.number) ?? false}
+                onAttach={attachment ? () => attachment.attachInvoices(previewNumbers) : undefined}
+              />
+            ))}
+            {hasMoreInvoices ? (
+              <Link
+                href={`/customers/${customer.id}`}
+                className='text-muted-foreground hover:text-foreground block px-1 text-xs underline-offset-2 hover:underline'
+              >
+                View all {openInvoices.length} invoices
+              </Link>
+            ) : null}
+          </div>
+        </section>
       ) : (
         <p className='text-muted-foreground px-1 text-sm'>No open invoices.</p>
       )}

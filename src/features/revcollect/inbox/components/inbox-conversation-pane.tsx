@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -47,7 +47,6 @@ export function InboxConversationPane({
   inboxContext,
   deepAnalysisText,
   timelineEvents,
-  highlightedEmailId,
   scrollToEmailId,
   onActivityEmailClick,
   agentDraftMeta,
@@ -59,19 +58,8 @@ export function InboxConversationPane({
   onContextOpenChange
 }: InboxConversationPaneProps) {
   const threadScrollRef = useRef<HTMLDivElement>(null);
-  const [composerPad, setComposerPad] = useState(0);
 
   const replyToEmail = useMemo(() => getLatestCustomerEmail(threadEmails), [threadEmails]);
-
-  useEffect(() => {
-    if (!composerPad || !replyToEmail) return;
-    const frame = requestAnimationFrame(() => {
-      threadScrollRef.current
-        ?.querySelector(`[data-thread-email-id="${replyToEmail.id}"]`)
-        ?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [composerPad, replyToEmail]);
 
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
@@ -147,30 +135,27 @@ export function InboxConversationPane({
         suggestedAction={selectedMessage.suggestedAction}
       />
 
-      <div className='relative flex min-h-0 flex-1 flex-col overflow-hidden'>
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
         <div
           ref={threadScrollRef}
           className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 md:pr-5 xl:py-4'
-          style={composerPad > 0 ? { paddingBottom: composerPad } : undefined}
         >
           <ConversationThread
             emails={threadEmails}
-            highlightedEmailId={highlightedEmailId}
-            replyTargetEmailId={composerPad > 0 ? replyToEmail?.id : null}
             customerName={customer.name}
             customerCompany={customer.company}
             customerAvatarUrl={customer.avatarUrl}
             latestCustomerEmailId={replyToEmail?.id}
             replyIntentLabel={selectedMessage.replyIntentLabel}
           />
+          <div className='mt-4 shrink-0 pt-2'>
+            <InboxThreadComposer
+              agentDraftMeta={agentDraftMeta}
+              aiDraftBase={aiDraftBase ?? ''}
+              customerStatus={customer.status}
+            />
+          </div>
         </div>
-
-        <InboxThreadComposer
-          agentDraftMeta={agentDraftMeta}
-          aiDraftBase={aiDraftBase ?? ''}
-          customerStatus={customer.status}
-          onOverlayHeightChange={setComposerPad}
-        />
       </div>
     </div>
   );

@@ -1,9 +1,15 @@
+'use client';
+
+import { Icons } from '@/components/icons';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, getDaysOverdueFromDueDate } from '../../utils';
 import type { Invoice } from '../../types';
 
 interface InboxContextInvoiceCardProps {
   invoice: Invoice;
+  isAttached?: boolean;
+  onAttach?: () => void;
 }
 
 const overduePillClasses = {
@@ -22,14 +28,18 @@ function getOverduePillClass(daysOverdue: number): string {
   return overduePillClasses.mild;
 }
 
-export function InboxContextInvoiceCard({ invoice }: InboxContextInvoiceCardProps) {
+export function InboxContextInvoiceCard({
+  invoice,
+  isAttached = false,
+  onAttach
+}: InboxContextInvoiceCardProps) {
   const daysOverdue = getDaysOverdueFromDueDate(invoice.dueDate);
   const showOverdue = daysOverdue > 0 && invoice.status !== 'current';
 
   return (
     <div className='w-full shrink-0 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
       <div className='flex items-center justify-between gap-2'>
-        <div className='flex min-w-0 items-center gap-1.5'>
+        <div className='flex min-w-0 flex-1 items-center gap-1.5'>
           <span className='shrink-0 text-sm font-semibold'>{invoice.number}</span>
           {showOverdue ? (
             <span
@@ -42,14 +52,39 @@ export function InboxContextInvoiceCard({ invoice }: InboxContextInvoiceCardProp
             </span>
           ) : null}
         </div>
-        <span
-          className={cn(
-            'shrink-0 text-sm font-semibold tabular-nums',
-            showOverdue ? 'text-rose-700 dark:text-rose-400' : undefined
-          )}
-        >
-          {formatCurrency(invoice.amountCents)}
-        </span>
+        <div className='flex shrink-0 items-center gap-2'>
+          <span
+            className={cn(
+              'text-sm font-semibold tabular-nums',
+              showOverdue ? 'text-rose-700 dark:text-rose-400' : undefined
+            )}
+          >
+            {formatCurrency(invoice.amountCents)}
+          </span>
+          {onAttach !== undefined ? (
+            isAttached ? (
+              <span
+                className='text-emerald-600 flex size-7 items-center justify-center dark:text-emerald-400'
+                aria-label={`${invoice.number} attached`}
+                title='Attached'
+              >
+                <Icons.check className='size-4' />
+              </span>
+            ) : onAttach ? (
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='text-muted-foreground hover:text-foreground size-7'
+                onClick={onAttach}
+                aria-label={`Attach ${invoice.number}`}
+                title='Attach invoice'
+              >
+                <Icons.add className='size-4' />
+              </Button>
+            ) : null
+          ) : null}
+        </div>
       </div>
     </div>
   );

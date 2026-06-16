@@ -8,32 +8,16 @@ interface InboxThreadComposerProps {
   agentDraftMeta?: AgentDraftMeta;
   aiDraftBase: string;
   customerStatus: CollectionStatus;
-  onOverlayHeightChange?: (height: number) => void;
 }
 
 export function InboxThreadComposer({
   agentDraftMeta,
   aiDraftBase,
-  customerStatus,
-  onOverlayHeightChange
+  customerStatus
 }: InboxThreadComposerProps) {
   if (agentDraftMeta) {
-    return (
-      <InboxAgentDraftPanel
-        floating
-        draftMeta={agentDraftMeta}
-        customerStatus={customerStatus}
-        baseDraft={aiDraftBase}
-        onOverlayHeightChange={onOverlayHeightChange}
-      />
-    );
+    return <InboxAgentDraftPanel draftMeta={agentDraftMeta} />;
   }
 
-  return (
-    <InboxFloatingComposer
-      draft={aiDraftBase}
-      customerStatus={customerStatus}
-      onOverlayHeightChange={onOverlayHeightChange}
-    />
-  );
+  return <InboxFloatingComposer draft={aiDraftBase} customerStatus={customerStatus} />;
 }

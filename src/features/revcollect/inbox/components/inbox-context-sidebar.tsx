@@ -9,6 +9,7 @@ import {
 import type { Customer, CustomerInboxContext } from '../../types';
 import { InboxContextActionsCard } from './inbox-context-actions-card';
 import { InboxOpenModeMenu } from './inbox-open-mode-menu';
+import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 
 interface InboxContextSidebarProps {
   customer: Customer;
@@ -24,9 +25,13 @@ function InboxContextSidebarComponent({
   inboxContext,
   aiInsightText,
   hasAgentDraft = false,
-  attachedInvoiceCount = 0,
+  attachedInvoiceCount: attachedInvoiceCountProp = 0,
   heroActionPresent = false
 }: InboxContextSidebarProps) {
+  const attachment = useOptionalInboxThreadAttachment();
+  const attachedInvoiceCount =
+    attachment?.attachedInvoiceNumbers.length ?? attachedInvoiceCountProp;
+
   return (
     <div className='flex h-full min-h-0 w-full flex-col'>
       <div
