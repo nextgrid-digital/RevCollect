@@ -5,7 +5,6 @@ import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { EmailAttachment, ThreadEmail } from '../../types';
-import { formatInboxActivityTime } from '../../utils';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -71,9 +70,6 @@ export function EmailMessageCard({
           {senderCompany ? (
             <span className='text-muted-foreground truncate text-[11px]'>{senderCompany}</span>
           ) : null}
-          <time className='text-muted-foreground shrink-0 text-[11px]' dateTime={email.sentAt}>
-            {formatInboxActivityTime(email.sentAt)}
-          </time>
           {intentLabel ? (
             <Badge variant='outline' className='border-0 bg-muted text-[10px] font-medium'>
               {intentLabel}

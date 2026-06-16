@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { appendCanSpamFooter } from '../../compliance/can-spam';
@@ -18,111 +20,173 @@ export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPa
   const attachment = useOptionalInboxThreadAttachment();
   const attachedInvoiceNumbers = attachment?.attachedInvoiceNumbers ?? [];
   const [body, setBody] = useState(draftMeta.body);
-  const [rewriteContext, setRewriteContext] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setBody(draftMeta.body);
-    setRewriteContext('');
-    setIsEditing(false);
+    setIsSent(false);
+    setAiEditOpen(false);
+    setAiPrompt('');
   }, [draftMeta]);
 
-  const handleEditFirst = useCallback(() => {
-    setIsEditing(true);
-    requestAnimationFrame(() => bodyRef.current?.focus());
-  }, []);
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [body, isSent]);
 
   const handleSend = useCallback(() => {
-    if (!body.trim()) return;
+    if (!body.trim() || isSent) return;
     appendCanSpamFooter(body);
+    setIsSent(true);
     toast.success('Reply sent (mock)');
-  }, [body]);
+  }, [body, isSent]);
 
-  const handleRewriteSubmit = useCallback(() => {
-    if (!rewriteContext.trim()) return;
-    toast.message('Rewriting draft with your context…');
-    setRewriteContext('');
-  }, [rewriteContext]);
+  const handleDetachInvoice = useCallback(
+    (invoiceNumber: string) => {
+      attachment?.detachInvoice(invoiceNumber);
+    },
+    [attachment]
+  );
 
-  const invoiceCount = attachedInvoiceNumbers.length;
-  const invoiceLabel =
-    invoiceCount > 0
-      ? `${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'} auto-attached`
-      : 'No invoices attached';
+  const handleAiRewrite = useCallback(() => {
+    if (!aiPrompt.trim() || isSent) return;
+    toast.success('Draft rewritten (mock)');
+    setAiEditOpen(false);
+    setAiPrompt('');
+  }, [aiPrompt, isSent]);
 
   return (
     <article
       id='agent-draft-panel'
       className={cn(
-        'flex w-full min-w-0 flex-col gap-3 rounded-2xl bg-violet-50 px-4 py-4 dark:bg-violet-950/25',
+        'border-border scroll-mt-4 flex w-full min-w-0 flex-col gap-3 rounded-2xl border bg-muted/50 px-4 py-4',
         className
       )}
     >
       <header className='flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3'>
-        <h3 className='text-violet-950 text-sm font-semibold dark:text-violet-100'>
-          AI-drafted reply
-        </h3>
+        <h3 className='text-foreground text-sm font-semibold'>AI-drafted reply</h3>
         <p className='text-muted-foreground text-xs sm:text-right'>
           Based on thread context + payment history
         </p>
       </header>
 
-      <Textarea
-        ref={bodyRef}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        readOnly={!isEditing}
-        rows={10}
-        className={cn(
-          'min-h-[12rem] resize-y rounded-2xl border-0 bg-white px-4 py-3 text-sm leading-relaxed shadow-none',
-          'focus-visible:ring-violet-200 dark:bg-white/95 dark:focus-visible:ring-violet-800',
-          !isEditing && 'text-foreground cursor-default'
-        )}
-        aria-label='AI-drafted reply body'
-      />
+      {attachedInvoiceNumbers.length > 0 ? (
+        <div className='flex flex-wrap gap-2'>
+          {attachedInvoiceNumbers.map((invoiceNumber) => (
+            <div
+              key={invoiceNumber}
+              className='bg-muted/70 inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs'
+            >
+              <Icons.fileTypePdf className='text-muted-foreground size-3.5 shrink-0' />
+              <span className='text-foreground font-medium tabular-nums'>{invoiceNumber}</span>
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='text-muted-foreground hover:text-foreground size-5 shrink-0'
+                onClick={() => handleDetachInvoice(invoiceNumber)}
+                aria-label={`Remove ${invoiceNumber}`}
+              >
+                <Icons.close className='size-3' />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className='text-muted-foreground text-xs'>No invoices attached</p>
+      )}
 
-      <div className='bg-muted/70 text-muted-foreground rounded-xl px-3 py-2 text-xs'>
-        <span className='text-foreground font-medium'>{invoiceLabel}</span>
-        {invoiceCount > 0 ? (
-          <span className='ml-2 tabular-nums'>{attachedInvoiceNumbers.join(' · ')}</span>
-        ) : null}
-      </div>
-
-      <div className='flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between'>
-        <input
-          type='text'
-          value={rewriteContext}
-          onChange={(e) => setRewriteContext(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleRewriteSubmit();
-            }
-          }}
-          placeholder='Add context for AI to rewrite'
+      <div className='border-input bg-card overflow-hidden rounded-2xl border'>
+        <Textarea
+          ref={bodyRef}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          readOnly={isSent}
+          rows={1}
           className={cn(
-            'border-muted-foreground/35 text-foreground placeholder:text-muted-foreground',
-            'h-10 w-full min-w-0 rounded-full border border-dashed bg-transparent px-4 text-sm',
-            'focus-visible:ring-violet-300 outline-none focus-visible:ring-2 sm:max-w-md'
+            'text-card-foreground min-h-0 resize-y rounded-none border-0 bg-transparent px-4 py-3 text-sm leading-relaxed shadow-none',
+            'focus-visible:border-transparent focus-visible:ring-0',
+            isSent && 'cursor-default resize-none opacity-80'
           )}
-          aria-label='Add context for AI to rewrite'
+          aria-label='AI-drafted reply body'
+          aria-readonly={isSent}
         />
-        <div className='flex shrink-0 items-center justify-end gap-2'>
+
+        <div className='border-border flex items-center justify-between gap-2 border-t px-3 py-2'>
+          <Popover open={aiEditOpen} onOpenChange={setAiEditOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                className='rounded-full'
+                disabled={isSent}
+              >
+                <Icons.sparkles className='size-3.5' />
+                Edit with AI
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              side='top'
+              align='start'
+              sideOffset={8}
+              className='w-[min(20rem,calc(100vw-2rem))] p-3'
+            >
+              <div className='flex flex-col gap-2'>
+                <p className='text-foreground text-xs font-medium'>How should AI edit this?</p>
+                <Textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder='e.g. Make it shorter and friendlier'
+                  rows={3}
+                  autoFocus
+                  className='min-h-0 resize-none text-sm'
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      handleAiRewrite();
+                    }
+                  }}
+                />
+                <div className='flex justify-end gap-2'>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => {
+                      setAiEditOpen(false);
+                      setAiPrompt('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type='button'
+                    size='sm'
+                    disabled={!aiPrompt.trim()}
+                    onClick={handleAiRewrite}
+                  >
+                    Rewrite
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
             type='button'
-            variant='outline'
+            size='sm'
             className='rounded-full'
-            onClick={handleEditFirst}
-          >
-            Edit first
-          </Button>
-          <Button
-            type='button'
-            className='rounded-full bg-[#B8956F] text-white hover:bg-[#A8845E] dark:bg-[#B8956F] dark:hover:bg-[#A8845E]'
+            disabled={isSent || !body.trim()}
             onClick={handleSend}
           >
-            Send as-is
+            {isSent ? 'Sent' : 'Send'}
+            {!isSent ? <Icons.send className='size-3.5' /> : null}
           </Button>
         </div>
       </div>

@@ -12,6 +12,7 @@ interface ConversationThreadProps {
   customerCompany: string;
   latestCustomerEmailId?: string;
   replyIntentLabel?: string;
+  autoScrollToLatestEmail?: boolean;
 }
 
 export function ConversationThread({
@@ -19,12 +20,15 @@ export function ConversationThread({
   customerName,
   customerCompany,
   latestCustomerEmailId,
-  replyIntentLabel
+  replyIntentLabel,
+  autoScrollToLatestEmail = true
 }: ConversationThreadProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const replyTargetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!autoScrollToLatestEmail) return;
+
     const frame = requestAnimationFrame(() => {
       if (latestCustomerEmailId && replyTargetRef.current) {
         replyTargetRef.current.scrollIntoView({ block: 'nearest', behavior: 'auto' });
@@ -33,7 +37,7 @@ export function ConversationThread({
       endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [emails, latestCustomerEmailId]);
+  }, [autoScrollToLatestEmail, emails, latestCustomerEmailId]);
 
   return (
     <div className='flex flex-col gap-3'>

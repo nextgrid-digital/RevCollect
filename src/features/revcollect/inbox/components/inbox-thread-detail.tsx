@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
@@ -12,6 +12,7 @@ import { InboxThreadHeroAction } from './inbox-thread-hero-action';
 import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
 import { focusInboxComposer } from '../lib/focus-inbox-composer';
+import { scrollInboxReplyTargetAfterLayout } from '../lib/scroll-inbox-reply-target';
 
 interface InboxThreadDetailProps {
   messageId: string;
@@ -44,24 +45,6 @@ export function InboxThreadDetail({
     [selection]
   );
 
-  const scrollToDraft = () => {
-    document
-      .getElementById('agent-draft-panel')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-
-  const scrollToComposer = useCallback(() => {
-    const draftPanel = document.getElementById('agent-draft-panel');
-    if (draftPanel) {
-      draftPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    document
-      .getElementById('inbox-thread-composer')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    focusInboxComposer();
-  }, []);
-
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
 
@@ -86,9 +69,21 @@ export function InboxThreadDetail({
   }, [messageId, selection]);
 
   useEffect(() => {
-    if (variant !== 'peek' || !selection || selection.agentDraftMeta) return;
-    focusInboxComposer();
-  }, [messageId, selection, variant]);
+    if (!selection || scrollToEmailId) return;
+
+    let cancelled = false;
+    void scrollInboxReplyTargetAfterLayout({ behavior: 'auto', block: 'end' }).then(
+      (scrolledToDraft) => {
+        if (cancelled) return;
+        if (!scrolledToDraft && variant === 'peek') {
+          focusInboxComposer();
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [messageId, selection, scrollToEmailId, variant]);
 
   if (!selection) {
     return (
@@ -122,7 +117,6 @@ export function InboxThreadDetail({
               companyName={customer.company}
               agentDraftMeta={selection.agentDraftMeta}
               unread={message.unread}
-              onPrimaryAction={hasAgentDraft ? scrollToDraft : scrollToComposer}
             />
 
             <div
@@ -135,6 +129,7 @@ export function InboxThreadDetail({
                 customerCompany={customer.company}
                 latestCustomerEmailId={replyToEmail?.id}
                 replyIntentLabel={message.replyIntentLabel}
+                autoScrollToLatestEmail={false}
               />
               <div className='mt-4 shrink-0 pt-2'>
                 <InboxThreadComposer
