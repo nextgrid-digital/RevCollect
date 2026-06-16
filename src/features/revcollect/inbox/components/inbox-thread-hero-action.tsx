@@ -14,6 +14,18 @@ export function getInboxThreadHeroState(
   return 'caught-up';
 }
 
+export function getInboxThreadHeroMessage(
+  companyName: string,
+  agentDraftMeta: AgentDraftMeta | undefined,
+  unread: boolean
+): string {
+  const state = getInboxThreadHeroState(agentDraftMeta, unread);
+
+  if (state === 'draft-ready') return `Reply ready for ${companyName}`;
+  if (state === 'awaiting-reply') return `${companyName} is waiting`;
+  return "You're up to date";
+}
+
 interface InboxThreadHeroActionProps {
   companyName: string;
   agentDraftMeta?: AgentDraftMeta;
@@ -27,14 +39,7 @@ export function InboxThreadHeroAction({
   unread,
   className
 }: InboxThreadHeroActionProps) {
-  const state = getInboxThreadHeroState(agentDraftMeta, unread);
-
-  const message =
-    state === 'draft-ready'
-      ? `Reply ready for ${companyName}`
-      : state === 'awaiting-reply'
-        ? `${companyName} is waiting`
-        : "You're up to date";
+  const message = getInboxThreadHeroMessage(companyName, agentDraftMeta, unread);
 
   return (
     <div className={cn('text-muted-foreground shrink-0 text-xs', className)}>

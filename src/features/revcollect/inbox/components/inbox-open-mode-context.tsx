@@ -1,8 +1,9 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -18,13 +19,9 @@ import {
   DEFAULT_INBOX_OPEN_MODE,
   type InboxOpenMode
 } from '../lib/inbox-open-mode-config';
+import { getInboxMessageIdFromPath, preserveInboxListQueryPath } from '../lib/inbox-list-query';
 
 export type { InboxOpenMode } from '../lib/inbox-open-mode-config';
-
-function getFullPageMessageId(pathname: string): string | null {
-  const match = pathname.match(/^\/inbox\/([^/]+)$/);
-  return match?.[1] ?? null;
-}
 
 interface InboxOpenModeContextValue {
   mode: InboxOpenMode;
@@ -36,14 +33,15 @@ interface InboxOpenModeContextValue {
 
 const InboxOpenModeContext = createContext<InboxOpenModeContextValue | null>(null);
 
-export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
+function InboxOpenModeProviderInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const [mode, setModeState] = useState<InboxOpenMode>(DEFAULT_INBOX_OPEN_MODE);
   const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
 
-  const fullPageMessageId = getFullPageMessageId(pathname);
+  const fullPageMessageId = getInboxMessageIdFromPath(pathname);
 
   useEffect(() => {
     setModeState(readInboxOpenMode());
@@ -81,49 +79,49 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
       if (nextMode === 'workspace') {
         setPeekMessageId(null);
         if (activeId) {
-          router.push(`/inbox/${activeId}`, { scroll: false });
+          router.push(preserveInboxListQueryPath(activeId, searchParams), { scroll: false });
         } else {
-          router.replace('/inbox', { scroll: false });
+          router.replace(preserveInboxListQueryPath(null, searchParams), { scroll: false });
         }
         return;
       }
 
       if (nextMode === 'full') {
         setPeekMessageId(null);
-        router.push(`/inbox/${activeId}`, { scroll: false });
+        router.push(preserveInboxListQueryPath(activeId, searchParams), { scroll: false });
         return;
       }
 
       if (isMobile) {
-        router.push(`/inbox/${activeId}`, { scroll: false });
+        router.push(preserveInboxListQueryPath(activeId, searchParams), { scroll: false });
         return;
       }
 
       setPeekMessageId(activeId);
       if (fullPageMessageId) {
-        router.replace('/inbox', { scroll: false });
+        router.replace(preserveInboxListQueryPath(null, searchParams), { scroll: false });
       }
     },
-    [fullPageMessageId, isMobile, peekMessageId, router]
+    [fullPageMessageId, isMobile, peekMessageId, router, searchParams]
   );
 
   const openMessage = useCallback(
     (messageId: string) => {
       if (isMobile) {
         setPeekMessageId(null);
-        router.push(`/inbox/${messageId}`, { scroll: false });
+        router.push(preserveInboxListQueryPath(messageId, searchParams), { scroll: false });
         return;
       }
 
       if (mode === 'workspace' || mode === 'full') {
         setPeekMessageId(null);
-        router.push(`/inbox/${messageId}`, { scroll: false });
+        router.push(preserveInboxListQueryPath(messageId, searchParams), { scroll: false });
         return;
       }
 
       setPeekMessageId(messageId);
     },
-    [isMobile, mode, router]
+    [isMobile, mode, router, searchParams]
   );
 
   const closePeek = useCallback(() => {
@@ -144,6 +142,14 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
   );
 
   return <InboxOpenModeContext.Provider value={value}>{children}</InboxOpenModeContext.Provider>;
+}
+
+export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={children}>
+      <InboxOpenModeProviderInner>{children}</InboxOpenModeProviderInner>
+    </Suspense>
+  );
 }
 
 export function useInboxOpenMode() {

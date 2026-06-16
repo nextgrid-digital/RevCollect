@@ -33,7 +33,6 @@ interface InboxThreadDetailProps {
   peekLayout?: 'side' | 'center';
   layout?: 'default' | 'workspace';
   hideContextRail?: boolean;
-  hideHeader?: boolean;
   highlightedEmailId?: string | null;
   scrollToEmailId?: string | null;
   scrollOnOpen?: 'auto' | 'smooth' | 'none';
@@ -215,6 +214,8 @@ export function InboxThreadDetail({
     onActivityEmailClick: handleActivityEmailClick
   };
 
+  const showPeekMobileContext = variant === 'peek' && isMobile;
+
   return (
     <InboxThreadAttachmentProvider
       resetKey={messageId}
@@ -242,14 +243,24 @@ export function InboxThreadDetail({
                   layout === 'workspace' && 'flex flex-col gap-2'
                 )}
               >
-                <InboxThreadToolbar
-                  customer={customer}
-                  message={message}
-                  agentDraftMeta={selection.agentDraftMeta}
-                  contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
-                  showSubject={!(isMobile && layout === 'workspace')}
-                  className={layout === 'workspace' ? undefined : 'h-auto pt-1 pb-2'}
-                />
+                {variant !== 'peek' || showPeekMobileContext ? (
+                  <InboxThreadToolbar
+                    customer={customer}
+                    message={message}
+                    agentDraftMeta={selection.agentDraftMeta}
+                    contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
+                    showSubject={variant !== 'peek' && !(isMobile && layout === 'workspace')}
+                    showHeroAction={variant !== 'peek'}
+                    showBackButton={variant === 'full'}
+                    className={
+                      layout === 'workspace'
+                        ? undefined
+                        : variant === 'peek'
+                          ? 'h-8'
+                          : 'h-auto pt-1 pb-2'
+                    }
+                  />
+                ) : null}
                 {layout === 'workspace' ? (
                   <div className='border-border/60 border-b' aria-hidden />
                 ) : null}

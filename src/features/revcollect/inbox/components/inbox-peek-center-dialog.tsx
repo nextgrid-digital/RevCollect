@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
+import { InboxPeekHeaderBar } from './inbox-peek-header-bar';
 import { InboxThreadDetail } from './inbox-thread-detail';
 
 interface InboxPeekCenterDialogProps {
@@ -15,6 +17,8 @@ interface InboxPeekCenterDialogProps {
 }
 
 export function InboxPeekCenterDialog({ messageId, onClose }: InboxPeekCenterDialogProps) {
+  const { data: selection } = useInboxSelectionData(messageId);
+
   return (
     <Dialog open={messageId !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -28,13 +32,25 @@ export function InboxPeekCenterDialog({ messageId, onClose }: InboxPeekCenterDia
           <DialogDescription>Collection thread preview</DialogDescription>
         </DialogHeader>
         {messageId ? (
-          <InboxThreadDetail
-            messageId={messageId}
-            variant='peek'
-            peekLayout='center'
-            onClose={onClose}
-            className='h-full'
-          />
+          <>
+            {selection ? (
+              <InboxPeekHeaderBar
+                customer={selection.customer}
+                subject={selection.message.subject}
+                agentDraftMeta={selection.agentDraftMeta}
+                unread={selection.message.unread}
+              />
+            ) : null}
+            <div className='min-h-0 flex-1 overflow-hidden'>
+              <InboxThreadDetail
+                messageId={messageId}
+                variant='peek'
+                peekLayout='center'
+                onClose={onClose}
+                className='h-full'
+              />
+            </div>
+          </>
         ) : null}
       </DialogContent>
     </Dialog>

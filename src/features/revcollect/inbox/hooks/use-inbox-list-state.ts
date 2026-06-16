@@ -1,29 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCustomers, useInboxMessages } from '../../api/queries';
 import type { Customer } from '../../types';
 import { filterInboxMessages, type InboxListFilter } from '../lib/filter-inbox-messages';
+import {
+  buildInboxPathForPathname,
+  parseInboxFilter,
+  parseInboxSearch
+} from '../lib/inbox-list-query';
 import {
   getInboxThreadActionStatus,
   threadNeedsAttention
 } from '../lib/get-inbox-thread-action-status';
 
-const VALID_FILTERS: InboxListFilter[] = [
-  'all',
-  'needs_attention',
-  'overdue',
-  'drafts',
-  'up_to_date',
-  'escalated'
-];
-
-function parseInboxFilter(value: string | null): InboxListFilter | null {
-  if (!value) return null;
-  if (value === 'replied') return 'up_to_date';
-  return VALID_FILTERS.includes(value as InboxListFilter) ? (value as InboxListFilter) : null;
-}
+const SEARCH_DEBOUNCE_MS = 250;
 
 function getListEmptyMessage(
   filter: InboxListFilter,
@@ -42,18 +34,43 @@ function getListEmptyMessage(
 }
 
 export function useInboxListState() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const urlFilter = parseInboxFilter(searchParams.get('filter'));
-  const [searchQuery, setSearchQuery] = useState('');
-  const [listFilter, setListFilter] = useState<InboxListFilter>(urlFilter ?? 'all');
+  const listFilter = parseInboxFilter(searchParams.get('filter')) ?? 'all';
+  const searchQuery = parseInboxSearch(searchParams.get('q'));
+  const [searchDraft, setSearchDraft] = useState(searchQuery);
   const { data: inboxMessages = [] } = useInboxMessages();
   const { data: customers = [] } = useCustomers();
 
   useEffect(() => {
-    if (urlFilter) {
-      setListFilter(urlFilter);
-    }
-  }, [urlFilter]);
+    setSearchDraft(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchDraft === searchQuery) return;
+
+    const timeoutId = window.setTimeout(() => {
+      router.replace(buildInboxPathForPathname(pathname, searchParams, { search: searchDraft }), {
+        scroll: false
+      });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pathname, router, searchDraft, searchParams, searchQuery]);
+
+  const setListFilter = useCallback(
+    (filter: InboxListFilter) => {
+      router.replace(buildInboxPathForPathname(pathname, searchParams, { filter }), {
+        scroll: false
+      });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const setSearchQuery = useCallback((value: string) => {
+    setSearchDraft(value);
+  }, []);
 
   const getCustomerById = useCallback(
     (id: string): Customer | undefined => customers.find((customer) => customer.id === id),
@@ -94,13 +111,13 @@ export function useInboxListState() {
   );
 
   const filteredMessages = useMemo(
-    () => filterInboxMessages(inboxMessages, listFilter, searchQuery, getCustomerById),
-    [inboxMessages, listFilter, searchQuery, getCustomerById]
+    () => filterInboxMessages(inboxMessages, listFilter, searchDraft, getCustomerById),
+    [inboxMessages, listFilter, searchDraft, getCustomerById]
   );
 
   return {
     inboxMessages,
-    searchQuery,
+    searchQuery: searchDraft,
     setSearchQuery,
     listFilter,
     setListFilter,
@@ -112,6 +129,6 @@ export function useInboxListState() {
     disputesCount,
     filteredMessages,
     getCustomerById,
-    emptyMessage: getListEmptyMessage(listFilter, searchQuery, filteredMessages.length > 0)
+    emptyMessage: getListEmptyMessage(listFilter, searchDraft, filteredMessages.length > 0)
   };
 }

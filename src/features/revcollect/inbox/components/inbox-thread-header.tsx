@@ -2,33 +2,43 @@
 
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { CustomerAvatar } from '../../components/customer-avatar';
-import type { Customer } from '../../types';
+import type { AgentDraftMeta, Customer } from '../../types';
+import { getInboxThreadHeroMessage } from './inbox-thread-hero-action';
 
 interface InboxThreadHeaderProps {
   customer: Customer;
+  subject?: string;
+  agentDraftMeta?: AgentDraftMeta;
+  unread?: boolean;
   className?: string;
 }
 
-export function InboxThreadHeader({ customer, className }: InboxThreadHeaderProps) {
+export function InboxThreadHeader({
+  customer,
+  subject,
+  agentDraftMeta,
+  unread = false,
+  className
+}: InboxThreadHeaderProps) {
+  const heroMessage = getInboxThreadHeroMessage(customer.company, agentDraftMeta, unread);
+  const title = subject ?? customer.company;
+
   return (
-    <header className={cn('bg-background w-full min-w-0 shrink-0', className)}>
-      <Link
-        href={`/customers/${customer.id}`}
-        className='group hover:bg-muted/40 -mx-1 flex items-center gap-3 rounded-lg px-1 py-0.5 transition-colors'
-      >
-        <CustomerAvatar
-          name={customer.company}
-          avatarUrl={customer.avatarUrl}
-          className='size-9 shrink-0'
-        />
-        <div className='min-w-0'>
-          <p className='text-foreground group-hover:underline text-sm font-semibold leading-snug underline-offset-2'>
-            {customer.company}
-          </p>
-          <p className='text-muted-foreground mt-0.5 text-xs leading-snug'>{customer.name}</p>
-        </div>
-      </Link>
+    <header className={cn('bg-background flex min-w-0 items-center', className)}>
+      <div className='hover:bg-muted/40 -mx-1 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden rounded-lg px-1 py-0.5'>
+        <Link
+          href={`/customers/${customer.id}`}
+          className='text-foreground min-w-0 shrink truncate text-sm font-semibold leading-snug hover:underline underline-offset-2'
+        >
+          {title}
+        </Link>
+        <span className='text-muted-foreground shrink-0 text-xs' aria-hidden>
+          ·
+        </span>
+        <p className='text-foreground/80 min-w-0 shrink truncate text-xs font-medium'>
+          {heroMessage}
+        </p>
+      </div>
     </header>
   );
 }

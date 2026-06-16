@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
@@ -8,6 +9,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
 import { useInboxListState } from '../hooks/use-inbox-list-state';
+import { preserveInboxListQueryPath } from '../lib/inbox-list-query';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { useInboxOpenMode } from './inbox-open-mode-context';
 import { InboxMessageList } from './inbox-message-list';
@@ -21,6 +23,8 @@ interface InboxWorkspaceProps {
 
 export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const inboxListHref = preserveInboxListQueryPath(null, searchParams);
   const { openMessage } = useInboxOpenMode();
   const listState = useInboxListState();
 
@@ -112,7 +116,7 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
           {activeMessageId ? (
             <WorkspacePageTitle
               className='h-8 shrink-0'
-              breadcrumbs={[{ label: 'Inbox', href: '/inbox' }, { label: messageSubject }]}
+              breadcrumbs={[{ label: 'Inbox', href: inboxListHref }, { label: messageSubject }]}
             />
           ) : (
             <InboxMessageListTitle className='h-8 shrink-0' />
