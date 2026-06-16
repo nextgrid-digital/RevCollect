@@ -164,6 +164,28 @@ export interface AgentConfig {
   signature: string;
 }
 
+export interface WorkspaceGeneralSettings {
+  companyName: string;
+  industry: string;
+  primaryContactEmail: string;
+  timezone: string;
+  reminderSequence: {
+    firstReminderDays: number;
+    secondReminderDays: number;
+    thirdReminderDays: number;
+    finalNoticeDays: number;
+  };
+  sendFromName: string;
+  replyToEmail: string;
+  emailSignature: string;
+  notifications: {
+    paymentReceived: boolean;
+    customerReplied: boolean;
+    invoiceOverdue: boolean;
+    weeklySummary: boolean;
+  };
+}
+
 export interface IntegrationConnection {
   connected: boolean;
   label: string;

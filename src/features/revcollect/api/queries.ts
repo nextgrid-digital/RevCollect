@@ -1,6 +1,11 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { AgentConfig, AgingBucket, AgingReportFilters } from '../types';
+import type {
+  AgentConfig,
+  AgingBucket,
+  AgingReportFilters,
+  WorkspaceGeneralSettings
+} from '../types';
 import { getRevCollectService } from './index';
 import type { DataAccessEvent, TenantId } from './types';
 
@@ -35,6 +40,7 @@ export const revcollectKeys = {
   agentConfig: () => [...revcollectKeys.all, 'agent', 'config'] as const,
   agentAddon: () => [...revcollectKeys.all, 'agent', 'addon'] as const,
   integrationStatus: () => [...revcollectKeys.all, 'integrations'] as const,
+  workspaceGeneralSettings: () => [...revcollectKeys.all, 'settings', 'general'] as const,
   agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const
 };
 
@@ -152,6 +158,14 @@ export function integrationStatusQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.integrationStatus(),
     queryFn: () => getRevCollectService().getIntegrationStatus(),
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
+export function workspaceGeneralSettingsQueryOptions() {
+  return queryOptions({
+    queryKey: revcollectKeys.workspaceGeneralSettings(),
+    queryFn: () => getRevCollectService().getWorkspaceGeneralSettings(),
     staleTime: MOCK_STALE_TIME
   });
 }
@@ -276,6 +290,25 @@ export function useActivateAgent() {
 
 export function useIntegrationStatus() {
   return useQuery(integrationStatusQueryOptions());
+}
+
+export function useWorkspaceGeneralSettings() {
+  return useQuery(workspaceGeneralSettingsQueryOptions());
+}
+
+export function useUpdateWorkspaceGeneralSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: WorkspaceGeneralSettings) =>
+      getRevCollectService().updateWorkspaceGeneralSettings(settings),
+    onSuccess: (data) => {
+      queryClient.setQueryData(revcollectKeys.workspaceGeneralSettings(), data);
+      toast.success('Settings saved');
+    },
+    onError: () => {
+      toast.error('Could not save settings');
+    }
+  });
 }
 
 export function useAgentDraftCount() {

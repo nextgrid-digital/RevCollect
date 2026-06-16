@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { SettingsAppearanceView } from './settings-appearance-view';
 import { SettingsBillingView } from './settings-billing-view';
 import { SettingsGeneralView } from './settings-general-view';
 import { SettingsIntegrationsView } from './settings-integrations-view';
@@ -11,6 +12,7 @@ import type { SettingsTab } from './settings-peek-context';
 
 const NAV_ITEMS: { tab: SettingsTab; label: string; href: string }[] = [
   { tab: 'general', label: 'General', href: '/settings' },
+  { tab: 'appearance', label: 'Appearance', href: '/settings/appearance' },
   { tab: 'integrations', label: 'Integrations', href: '/settings/integrations' },
   { tab: 'billing', label: 'Billing', href: '/settings/billing' }
 ];
@@ -19,6 +21,8 @@ function SettingsPageContent({ tab }: { tab: SettingsTab }) {
   switch (tab) {
     case 'general':
       return <SettingsGeneralView />;
+    case 'appearance':
+      return <SettingsAppearanceView />;
     case 'integrations':
       return <SettingsIntegrationsView />;
     case 'billing':

@@ -3,7 +3,7 @@
 import { parseAsStringEnum, useQueryState } from 'nuqs';
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 
-export const SETTINGS_TABS = ['general', 'integrations', 'billing'] as const;
+export const SETTINGS_TABS = ['general', 'appearance', 'integrations', 'billing'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 const settingsTabParser = parseAsStringEnum([...SETTINGS_TABS]);
@@ -73,6 +73,8 @@ export function settingsTabFromPath(path: string): SettingsTab | null {
   switch (path) {
     case '/settings':
       return 'general';
+    case '/settings/appearance':
+      return 'appearance';
     case '/settings/integrations':
       return 'integrations';
     case '/settings/billing':

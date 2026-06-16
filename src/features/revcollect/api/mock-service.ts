@@ -26,7 +26,13 @@ import {
   getAiDraftForMessage
 } from '../mock-data';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
-import type { AgentActivationResult, AgentAddonStatus, AgentConfig } from '../types';
+import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
+import type {
+  AgentActivationResult,
+  AgentAddonStatus,
+  AgentConfig,
+  WorkspaceGeneralSettings
+} from '../types';
 import type { RevCollectService } from './service';
 import type {
   DataAccessEvent,
@@ -43,6 +49,9 @@ function resolveMock<T>(value: T): Promise<T> {
 
 let mutableAgentConfig: AgentConfig = structuredClone(initialAgentConfig);
 let mutableAgentAddonStatus: AgentAddonStatus = { ...initialAgentAddonStatus };
+let mutableWorkspaceGeneralSettings: WorkspaceGeneralSettings = structuredClone(
+  DEFAULT_WORKSPACE_GENERAL_SETTINGS
+);
 
 export class MockRevCollectService implements RevCollectService {
   getTenantId(): TenantId {
@@ -182,6 +191,15 @@ export class MockRevCollectService implements RevCollectService {
 
   getIntegrationStatus() {
     return resolveMock(integrationStatus);
+  }
+
+  getWorkspaceGeneralSettings() {
+    return resolveMock({ ...mutableWorkspaceGeneralSettings });
+  }
+
+  updateWorkspaceGeneralSettings(settings: WorkspaceGeneralSettings) {
+    mutableWorkspaceGeneralSettings = structuredClone(settings);
+    return resolveMock({ ...mutableWorkspaceGeneralSettings });
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {

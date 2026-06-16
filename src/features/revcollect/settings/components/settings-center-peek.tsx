@@ -9,12 +9,14 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { SETTINGS_TABS, type SettingsTab, useSettingsPeek } from './settings-peek-context';
+import { SettingsAppearanceView } from './settings-appearance-view';
 import { SettingsBillingView } from './settings-billing-view';
 import { SettingsGeneralView } from './settings-general-view';
 import { SettingsIntegrationsView } from './settings-integrations-view';
 
 const NAV_ITEMS: { tab: SettingsTab; label: string }[] = [
   { tab: 'general', label: 'General' },
+  { tab: 'appearance', label: 'Appearance' },
   { tab: 'integrations', label: 'Integrations' },
   { tab: 'billing', label: 'Billing' }
 ];
@@ -23,6 +25,8 @@ function SettingsPeekContent({ tab }: { tab: SettingsTab }) {
   switch (tab) {
     case 'general':
       return <SettingsGeneralView />;
+    case 'appearance':
+      return <SettingsAppearanceView />;
     case 'integrations':
       return <SettingsIntegrationsView />;
     case 'billing':

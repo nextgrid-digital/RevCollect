@@ -15,7 +15,8 @@ import type {
   IntegrationStatus,
   Invoice,
   ThreadEmail,
-  TimelineEvent
+  TimelineEvent,
+  WorkspaceGeneralSettings
 } from '../types';
 import type {
   CustomerStatusSummary,
@@ -58,6 +59,11 @@ export interface RevCollectService {
   subscribeAgentAddon(): Promise<AgentAddonStatus>;
   activateAgent(): Promise<AgentActivationResult>;
   getIntegrationStatus(): Promise<IntegrationStatus>;
+
+  getWorkspaceGeneralSettings(): Promise<WorkspaceGeneralSettings>;
+  updateWorkspaceGeneralSettings(
+    settings: WorkspaceGeneralSettings
+  ): Promise<WorkspaceGeneralSettings>;
 
   exportTenantData(tenantId: TenantId): Promise<TenantDataExport>;
   requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult>;
