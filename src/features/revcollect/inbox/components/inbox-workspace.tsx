@@ -1,51 +1,25 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { MobileWorkspaceBar } from '@/components/layout/mobile-workspace-bar';
+import { useCallback, useState } from 'react';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
+import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
-import type { Customer, InboxMessage } from '../../types';
-import { getInboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 import { useInboxListState } from '../hooks/use-inbox-list-state';
+import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { useInboxOpenMode } from './inbox-open-mode-context';
 import { InboxMessageList } from './inbox-message-list';
 import { InboxMessageListTitle } from './inbox-message-list-header';
 import { InboxThreadDetail } from './inbox-thread-detail';
 import { InboxWorkspaceContextColumn } from './inbox-workspace-context-column';
 
-function pickDefaultMessageId(
-  messages: InboxMessage[],
-  getCustomer: (id: string) => Customer | undefined
-): string | null {
-  for (const message of messages) {
-    const customer = getCustomer(message.customerId);
-    if (!customer) continue;
-    if (getInboxThreadActionStatus(message, customer) === 'ai_draft_ready') {
-      return message.id;
-    }
-  }
-
-  for (const message of messages) {
-    const customer = getCustomer(message.customerId);
-    if (!customer) continue;
-    if (getInboxThreadActionStatus(message, customer) === 'awaiting_reply') {
-      return message.id;
-    }
-  }
-
-  return messages[0]?.id ?? null;
-}
-
 interface InboxWorkspaceProps {
   messageId?: string | null;
 }
 
 export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
-  const router = useRouter();
   const isMobile = useIsMobile();
   const { openMessage } = useInboxOpenMode();
   const listState = useInboxListState();
@@ -54,13 +28,9 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   const showListOnMobile = isMobile && !activeMessageId;
   const showThreadOnMobile = isMobile && Boolean(activeMessageId);
 
-  useEffect(() => {
-    if (isMobile || activeMessageId || listState.inboxMessages.length === 0) return;
-    const defaultId = pickDefaultMessageId(listState.inboxMessages, listState.getCustomerById);
-    if (defaultId) {
-      router.replace(`/inbox/${defaultId}`, { scroll: false });
-    }
-  }, [activeMessageId, isMobile, listState.inboxMessages, router]);
+  const { data: selection } = useInboxSelectionData(activeMessageId);
+  const messageSubject =
+    selection?.message.id === activeMessageId ? selection.message.subject : '…';
 
   const handleSelectMessage = useCallback(
     (id: string) => {
@@ -98,15 +68,6 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
       getCustomerById={listState.getCustomerById}
       emptyMessage={listState.emptyMessage}
     />
-  );
-
-  const listColumnMobile = (
-    <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
-      <InboxMessageListTitle className='h-8' />
-      <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
-        {listContent(false)}
-      </WorkspaceCard>
-    </div>
   );
 
   const listColumnDesktop = (
@@ -147,15 +108,22 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   return (
     <WorkspaceCanvas>
       {isMobile ? (
-        <>
-          {showListOnMobile ? listColumnMobile : null}
-          {showThreadOnMobile ? (
-            <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
-              <MobileWorkspaceBar backHref='/inbox' backLabel='Inbox' />
-              {threadColumn}
-            </div>
+        <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
+          {activeMessageId ? (
+            <WorkspacePageTitle
+              className='h-8 shrink-0'
+              breadcrumbs={[{ label: 'Inbox', href: '/inbox' }, { label: messageSubject }]}
+            />
+          ) : (
+            <InboxMessageListTitle className='h-8 shrink-0' />
+          )}
+          {showListOnMobile ? (
+            <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+              {listContent(false)}
+            </WorkspaceCard>
           ) : null}
-        </>
+          {showThreadOnMobile ? threadColumn : null}
+        </div>
       ) : (
         <>
           {listColumnDesktop}

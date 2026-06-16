@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MobileWorkspaceBar } from '@/components/layout/mobile-workspace-bar';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
+import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
-import { useCustomers } from '../../api/queries';
+import { useCustomer, useCustomers } from '../../api/queries';
 import { CustomersDetailPanel } from './customers-detail-panel';
 import { CustomersList } from './customers-list';
 import { CustomersListTitle } from './customers-list-header';
@@ -33,6 +33,9 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
   const showListOnMobile = isMobile && !activeCustomerId;
   const showDetailOnMobile = isMobile && Boolean(activeCustomerId);
 
+  const { data: customer } = useCustomer(activeCustomerId ?? undefined);
+  const customerCompany = customer?.company ?? '…';
+
   useEffect(() => {
     if (isMobile || activeCustomerId || customers.length === 0) return;
     const defaultId = pickDefaultCustomerId(customers);
@@ -47,15 +50,6 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
       showListTitle={showListTitle}
       className='min-h-0 flex-1'
     />
-  );
-
-  const listColumnMobile = (
-    <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
-      <CustomersListTitle className='h-8' />
-      <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
-        {listContent(false)}
-      </WorkspaceCard>
-    </div>
   );
 
   const listColumnDesktop = (
@@ -91,15 +85,22 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
   return (
     <WorkspaceCanvas>
       {isMobile ? (
-        <>
-          {showListOnMobile ? listColumnMobile : null}
-          {showDetailOnMobile ? (
-            <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
-              <MobileWorkspaceBar backHref='/customers' backLabel='Customers' />
-              {detailPanel}
-            </div>
+        <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
+          {activeCustomerId ? (
+            <WorkspacePageTitle
+              className='h-8 shrink-0'
+              breadcrumbs={[{ label: 'Customers', href: '/customers' }, { label: customerCompany }]}
+            />
+          ) : (
+            <CustomersListTitle className='h-8 shrink-0' />
+          )}
+          {showListOnMobile ? (
+            <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+              {listContent(false)}
+            </WorkspaceCard>
           ) : null}
-        </>
+          {showDetailOnMobile ? detailPanel : null}
+        </div>
       ) : (
         <>
           {listColumnDesktop}

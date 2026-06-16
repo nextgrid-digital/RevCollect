@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
@@ -53,6 +54,7 @@ export function InboxThreadDetail({
   className
 }: InboxThreadDetailProps) {
   const reduceMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const {
     data: selection,
     isLoading,
@@ -219,86 +221,89 @@ export function InboxThreadDetail({
       initialAttachedInvoiceNumbers={initialAttachedInvoiceNumbers}
     >
       <div className={cn('bg-background flex min-h-0 min-w-0 flex-1 flex-col', className)}>
-        <div
-          className={cn(
-            'flex min-h-0 flex-1 gap-4',
-            layout === 'default' && inboxCanvasPadding,
-            layout === 'default' && peekLayout === 'center' && 'md:gap-3'
-          )}
-        >
+        <div className={cn('flex min-h-0 flex-1', layout === 'default' && inboxCanvasPadding)}>
           <div
             className={cn(
-              'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
-              peekLayout === 'center' && 'md:min-w-[28rem]'
+              'flex min-h-0 min-w-0 flex-1 gap-4',
+              layout === 'default' && 'mx-auto w-full max-w-6xl',
+              layout === 'default' && peekLayout === 'center' && 'md:gap-3'
             )}
           >
             <div
               className={cn(
-                inboxCenterMaxWidth,
-                'shrink-0',
-                layout === 'workspace' && 'flex flex-col gap-2'
-              )}
-            >
-              <InboxThreadToolbar
-                customer={customer}
-                message={message}
-                agentDraftMeta={selection.agentDraftMeta}
-                contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
-                className={layout === 'workspace' ? undefined : 'h-auto pt-1 pb-2'}
-              />
-              {layout === 'workspace' ? (
-                <div className='border-border/60 border-b' aria-hidden />
-              ) : null}
-            </div>
-
-            <div
-              ref={threadScrollRef}
-              data-inbox-thread-scroll
-              className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'
-            >
-              <div className={cn(inboxCenterMaxWidth, 'pb-2')}>
-                <InboxThreadTransition messageId={messageId}>
-                  <ConversationThread
-                    emails={threadEmails}
-                    customerName={customer.name}
-                    customerCompany={customer.company}
-                    latestCustomerEmailId={replyToEmail?.id}
-                    replyIntentLabel={message.replyIntentLabel}
-                    autoScrollToLatestEmail={false}
-                  />
-                  <div className='bg-background sticky bottom-0 z-10 shrink-0 pt-4 pb-2'>
-                    <InboxThreadComposer
-                      agentDraftMeta={selection.agentDraftMeta}
-                      aiDraftBase={selection.aiDraftBase}
-                      customerStatus={customer.status}
-                      autoFocus={variant === 'peek'}
-                    />
-                  </div>
-                </InboxThreadTransition>
-              </div>
-            </div>
-          </div>
-
-          {layout !== 'workspace' ? (
-            <div
-              className={cn(
-                'hidden min-h-0 shrink-0 flex-col self-stretch md:flex',
-                peekLayout === 'center' ? 'w-64' : inboxContextWidth
+                'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+                peekLayout === 'center' && 'md:min-w-[28rem]'
               )}
             >
               <div
                 className={cn(
-                  inboxContextCard,
-                  inboxContextCardSticky,
-                  'flex min-h-0 w-full flex-1 flex-col'
+                  inboxCenterMaxWidth,
+                  'shrink-0',
+                  layout === 'workspace' && 'flex flex-col gap-2'
                 )}
               >
-                <div className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl'>
-                  <InboxContextSidebar {...contextSidebarProps} />
+                <InboxThreadToolbar
+                  customer={customer}
+                  message={message}
+                  agentDraftMeta={selection.agentDraftMeta}
+                  contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
+                  showSubject={!(isMobile && layout === 'workspace')}
+                  className={layout === 'workspace' ? undefined : 'h-auto pt-1 pb-2'}
+                />
+                {layout === 'workspace' ? (
+                  <div className='border-border/60 border-b' aria-hidden />
+                ) : null}
+              </div>
+
+              <div
+                ref={threadScrollRef}
+                data-inbox-thread-scroll
+                className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'
+              >
+                <div className={cn(inboxCenterMaxWidth, 'pb-2')}>
+                  <InboxThreadTransition messageId={messageId}>
+                    <ConversationThread
+                      emails={threadEmails}
+                      customerName={customer.name}
+                      customerCompany={customer.company}
+                      latestCustomerEmailId={replyToEmail?.id}
+                      replyIntentLabel={message.replyIntentLabel}
+                      autoScrollToLatestEmail={false}
+                    />
+                    <div className='bg-background sticky bottom-0 z-10 shrink-0 pt-4 pb-2'>
+                      <InboxThreadComposer
+                        agentDraftMeta={selection.agentDraftMeta}
+                        aiDraftBase={selection.aiDraftBase}
+                        customerStatus={customer.status}
+                        autoFocus={variant === 'peek'}
+                      />
+                    </div>
+                  </InboxThreadTransition>
                 </div>
               </div>
             </div>
-          ) : null}
+
+            {layout !== 'workspace' ? (
+              <div
+                className={cn(
+                  'hidden min-h-0 shrink-0 flex-col self-stretch md:flex',
+                  peekLayout === 'center' ? 'w-64' : inboxContextWidth
+                )}
+              >
+                <div
+                  className={cn(
+                    inboxContextCard,
+                    inboxContextCardSticky,
+                    'flex min-h-0 w-full flex-1 flex-col'
+                  )}
+                >
+                  <div className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl'>
+                    <InboxContextSidebar {...contextSidebarProps} />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </InboxThreadAttachmentProvider>

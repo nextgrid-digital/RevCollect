@@ -15,26 +15,28 @@ export function InboxNotionView() {
 
   return (
     <>
-      <div className='flex h-full min-h-0 w-full flex-1 overflow-hidden'>
-        <InboxMessageList
-          variant='notion'
-          className='min-h-0 min-w-0 flex-1'
-          searchQuery={listState.searchQuery}
-          onSearchChange={listState.setSearchQuery}
-          listFilter={listState.listFilter}
-          onFilterChange={listState.setListFilter}
-          allCount={listState.allCount}
-          needsAttentionCount={listState.needsAttentionCount}
-          overdueCount={listState.overdueCount}
-          draftsCount={listState.draftsCount}
-          upToDateCount={listState.upToDateCount}
-          disputesCount={listState.disputesCount}
-          filteredMessages={listState.filteredMessages}
-          selectedId={sidePeekOpen ? peekMessageId : null}
-          onSelectMessage={openMessage}
-          getCustomerById={listState.getCustomerById}
-          emptyMessage={listState.emptyMessage}
-        />
+      <div className='flex h-full min-h-0 w-full flex-1 justify-center overflow-hidden'>
+        <div className='mx-auto flex h-full min-h-0 w-full max-w-6xl min-w-0 flex-col'>
+          <InboxMessageList
+            variant='notion'
+            className='min-h-0 min-w-0 flex-1'
+            searchQuery={listState.searchQuery}
+            onSearchChange={listState.setSearchQuery}
+            listFilter={listState.listFilter}
+            onFilterChange={listState.setListFilter}
+            allCount={listState.allCount}
+            needsAttentionCount={listState.needsAttentionCount}
+            overdueCount={listState.overdueCount}
+            draftsCount={listState.draftsCount}
+            upToDateCount={listState.upToDateCount}
+            disputesCount={listState.disputesCount}
+            filteredMessages={listState.filteredMessages}
+            selectedId={sidePeekOpen ? peekMessageId : null}
+            onSelectMessage={openMessage}
+            getCustomerById={listState.getCustomerById}
+            emptyMessage={listState.emptyMessage}
+          />
+        </div>
       </div>
 
       <InboxPeekSidePanel messageId={sidePeekOpen ? peekMessageId : null} onClose={closePeek} />

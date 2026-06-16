@@ -14,6 +14,7 @@ interface InboxThreadToolbarProps {
   agentDraftMeta?: AgentDraftMeta;
   contextSidebar?: ReactNode;
   className?: string;
+  showSubject?: boolean;
 }
 
 export function InboxThreadToolbar({
@@ -21,7 +22,8 @@ export function InboxThreadToolbar({
   message,
   agentDraftMeta,
   contextSidebar,
-  className
+  className,
+  showSubject = true
 }: InboxThreadToolbarProps) {
   const [contextOpen, setContextOpen] = useState(false);
 
@@ -30,10 +32,18 @@ export function InboxThreadToolbar({
   }, [message.id]);
 
   return (
-    <div className={cn('flex h-8 shrink-0 items-center justify-between gap-2 md:gap-4', className)}>
-      <h2 className='text-foreground min-w-0 flex-1 truncate text-sm font-semibold'>
-        {message.subject}
-      </h2>
+    <div
+      className={cn(
+        'flex h-8 shrink-0 items-center gap-2 md:gap-4',
+        showSubject ? 'justify-between' : 'justify-end',
+        className
+      )}
+    >
+      {showSubject ? (
+        <h2 className='text-foreground min-w-0 flex-1 truncate text-sm font-semibold'>
+          {message.subject}
+        </h2>
+      ) : null}
 
       <div className='flex shrink-0 items-center gap-2'>
         <InboxThreadHeroAction
