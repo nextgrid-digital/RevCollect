@@ -98,6 +98,12 @@ export class MockRevCollectService implements RevCollectService {
     return resolveMock(getCustomerById(id));
   }
 
+  getCustomerContext(customerId: string) {
+    const customer = getCustomerById(customerId);
+    if (!customer) return resolveMock(null);
+    return resolveMock(getCustomerInboxContext(customerId, customer));
+  }
+
   getCustomerStatusSummary() {
     return resolveMock(getCustomerStatusSummary());
   }

@@ -15,6 +15,7 @@ export const revcollectKeys = {
     [...revcollectKeys.inbox(), 'customer', customerId] as const,
   customers: () => [...revcollectKeys.all, 'customers'] as const,
   customer: (id: string) => [...revcollectKeys.customers(), id] as const,
+  customerContext: (id: string) => [...revcollectKeys.customers(), id, 'context'] as const,
   invoices: () => [...revcollectKeys.all, 'invoices'] as const,
   invoicesForCustomer: (customerId: string) =>
     [...revcollectKeys.invoices(), 'customer', customerId] as const,
@@ -68,6 +69,17 @@ export function customerQueryOptions(id: string) {
   return queryOptions({
     queryKey: revcollectKeys.customer(id),
     queryFn: () => getRevCollectService().getCustomerById(id),
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
+export function customerContextQueryOptions(customerId: string) {
+  return queryOptions({
+    queryKey: revcollectKeys.customerContext(customerId),
+    queryFn: async () => {
+      const context = await getRevCollectService().getCustomerContext(customerId);
+      return context;
+    },
     staleTime: MOCK_STALE_TIME
   });
 }
@@ -167,6 +179,13 @@ export function useCustomer(id: string | undefined) {
   });
 }
 
+export function useCustomerInboxContext(customerId: string | undefined) {
+  return useQuery({
+    ...customerContextQueryOptions(customerId ?? ''),
+    enabled: !!customerId
+  });
+}
+
 export function useInvoicesForCustomer(customerId: string | undefined) {
   return useQuery({
     ...invoicesForCustomerQueryOptions(customerId ?? ''),
@@ -198,6 +217,15 @@ export function useInboxThreadForCustomer(customerId: string | undefined) {
     queryKey: revcollectKeys.inboxThreadForCustomer(customerId ?? ''),
     queryFn: () => getRevCollectService().getInboxThreadForCustomer(customerId!),
     enabled: !!customerId,
+    staleTime: MOCK_STALE_TIME
+  });
+}
+
+export function useThreadEmails(threadId: string | undefined) {
+  return useQuery({
+    queryKey: [...revcollectKeys.inbox(), 'thread', threadId ?? ''] as const,
+    queryFn: () => getRevCollectService().getThreadEmails(threadId!),
+    enabled: !!threadId,
     staleTime: MOCK_STALE_TIME
   });
 }

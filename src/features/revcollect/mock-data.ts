@@ -891,7 +891,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     source: 'QuickBooks',
     aiInsight: 'Typically pays 20-25 days late. Payment velocity slowing over last 3 months.',
     deepAnalysis:
-      'Ridgeline has requested installment plans twice in the past year. Both times they honored the full schedule within 5 days of each due date. Approving the split is low risk. The 3-month timeline matches their cash flow cycle (Q2 is historically tight for construction firms).'
+      'Ridgeline has requested 3-part installment plans before. Both times they honored the full schedule within 5 days of each due date. Approving the split is low risk. The 3-month timeline matches their cash flow cycle (Q2 is historically tight for construction firms).'
   },
   'cust-9': {
     avgDsoDays: 41,
@@ -1001,7 +1001,7 @@ const rawTimelineByCustomerId: Record<string, TimelineEvent[]> = {
       customerId: 'cust-6',
       type: 'email_received',
       title: 'Tom replied',
-      description: 'Requested installment plan',
+      description: 'Requested 3-part installment plan',
       occurredAt: '2026-05-29T10:14:00Z'
     },
     {
@@ -1009,7 +1009,7 @@ const rawTimelineByCustomerId: Record<string, TimelineEvent[]> = {
       customerId: 'cust-6',
       type: 'email_sent',
       title: 'Escalation sent',
-      description: 'Escalation notice with aging statement',
+      description: 'Final notice with all invoices attached',
       occurredAt: '2026-05-28T09:00:00Z'
     },
     {
@@ -1017,7 +1017,7 @@ const rawTimelineByCustomerId: Record<string, TimelineEvent[]> = {
       customerId: 'cust-6',
       type: 'email_sent',
       title: '3rd reminder sent',
-      description: 'Firm overdue notice for INV-5402',
+      description: 'No response received',
       occurredAt: '2026-05-15T10:00:00Z'
     },
     {
@@ -1025,8 +1025,16 @@ const rawTimelineByCustomerId: Record<string, TimelineEvent[]> = {
       customerId: 'cust-6',
       type: 'email_sent',
       title: '2nd reminder sent',
-      description: 'Friendly reminder for open balance',
+      description: 'No response received',
       occurredAt: '2026-05-08T10:00:00Z'
+    },
+    {
+      id: 'tl-7e',
+      customerId: 'cust-6',
+      type: 'email_sent',
+      title: '1st reminder sent',
+      description: 'Automated after 7 days overdue',
+      occurredAt: '2026-03-29T10:00:00Z'
     }
   ],
   'cust-9': [

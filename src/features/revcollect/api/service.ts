@@ -10,6 +10,7 @@ import type {
   AgingReportFilters,
   AgingReportSummary,
   Customer,
+  CustomerInboxContext,
   InboxMessage,
   IntegrationStatus,
   Invoice,
@@ -35,6 +36,7 @@ export interface RevCollectService {
 
   listCustomers(): Promise<Customer[]>;
   getCustomerById(id: string): Promise<Customer | undefined>;
+  getCustomerContext(customerId: string): Promise<CustomerInboxContext | null>;
   getCustomerStatusSummary(): Promise<CustomerStatusSummary>;
 
   listInvoices(): Promise<Invoice[]>;

@@ -1,10 +1,10 @@
 import PageContainer from '@/components/layout/page-container';
-import { CustomersTable } from '@/features/revcollect/customers/components/customers-table';
+import { CustomersWorkspace } from '@/features/revcollect/customers/components/customers-workspace';
 
 export default function CustomersPage() {
   return (
-    <PageContainer>
-      <CustomersTable />
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
+      <CustomersWorkspace />
     </PageContainer>
   );
 }

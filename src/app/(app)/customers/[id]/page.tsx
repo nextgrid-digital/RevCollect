@@ -1,5 +1,5 @@
 import PageContainer from '@/components/layout/page-container';
-import { CustomerDetailView } from '@/features/revcollect/customers/components/customer-detail-view';
+import { CustomersWorkspace } from '@/features/revcollect/customers/components/customers-workspace';
 
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>;
@@ -9,8 +9,8 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const { id } = await params;
 
   return (
-    <PageContainer>
-      <CustomerDetailView customerId={id} />
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
+      <CustomersWorkspace customerId={id} />
     </PageContainer>
   );
 }

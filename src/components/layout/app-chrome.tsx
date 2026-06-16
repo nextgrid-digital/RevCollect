@@ -10,13 +10,21 @@ function isInboxPath(pathname: string) {
   return pathname === '/inbox' || pathname.startsWith('/inbox/');
 }
 
+function isCustomersWorkspacePath(pathname: string) {
+  return pathname === '/customers' || pathname.startsWith('/customers/');
+}
+
+function isFullWidthHeaderPath(pathname: string) {
+  return !isInboxPath(pathname) && !isCustomersWorkspacePath(pathname);
+}
+
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isInbox = isInboxPath(pathname);
 
   const chrome = (
     <>
-      {!isInbox ? <Header /> : null}
+      {isFullWidthHeaderPath(pathname) ? <Header /> : null}
       <InfobarProvider defaultOpen={false}>
         <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>{children}</div>
         <InfoSidebar side='right' />

@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
+import { useCustomer } from '@/features/revcollect/api/queries';
 
 type BreadcrumbItem = {
   title: string;
@@ -18,17 +19,19 @@ const routeMapping: Record<string, BreadcrumbItem[]> = {
 
 export function useBreadcrumbs() {
   const pathname = usePathname();
+  const customerMatch = pathname.match(/^\/customers\/([^/]+)$/);
+  const customerId = customerMatch?.[1];
+  const { data: customer } = useCustomer(customerId);
 
   const breadcrumbs = useMemo(() => {
     if (routeMapping[pathname]) {
       return routeMapping[pathname];
     }
 
-    const customerMatch = pathname.match(/^\/customers\/([^/]+)$/);
     if (customerMatch) {
       return [
         { title: 'Customers', link: '/customers' },
-        { title: 'Detail', link: pathname }
+        { title: customer?.company ?? 'Detail', link: pathname }
       ];
     }
 
@@ -48,7 +51,7 @@ export function useBreadcrumbs() {
         link: path
       };
     });
-  }, [pathname]);
+  }, [pathname, customerMatch, customer?.company]);
 
   return breadcrumbs;
 }
