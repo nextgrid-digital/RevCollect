@@ -89,7 +89,7 @@ export function InboxMessageList({
         <div
           ref={scrollRef}
           data-inbox-list-scroll
-          className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-2 [overflow-anchor:none]'
+          className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [overflow-anchor:none]'
         >
           <LayoutGroup id={variant === 'notion' ? 'inbox-notion-list' : 'inbox-list'}>
             <div className='pb-4'>

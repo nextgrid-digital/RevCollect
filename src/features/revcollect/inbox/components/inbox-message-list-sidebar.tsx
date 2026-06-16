@@ -81,7 +81,7 @@ export function InboxMessageListSidebar({
       ) : null}
       <SidebarContent
         data-inbox-list-scroll
-        className='scroll-stable overflow-y-auto py-1 pr-2 [overflow-anchor:none] md:pr-3'
+        className='scroll-stable overflow-y-auto overscroll-contain py-1 [overflow-anchor:none]'
       >
         {filteredMessages.length === 0 ? (
           <p className='text-muted-foreground px-2 py-8 text-center text-sm'>{emptyMessage}</p>
