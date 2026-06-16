@@ -12,8 +12,11 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: {
+    default: 'RevCollect',
+    template: '%s | RevCollect'
+  },
+  description: 'AI-powered accounts receivable and collections dashboard'
 };
 
 export const viewport: Viewport = {
