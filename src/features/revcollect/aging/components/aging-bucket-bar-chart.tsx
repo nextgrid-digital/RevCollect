@@ -1,4 +1,8 @@
+'use client';
+
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { springSoft } from '@/features/revcollect/motion/motion-tokens';
 import { formatCurrency } from '../../utils';
 import type { AgingChartBucketRow, AgingReportBucket } from '../../types';
 
@@ -21,7 +25,7 @@ export function AgingBucketBarChart({ buckets }: AgingBucketBarChartProps) {
     <section className='min-w-0'>
       <h2 className='mb-4 text-sm font-semibold sm:text-base'>Outstanding by Aging Bucket</h2>
       <div className='space-y-4 sm:space-y-3'>
-        {buckets.map((bucket) => {
+        {buckets.map((bucket, index) => {
           const widthPct = Math.max(
             (bucket.totalCents / maxTotal) * 100,
             bucket.totalCents > 0 ? 8 : 0
@@ -40,15 +44,17 @@ export function AgingBucketBarChart({ buckets }: AgingBucketBarChartProps) {
                 </span>
               </div>
               <div className='bg-muted/50 h-7 min-w-0 overflow-hidden rounded-md sm:h-8'>
-                <div
+                <motion.div
                   className={cn(
-                    'flex h-full min-w-[2.5rem] items-center rounded-md px-2 text-[11px] font-medium text-white transition-all sm:min-w-[3rem] sm:px-2.5 sm:text-xs',
+                    'flex h-full min-w-[2.5rem] items-center rounded-md px-2 text-[11px] font-medium text-white sm:min-w-[3rem] sm:px-2.5 sm:text-xs',
                     bucketBarStyles[bucket.bucket]
                   )}
-                  style={{ width: `${widthPct}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${widthPct}%` }}
+                  transition={{ ...springSoft, delay: index * 0.04 }}
                 >
                   {bucket.invoiceCount > 0 ? invoiceLabel : null}
-                </div>
+                </motion.div>
               </div>
               <span className='hidden text-sm font-medium tabular-nums sm:block'>
                 {formatCurrency(bucket.totalCents)}

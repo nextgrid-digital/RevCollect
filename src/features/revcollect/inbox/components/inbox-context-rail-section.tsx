@@ -25,7 +25,7 @@ export function InboxContextRailSection({
       ) : (
         <div
           className={cn(
-            'overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800',
+            'bg-card overflow-hidden rounded-2xl shadow-sm ring-1 ring-border/60',
             label ? 'mt-1.5' : undefined,
             contentClassName
           )}

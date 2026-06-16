@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -15,6 +15,11 @@ import type {
 } from '../../types';
 import { CustomerContextPanel } from '../../components/customer-context-panel';
 import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
+import {
+  scrollInboxThreadEmailIntoView,
+  scrollInboxThreadToBottomAfterLayout
+} from '../lib/scroll-inbox-reply-target';
+import { inboxCenterMaxWidth } from '../lib/inbox-layout';
 import { ConversationThread } from './conversation-thread';
 import { InboxThreadActionBar } from './inbox-thread-action-bar';
 import { InboxThreadComposer } from './inbox-thread-composer';
@@ -64,14 +69,31 @@ export function InboxConversationPane({
   useEffect(() => {
     if (!scrollToEmailId || !threadScrollRef.current) return;
 
+    const container = threadScrollRef.current;
     const frame = requestAnimationFrame(() => {
-      const target = threadScrollRef.current?.querySelector(
-        `[data-thread-email-id="${scrollToEmailId}"]`
-      );
-      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const latestCustomerEmailId = getLatestCustomerEmail(threadEmails)?.id;
+
+      if (scrollToEmailId === latestCustomerEmailId) {
+        void scrollInboxThreadToBottomAfterLayout(container, { behavior: 'smooth' });
+        return;
+      }
+
+      scrollInboxThreadEmailIntoView(container, scrollToEmailId, {
+        behavior: 'smooth',
+        block: 'start'
+      });
     });
     return () => cancelAnimationFrame(frame);
-  }, [scrollToEmailId]);
+  }, [scrollToEmailId, threadEmails]);
+
+  useLayoutEffect(() => {
+    if (scrollToEmailId) return;
+
+    const container = threadScrollRef.current;
+    if (!container) return;
+
+    void scrollInboxThreadToBottomAfterLayout(container, { behavior: 'auto' });
+  }, [selectedMessage.id, threadEmails, scrollToEmailId]);
 
   const handleActivityEmailClick = useCallback(
     (emailId: string) => {
@@ -138,21 +160,25 @@ export function InboxConversationPane({
       <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
         <div
           ref={threadScrollRef}
-          className='scroll-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 md:pr-5 xl:py-4'
+          data-inbox-thread-scroll
+          className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-3 md:px-6 md:py-4'
         >
-          <ConversationThread
-            emails={threadEmails}
-            customerName={customer.name}
-            customerCompany={customer.company}
-            latestCustomerEmailId={replyToEmail?.id}
-            replyIntentLabel={selectedMessage.replyIntentLabel}
-          />
-          <div className='mt-4 shrink-0 pt-2'>
-            <InboxThreadComposer
-              agentDraftMeta={agentDraftMeta}
-              aiDraftBase={aiDraftBase ?? ''}
-              customerStatus={customer.status}
+          <div className={inboxCenterMaxWidth}>
+            <ConversationThread
+              emails={threadEmails}
+              customerName={customer.name}
+              customerCompany={customer.company}
+              latestCustomerEmailId={replyToEmail?.id}
+              replyIntentLabel={selectedMessage.replyIntentLabel}
+              autoScrollToLatestEmail={false}
             />
+            <div className='bg-background sticky bottom-0 z-10 shrink-0 pt-4 pb-2'>
+              <InboxThreadComposer
+                agentDraftMeta={agentDraftMeta}
+                aiDraftBase={aiDraftBase ?? ''}
+                customerStatus={customer.status}
+              />
+            </div>
           </div>
         </div>
       </div>

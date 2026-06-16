@@ -9,8 +9,6 @@ import {
   SheetTitle
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
-import { focusInboxComposer } from '../lib/focus-inbox-composer';
-import { scrollInboxReplyTargetAfterLayout } from '../lib/scroll-inbox-reply-target';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { InboxThreadDetail } from './inbox-thread-detail';
 import { InboxThreadHeader } from './inbox-thread-header';
@@ -30,11 +28,6 @@ export function InboxPeekSidePanel({ messageId, onClose }: InboxPeekSidePanelPro
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
-          void scrollInboxReplyTargetAfterLayout().then((scrolledToDraft) => {
-            if (!scrolledToDraft) {
-              focusInboxComposer();
-            }
-          });
         }}
         className='border-border/60 flex h-full w-[min(92vw,52rem)] max-w-[min(92vw,52rem)] flex-col gap-0 overflow-hidden border-l p-0 shadow-xl sm:max-w-[min(92vw,52rem)]'
       >

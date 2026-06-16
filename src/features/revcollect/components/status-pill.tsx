@@ -1,4 +1,7 @@
+'use client';
+
 import type { CollectionStatus } from '../types';
+import { MotionReveal } from '@/features/revcollect/motion/motion-primitives';
 import { StatusBadge, type StatusBadgeTone } from './status-badge';
 
 const statusConfig: Record<CollectionStatus, { label: string; tone: StatusBadgeTone }> = {
@@ -20,5 +23,9 @@ interface StatusPillProps {
 
 export function StatusPill({ status, className }: StatusPillProps) {
   const config = statusConfig[status];
-  return <StatusBadge label={config.label} tone={config.tone} className={className} />;
+  return (
+    <MotionReveal>
+      <StatusBadge label={config.label} tone={config.tone} className={className} />
+    </MotionReveal>
+  );
 }

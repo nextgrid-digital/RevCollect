@@ -40,9 +40,9 @@ export function ConversationThread({
   }, [autoScrollToLatestEmail, emails, latestCustomerEmailId]);
 
   return (
-    <div className='flex flex-col gap-3'>
-      <InboxContextSectionLabel>Conversation</InboxContextSectionLabel>
-      <div className='flex flex-col gap-3'>
+    <div className='flex flex-col gap-6'>
+      <InboxContextSectionLabel className='sr-only'>Conversation</InboxContextSectionLabel>
+      <div className='flex flex-col gap-4'>
         {emails.map((email, index) => {
           const isCustomer = email.author === 'customer';
           const senderName = isCustomer ? customerName : 'You';

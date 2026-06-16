@@ -26,7 +26,7 @@ export function CustomerContextPanelFloatingHeader({
 }) {
   return (
     <div className='space-y-2'>
-      <div className='flex items-center gap-3'>
+      <div className='flex items-start gap-3'>
         <CustomerAvatar
           name={customer.company}
           avatarUrl={customer.avatarUrl}

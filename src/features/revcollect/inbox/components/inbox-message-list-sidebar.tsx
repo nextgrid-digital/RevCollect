@@ -16,9 +16,10 @@ interface InboxMessageListSidebarProps {
   listFilter: InboxListFilter;
   onFilterChange: (filter: InboxListFilter) => void;
   allCount: number;
+  needsAttentionCount: number;
   overdueCount: number;
   draftsCount: number;
-  repliedCount: number;
+  upToDateCount: number;
   disputesCount: number;
   filteredMessages: InboxMessage[];
   selectedId: string;
@@ -36,9 +37,10 @@ export function InboxMessageListSidebar({
   listFilter,
   onFilterChange,
   allCount,
+  needsAttentionCount,
   overdueCount,
   draftsCount,
-  repliedCount,
+  upToDateCount,
   disputesCount,
   filteredMessages,
   selectedId,
@@ -69,14 +71,18 @@ export function InboxMessageListSidebar({
             filter={listFilter}
             onFilterChange={onFilterChange}
             allCount={allCount}
+            needsAttentionCount={needsAttentionCount}
             overdueCount={overdueCount}
             draftsCount={draftsCount}
-            repliedCount={repliedCount}
+            upToDateCount={upToDateCount}
             disputesCount={disputesCount}
           />
         </SidebarHeader>
       ) : null}
-      <SidebarContent className='scroll-stable overflow-y-auto py-1 pr-2 md:pr-3'>
+      <SidebarContent
+        data-inbox-list-scroll
+        className='scroll-stable overflow-y-auto py-1 pr-2 [overflow-anchor:none] md:pr-3'
+      >
         {filteredMessages.length === 0 ? (
           <p className='text-muted-foreground px-2 py-8 text-center text-sm'>{emptyMessage}</p>
         ) : (
@@ -91,7 +97,7 @@ export function InboxMessageListSidebar({
                   message={message}
                   customer={msgCustomer}
                   selected={selectedId === message.id}
-                  onSelect={() => onSelectMessage(message.id)}
+                  onSelectMessage={onSelectMessage}
                 />
               );
             })}

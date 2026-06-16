@@ -17,10 +17,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from '@/components/ui/sidebar';
 import { navGroups } from '@/config/nav-config';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -29,12 +29,12 @@ import { Icons } from '../icons';
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { isOpen } = useMediaQuery();
+  const { setOpenMobile } = useSidebar();
   const filteredGroups = useFilteredNavGroups(navGroups);
 
   React.useEffect(() => {
-    // Side effects based on sidebar state changes
-  }, [isOpen]);
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   return (
     <Sidebar collapsible='icon'>

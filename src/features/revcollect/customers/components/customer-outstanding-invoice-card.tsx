@@ -35,7 +35,7 @@ export function CustomerOutstandingInvoiceCard({
   const showOverdue = daysOverdue > 0 && invoice.status !== 'current';
 
   return (
-    <div className='flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+    <div className='bg-card flex flex-col gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 ring-border/60 sm:flex-row sm:items-center sm:justify-between'>
       <div className='flex min-w-0 flex-1 items-start gap-3'>
         <span
           className={cn(
@@ -52,7 +52,7 @@ export function CustomerOutstandingInvoiceCard({
           </p>
         </div>
       </div>
-      <div className='flex shrink-0 items-center gap-3'>
+      <div className='flex shrink-0 items-center justify-between gap-3 sm:justify-end'>
         <span
           className={cn(
             'text-sm font-semibold tabular-nums',

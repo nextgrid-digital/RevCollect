@@ -5,11 +5,23 @@ import { useSearchParams } from 'next/navigation';
 import { useCustomers, useInboxMessages } from '../../api/queries';
 import type { Customer } from '../../types';
 import { filterInboxMessages, type InboxListFilter } from '../lib/filter-inbox-messages';
+import {
+  getInboxThreadActionStatus,
+  threadNeedsAttention
+} from '../lib/get-inbox-thread-action-status';
 
-const VALID_FILTERS: InboxListFilter[] = ['all', 'overdue', 'drafts', 'replied', 'escalated'];
+const VALID_FILTERS: InboxListFilter[] = [
+  'all',
+  'needs_attention',
+  'overdue',
+  'drafts',
+  'up_to_date',
+  'escalated'
+];
 
 function parseInboxFilter(value: string | null): InboxListFilter | null {
   if (!value) return null;
+  if (value === 'replied') return 'up_to_date';
   return VALID_FILTERS.includes(value as InboxListFilter) ? (value as InboxListFilter) : null;
 }
 
@@ -22,9 +34,10 @@ function getListEmptyMessage(
     return 'No threads match your search';
   }
   if (filter === 'all') return 'No threads';
+  if (filter === 'needs_attention') return 'No threads need attention';
   if (filter === 'overdue') return 'No overdue threads';
   if (filter === 'drafts') return 'No AI drafts ready';
-  if (filter === 'replied') return 'No replied threads';
+  if (filter === 'up_to_date') return 'No up to date threads';
   return 'No dispute threads';
 }
 
@@ -48,6 +61,15 @@ export function useInboxListState() {
   );
 
   const allCount = inboxMessages.length;
+  const needsAttentionCount = useMemo(
+    () =>
+      inboxMessages.filter((message) => {
+        const customer = getCustomerById(message.customerId);
+        if (!customer) return false;
+        return threadNeedsAttention(getInboxThreadActionStatus(message, customer));
+      }).length,
+    [inboxMessages, getCustomerById]
+  );
   const overdueCount = useMemo(
     () => inboxMessages.filter((m) => getCustomerById(m.customerId)?.status === 'overdue').length,
     [inboxMessages, getCustomerById]
@@ -56,9 +78,14 @@ export function useInboxListState() {
     () => inboxMessages.filter((m) => m.agentDraftReady).length,
     [inboxMessages]
   );
-  const repliedCount = useMemo(
-    () => inboxMessages.filter((m) => !m.unread).length,
-    [inboxMessages]
+  const upToDateCount = useMemo(
+    () =>
+      inboxMessages.filter((message) => {
+        const customer = getCustomerById(message.customerId);
+        if (!customer) return false;
+        return getInboxThreadActionStatus(message, customer) === 'up_to_date';
+      }).length,
+    [inboxMessages, getCustomerById]
   );
   const disputesCount = useMemo(
     () =>
@@ -78,9 +105,10 @@ export function useInboxListState() {
     listFilter,
     setListFilter,
     allCount,
+    needsAttentionCount,
     overdueCount,
     draftsCount,
-    repliedCount,
+    upToDateCount,
     disputesCount,
     filteredMessages,
     getCustomerById,

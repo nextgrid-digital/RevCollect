@@ -48,7 +48,7 @@ export function SettingsIntegrationsView() {
             }
             className={index === 0 ? 'pb-6' : index === integrations.length - 1 ? 'pt-6' : 'py-6'}
           >
-            <div className='flex items-center justify-between gap-4'>
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
               <p className='text-muted-foreground text-sm'>{item.detail}</p>
               {!item.connected ? (
                 <Button asChild size='sm' variant='outline'>

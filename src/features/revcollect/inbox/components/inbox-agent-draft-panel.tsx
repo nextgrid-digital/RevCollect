@@ -64,7 +64,7 @@ export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPa
     <article
       id='agent-draft-panel'
       className={cn(
-        'border-border scroll-mt-4 flex w-full min-w-0 flex-col gap-3 rounded-2xl border bg-muted/50 px-4 py-4',
+        'border-border scroll-mt-4 flex w-full min-w-0 flex-col gap-3 rounded-2xl border bg-muted/50 px-3 py-4 sm:px-4',
         className
       )}
     >
@@ -117,7 +117,7 @@ export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPa
           aria-readonly={isSent}
         />
 
-        <div className='border-border flex items-center justify-between gap-2 border-t px-3 py-2'>
+        <div className='border-border flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2'>
           <Popover open={aiEditOpen} onOpenChange={setAiEditOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -128,7 +128,8 @@ export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPa
                 disabled={isSent}
               >
                 <Icons.sparkles className='size-3.5' />
-                Edit with AI
+                <span className='sm:hidden'>AI</span>
+                <span className='hidden sm:inline'>Edit with AI</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent

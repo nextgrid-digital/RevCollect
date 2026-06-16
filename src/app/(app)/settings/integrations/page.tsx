@@ -3,7 +3,7 @@ import { SettingsPageLayout } from '@/features/revcollect/settings/components/se
 
 export default function SettingsIntegrationsPage() {
   return (
-    <PageContainer lockPageScroll>
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
       <SettingsPageLayout tab='integrations' />
     </PageContainer>
   );

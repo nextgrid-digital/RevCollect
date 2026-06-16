@@ -55,7 +55,7 @@ export function AgentCustomerOverridesSection({
 
           return (
             <li key={override.customerId} className='flex flex-col gap-3 px-3 py-3'>
-              <div className='flex items-start justify-between gap-3'>
+              <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
                 <div className='flex min-w-0 items-center gap-3'>
                   <CustomerAvatar
                     name={customer.company}
@@ -64,14 +64,17 @@ export function AgentCustomerOverridesSection({
                   />
                   <p className='truncate text-sm font-medium'>{customer.company}</p>
                 </div>
-                <div className='flex shrink-0 items-center gap-2'>
+                <div className='flex w-full shrink-0 items-center gap-2 sm:w-auto'>
                   <Select
                     value={override.style}
                     onValueChange={(value) =>
                       onOverrideChange(override.customerId, value as AgentFollowUpStyle)
                     }
                   >
-                    <SelectTrigger className='w-36' aria-label={`Tone for ${customer.company}`}>
+                    <SelectTrigger
+                      className='w-full sm:w-36'
+                      aria-label={`Tone for ${customer.company}`}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

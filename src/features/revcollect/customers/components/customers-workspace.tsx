@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { MobileWorkspaceBar } from '@/components/layout/mobile-workspace-bar';
+import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
+import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
 import { useCustomers } from '../../api/queries';
 import { CustomersDetailPanel } from './customers-detail-panel';
 import { CustomersList } from './customers-list';
+import { CustomersListTitle } from './customers-list-header';
+import { CustomersWorkspaceActivityColumn } from './customers-workspace-activity-column';
 
 interface CustomersWorkspaceProps {
   customerId?: string | null;
@@ -32,54 +37,72 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
     if (isMobile || activeCustomerId || customers.length === 0) return;
     const defaultId = pickDefaultCustomerId(customers);
     if (defaultId) {
-      router.replace(`/customers/${defaultId}`);
+      router.replace(`/customers/${defaultId}`, { scroll: false });
     }
   }, [activeCustomerId, isMobile, customers, router]);
 
-  const listColumn = (
-    <div
-      className={cn(
-        'bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full min-h-0 flex-col overflow-hidden border-r',
-        isMobile ? 'w-full' : 'w-80 shrink-0'
-      )}
-    >
-      <CustomersList selectedId={activeCustomerId} className='min-h-0 flex-1' />
+  const listContent = (showListTitle: boolean) => (
+    <CustomersList
+      selectedId={activeCustomerId}
+      showListTitle={showListTitle}
+      className='min-h-0 flex-1'
+    />
+  );
+
+  const listColumnMobile = (
+    <div className='bg-sidebar text-sidebar-foreground flex h-full min-h-0 w-full flex-col overflow-hidden'>
+      {listContent(true)}
     </div>
   );
 
-  const detailColumn = activeCustomerId ? (
-    <CustomersDetailPanel customerId={activeCustomerId} className='min-h-0 min-w-0 flex-1' />
+  const listColumnDesktop = (
+    <div className={cn('hidden min-h-0 min-w-0 flex-col gap-2 md:flex', workspaceListWidth)}>
+      <CustomersListTitle className='h-8' />
+      <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+        {listContent(false)}
+      </WorkspaceCard>
+    </div>
+  );
+
+  const detailPanel = activeCustomerId ? (
+    <CustomersDetailPanel
+      customerId={activeCustomerId}
+      hideActivityAside
+      className='bg-background min-h-0 min-w-0 flex-1 overflow-hidden'
+    />
   ) : (
     <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
       Select a customer to get started
     </div>
   );
 
+  const desktopWorkspace = activeCustomerId ? (
+    <div className='flex min-h-0 min-w-0 flex-1 gap-4'>
+      {detailPanel}
+      <CustomersWorkspaceActivityColumn customerId={activeCustomerId} />
+    </div>
+  ) : (
+    detailPanel
+  );
+
   return (
-    <div className='flex h-full min-h-0 w-full flex-1 overflow-hidden'>
+    <WorkspaceCanvas>
       {isMobile ? (
         <>
-          {showListOnMobile ? listColumn : null}
+          {showListOnMobile ? listColumnMobile : null}
           {showDetailOnMobile ? (
             <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
-              <div className='border-border/60 shrink-0 border-b px-4 py-2'>
-                <Link
-                  href='/customers'
-                  className='text-primary text-sm font-medium hover:underline'
-                >
-                  ← Back to customers
-                </Link>
-              </div>
-              {detailColumn}
+              <MobileWorkspaceBar backHref='/customers' backLabel='Customers' />
+              {detailPanel}
             </div>
           ) : null}
         </>
       ) : (
         <>
-          {listColumn}
-          {detailColumn}
+          {listColumnDesktop}
+          {desktopWorkspace}
         </>
       )}
-    </div>
+    </WorkspaceCanvas>
   );
 }

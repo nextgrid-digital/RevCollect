@@ -79,27 +79,27 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
       if (nextMode === 'workspace') {
         setPeekMessageId(null);
         if (activeId) {
-          router.push(`/inbox/${activeId}`);
+          router.push(`/inbox/${activeId}`, { scroll: false });
         } else {
-          router.replace('/inbox');
+          router.replace('/inbox', { scroll: false });
         }
         return;
       }
 
       if (nextMode === 'full') {
         setPeekMessageId(null);
-        router.push(`/inbox/${activeId}`);
+        router.push(`/inbox/${activeId}`, { scroll: false });
         return;
       }
 
       if (isMobile) {
-        router.push(`/inbox/${activeId}`);
+        router.push(`/inbox/${activeId}`, { scroll: false });
         return;
       }
 
       setPeekMessageId(activeId);
       if (fullPageMessageId) {
-        router.replace('/inbox');
+        router.replace('/inbox', { scroll: false });
       }
     },
     [fullPageMessageId, isMobile, peekMessageId, router]
@@ -109,13 +109,13 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
     (messageId: string) => {
       if (isMobile) {
         setPeekMessageId(null);
-        router.push(`/inbox/${messageId}`);
+        router.push(`/inbox/${messageId}`, { scroll: false });
         return;
       }
 
       if (mode === 'workspace' || mode === 'full') {
         setPeekMessageId(null);
-        router.push(`/inbox/${messageId}`);
+        router.push(`/inbox/${messageId}`, { scroll: false });
         return;
       }
 

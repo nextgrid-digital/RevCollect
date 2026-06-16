@@ -3,7 +3,7 @@ import { OnboardingSteps } from '@/features/revcollect/onboarding/components/onb
 
 export default function OnboardingPage() {
   return (
-    <PageContainer>
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
       <OnboardingSteps />
     </PageContainer>
   );

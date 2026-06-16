@@ -3,7 +3,7 @@ import { AgentPage } from '@/features/revcollect/agent/components/agent-page';
 
 export default function AgentPageRoute() {
   return (
-    <PageContainer>
+    <PageContainer compactMobile lockPageScroll flushTop flushX>
       <AgentPage />
     </PageContainer>
   );

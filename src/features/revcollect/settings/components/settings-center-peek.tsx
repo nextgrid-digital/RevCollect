@@ -49,22 +49,26 @@ export function SettingsCenterPeek() {
           <DialogDescription>Workspace and account preferences</DialogDescription>
         </DialogHeader>
 
-        <div className='flex min-h-0 flex-1'>
+        <div className='flex min-h-0 flex-1 flex-col md:flex-row'>
           <nav
-            className='bg-sidebar text-sidebar-foreground border-border/60 flex w-52 shrink-0 flex-col border-r px-3 py-4'
+            className='border-border/60 bg-sidebar text-sidebar-foreground flex shrink-0 flex-row gap-1 overflow-x-auto border-b px-3 py-3 md:w-52 md:flex-col md:gap-0 md:overflow-visible md:border-r md:border-b-0 md:py-4'
             aria-label='Settings sections'
           >
-            <p className='text-sidebar-foreground px-2 pb-3 text-sm font-semibold'>Settings</p>
-            <p className='text-muted-foreground px-2 pb-1 text-xs font-medium'>Workspace</p>
-            <ul className='space-y-0.5'>
+            <p className='text-sidebar-foreground hidden px-2 pb-3 text-sm font-semibold md:block'>
+              Settings
+            </p>
+            <p className='text-muted-foreground hidden px-2 pb-1 text-xs font-medium md:block'>
+              Workspace
+            </p>
+            <ul className='flex gap-1 md:flex-col md:gap-0.5'>
               {NAV_ITEMS.map((item) => (
-                <li key={item.tab}>
+                <li key={item.tab} className='shrink-0 md:shrink'>
                   <button
                     type='button'
                     onClick={() => setTab(item.tab)}
                     aria-current={tab === item.tab ? 'page' : undefined}
                     className={cn(
-                      'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                      'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground inline-flex rounded-md px-3 py-1.5 text-sm transition-colors md:block md:w-full md:px-2',
                       tab === item.tab &&
                         'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                     )}
@@ -76,7 +80,7 @@ export function SettingsCenterPeek() {
             </ul>
           </nav>
 
-          <div className='min-h-0 flex-1 overflow-y-auto p-6'>
+          <div className='min-h-0 flex-1 overflow-y-auto p-4 sm:p-6'>
             <SettingsPeekContent tab={tab} />
           </div>
         </div>

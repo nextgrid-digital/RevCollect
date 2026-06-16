@@ -834,14 +834,22 @@ const balanceByCustomerId = invoices.reduce<Record<string, number>>((acc, invoic
   return acc;
 }, {});
 
+function mockCustomerPhone(customerId: string): string {
+  const match = /(\d+)$/.exec(customerId);
+  const num = match ? Number.parseInt(match[1], 10) : 1;
+  return `+1 (555) 010-${String(1000 + num).slice(-4)}`;
+}
+
 export const customers: Customer[] = customerSeeds.map((seed) => ({
   ...seed,
+  phone: mockCustomerPhone(seed.id),
   balanceCents: balanceByCustomerId[seed.id] ?? 0
 }));
 
 const inboxThreadData = createInboxThreadData(
   customerSeeds.map((seed) => ({
     ...seed,
+    phone: mockCustomerPhone(seed.id),
     balanceCents: balanceByCustomerId[seed.id] ?? 0
   }))
 );

@@ -56,22 +56,27 @@ function InboxContextRailBodyComponent({
   const previewInvoices = openInvoices.slice(0, INVOICE_PREVIEW_LIMIT);
   const hasMoreInvoices = openInvoices.length > INVOICE_PREVIEW_LIMIT;
   const hasAiInsight = Boolean(aiInsightText.trim());
-  const defaultAccordionSection = hasAiInsight ? 'ai-insight' : undefined;
+  const allAccordionSections = hasAiInsight ? ['ai-insight', 'details'] : ['details'];
 
-  const [openSection, setOpenSection] = useState<string | undefined>(defaultAccordionSection);
+  const [openSections, setOpenSections] = useState<string[]>(allAccordionSections);
+
+  useEffect(() => {
+    setOpenSections(hasAiInsight ? ['ai-insight', 'details'] : ['details']);
+  }, [customer.id, hasAiInsight]);
 
   useEffect(() => {
     if (showDetails) {
-      setOpenSection('details');
+      setOpenSections((prev) => (prev.includes('details') ? prev : [...prev, 'details']));
       return;
     }
-    const detailsExpanded = readInboxInsightsDetailsExpanded();
-    setOpenSection(detailsExpanded ? 'details' : defaultAccordionSection);
-  }, [showDetails, defaultAccordionSection]);
+    if (!readInboxInsightsDetailsExpanded()) {
+      setOpenSections((prev) => prev.filter((section) => section !== 'details'));
+    }
+  }, [showDetails]);
 
-  const handleSectionChange = (value: string) => {
-    setOpenSection(value || undefined);
-    writeInboxInsightsDetailsExpanded(value === 'details');
+  const handleSectionChange = (value: string[]) => {
+    setOpenSections(value);
+    writeInboxInsightsDetailsExpanded(value.includes('details'));
   };
 
   const unattachedPreview = previewInvoices.filter(
@@ -134,9 +139,8 @@ function InboxContextRailBodyComponent({
       )}
 
       <Accordion
-        type='single'
-        collapsible
-        value={openSection}
+        type='multiple'
+        value={openSections}
         onValueChange={handleSectionChange}
         className='w-full'
       >
@@ -158,6 +162,8 @@ function InboxContextRailBodyComponent({
           <AccordionContent className='pb-1'>
             <InboxContextDetailsCard
               contactName={customer.name}
+              contactEmail={customer.email}
+              contactPhone={customer.phone}
               paymentTerms={context.paymentTerms}
               hideLabel
             />

@@ -1,82 +1,111 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import type { ReplyIntent } from '../../types';
+import type { Customer, InboxMessage, ReplyIntent } from '../../types';
+import {
+  getInboxThreadActionStatus,
+  getIntentLabel,
+  type InboxThreadActionStatus
+} from './get-inbox-thread-action-status';
 
-export type InboxListPillVariant = 'danger' | 'neutral' | 'draft';
+export type InboxListPillVariant = 'ai_draft' | 'attention' | 'monitoring' | 'muted' | 'overdue';
 
 export interface InboxListPillItem {
   label: string;
   variant: InboxListPillVariant;
+  icon?: ComponentType<{ className?: string }>;
+}
+
+export interface InboxThreadListBadges {
+  primary: InboxListPillItem | null;
+  secondary: InboxListPillItem | null;
+  status: InboxThreadActionStatus;
 }
 
 const pillVariantClasses: Record<InboxListPillVariant, string> = {
-  danger: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
-  neutral: 'bg-muted text-muted-foreground',
-  draft: 'bg-muted text-muted-foreground ring-1 ring-border'
+  ai_draft:
+    'bg-violet-100 text-violet-800 ring-1 ring-violet-200/80 dark:bg-violet-950/70 dark:text-violet-200 dark:ring-violet-700/50',
+  attention: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
+  monitoring: 'bg-muted text-muted-foreground ring-1 ring-border',
+  muted: 'bg-muted/60 text-muted-foreground',
+  overdue: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
 };
 
-function capitalizeIntent(intent: ReplyIntent): string {
-  return intent.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+export function getInboxThreadListBadges(
+  message: InboxMessage,
+  customer: Customer
+): InboxThreadListBadges {
+  const status = getInboxThreadActionStatus(message, customer);
+  const primary = getInboxThreadStatusDisplay(
+    status,
+    message.replyIntent,
+    message.replyIntentLabel
+  );
+  const secondary = getSecondaryOverdueChip(status, customer.daysOverdue);
+
+  return { primary, secondary, status };
 }
 
-function getIntentLabel(
+function getInboxThreadStatusDisplay(
+  status: InboxThreadActionStatus,
   replyIntent: ReplyIntent | undefined,
   replyIntentLabel: string | undefined
-): string | null {
-  if (!replyIntent) {
-    return replyIntentLabel ?? null;
-  }
-
-  switch (replyIntent) {
-    case 'deflection':
-      return replyIntentLabel ?? 'Deflection';
-    case 'promise':
-      return replyIntentLabel ?? 'Promise';
-    case 'dispute':
-      return replyIntentLabel ?? 'Dispute';
-    case 'payment_confirmation':
-      return replyIntentLabel ?? 'Payment confirmation';
-    case 'other':
-      return replyIntentLabel ?? capitalizeIntent(replyIntent);
+): InboxListPillItem | null {
+  switch (status) {
+    case 'ai_draft_ready':
+      return {
+        label: 'AI draft ready',
+        variant: 'ai_draft',
+        icon: Icons.sparkles
+      };
+    case 'awaiting_reply':
+      return {
+        label: 'Awaiting reply',
+        variant: 'attention',
+        icon: Icons.inbox
+      };
+    case 'monitoring': {
+      const intentLabel = getIntentLabel(replyIntent, replyIntentLabel);
+      return {
+        label: intentLabel ? `Monitoring · ${intentLabel}` : 'Monitoring',
+        variant: 'monitoring'
+      };
+    }
+    case 'up_to_date':
+      return {
+        label: 'Up to date',
+        variant: 'muted'
+      };
     default: {
-      const _exhaustive: never = replyIntent;
+      const _exhaustive: never = status;
       return _exhaustive;
     }
   }
 }
 
-/** Returns at most one list pill: draft > overdue > intent. */
-export function getPrimaryListPill(
-  daysOverdue: number,
-  replyIntent: ReplyIntent | undefined,
-  replyIntentLabel: string | undefined,
-  agentDraftReady: boolean | undefined
+function getSecondaryOverdueChip(
+  status: InboxThreadActionStatus,
+  daysOverdue: number
 ): InboxListPillItem | null {
-  if (agentDraftReady) {
-    return { label: 'Draft', variant: 'draft' };
-  }
+  if (daysOverdue <= 0) return null;
+  if (status !== 'ai_draft_ready' && status !== 'awaiting_reply') return null;
 
-  if (daysOverdue > 0) {
-    return { label: `${daysOverdue}d overdue`, variant: 'danger' };
-  }
-
-  const intentLabel = getIntentLabel(replyIntent, replyIntentLabel);
-  if (intentLabel) {
-    return { label: intentLabel, variant: 'neutral' };
-  }
-
-  return null;
+  return {
+    label: `${daysOverdue}d overdue`,
+    variant: 'overdue'
+  };
 }
 
 interface InboxListPillProps {
   label: string;
   variant: InboxListPillVariant;
+  icon?: ComponentType<{ className?: string }>;
   className?: string;
 }
 
-export function InboxListPill({ label, variant, className }: InboxListPillProps) {
+export function InboxListPill({ label, variant, icon: Icon, className }: InboxListPillProps) {
   return (
     <span
       className={cn(
@@ -85,9 +114,7 @@ export function InboxListPill({ label, variant, className }: InboxListPillProps)
         className
       )}
     >
-      {variant === 'draft' ? (
-        <Icons.squareCheck className='size-3 shrink-0 opacity-90' aria-hidden />
-      ) : null}
+      {Icon ? <Icon className='size-3 shrink-0 opacity-90' aria-hidden /> : null}
       {label}
     </span>
   );

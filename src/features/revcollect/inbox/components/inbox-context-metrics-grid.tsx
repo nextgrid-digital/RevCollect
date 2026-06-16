@@ -42,7 +42,7 @@ export function InboxContextMetricsGrid({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl bg-white px-3 py-1 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800',
+        'bg-card overflow-hidden rounded-2xl px-3 py-1 shadow-sm ring-1 ring-border/60',
         className
       )}
     >

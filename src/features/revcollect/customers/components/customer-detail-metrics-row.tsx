@@ -18,7 +18,7 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, valueClassName }: MetricCardProps) {
   return (
-    <div className='overflow-hidden rounded-xl bg-white px-3 py-3 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+    <div className='bg-card overflow-hidden rounded-2xl px-3 py-3 shadow-sm ring-1 ring-border/60'>
       <p className={cn('text-lg font-semibold tabular-nums', valueClassName)}>{value}</p>
       <p className='text-muted-foreground mt-0.5 text-xs'>{label}</p>
     </div>

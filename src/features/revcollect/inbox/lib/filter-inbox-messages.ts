@@ -1,6 +1,13 @@
 import type { Customer, InboxMessage } from '../../types';
+import { getInboxThreadActionStatus, threadNeedsAttention } from './get-inbox-thread-action-status';
 
-export type InboxListFilter = 'all' | 'overdue' | 'drafts' | 'replied' | 'escalated';
+export type InboxListFilter =
+  | 'all'
+  | 'needs_attention'
+  | 'overdue'
+  | 'drafts'
+  | 'up_to_date'
+  | 'escalated';
 
 function matchesSearch(
   message: InboxMessage,
@@ -35,11 +42,14 @@ export function filterInboxMessages(
     const customer = getCustomer(message.customerId);
     if (!customer) return false;
 
+    const actionStatus = getInboxThreadActionStatus(message, customer);
+
     const matchesFilter =
       filter === 'all' ||
+      (filter === 'needs_attention' && threadNeedsAttention(actionStatus)) ||
       (filter === 'overdue' && customer.status === 'overdue') ||
       (filter === 'drafts' && message.agentDraftReady) ||
-      (filter === 'replied' && !message.unread) ||
+      (filter === 'up_to_date' && actionStatus === 'up_to_date') ||
       (filter === 'escalated' && customer.status === 'in_dispute');
     if (!matchesFilter) return false;
 

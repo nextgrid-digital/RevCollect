@@ -37,14 +37,8 @@ export function InboxThreadHeroAction({
         : "You're up to date";
 
   return (
-    <div
-      className={cn(
-        'border-border/60 flex shrink-0 items-center border-b px-4 py-2.5',
-        state === 'caught-up' ? 'bg-muted/30' : 'bg-muted/50',
-        className
-      )}
-    >
-      <p className='text-foreground min-w-0 truncate text-sm font-medium'>{message}</p>
+    <div className={cn('text-muted-foreground shrink-0 text-xs', className)}>
+      <p className='text-foreground/80 min-w-0 truncate font-medium'>{message}</p>
     </div>
   );
 }

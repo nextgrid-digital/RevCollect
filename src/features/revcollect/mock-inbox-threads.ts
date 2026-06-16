@@ -761,7 +761,7 @@ function buildThreadsForCustomers(customers: Customer[]): {
     const receivedAtIso = receivedAt.toISOString();
 
     const draftBody = `${template.draft}${SIGNATURE}`;
-    const agentDraftReady = template.agentDraftReady ?? index < 2;
+    const agentDraftReady = template.agentDraftReady ?? Boolean(template.draftTitle);
 
     inboxMessages.push({
       id: threadId,

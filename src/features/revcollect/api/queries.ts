@@ -1,4 +1,10 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type {
   AgentConfig,
@@ -175,7 +181,10 @@ export function useInboxMessages() {
 }
 
 export function useInboxSelectionData(messageId: string | null) {
-  const query = useQuery(inboxSelectionQueryOptions(messageId));
+  const query = useQuery({
+    ...inboxSelectionQueryOptions(messageId),
+    placeholderData: keepPreviousData
+  });
   return {
     ...query,
     data: query.data ?? null
@@ -189,7 +198,8 @@ export function useCustomers() {
 export function useCustomer(id: string | undefined) {
   return useQuery({
     ...customerQueryOptions(id ?? ''),
-    enabled: !!id
+    enabled: !!id,
+    placeholderData: keepPreviousData
   });
 }
 

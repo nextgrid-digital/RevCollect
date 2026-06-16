@@ -37,7 +37,7 @@ export function InboxContextInvoiceCard({
   const showOverdue = daysOverdue > 0 && invoice.status !== 'current';
 
   return (
-    <div className='w-full shrink-0 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+    <div className='bg-card w-full shrink-0 rounded-2xl px-3 py-2 shadow-sm ring-1 ring-border/60'>
       <div className='flex items-center justify-between gap-2'>
         <div className='flex min-w-0 flex-1 items-center gap-1.5'>
           <span className='shrink-0 text-sm font-semibold'>{invoice.number}</span>

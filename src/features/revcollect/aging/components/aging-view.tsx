@@ -1,8 +1,13 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
+import { WorkspaceCard } from '@/components/layout/workspace-card';
+import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { DataTableSkeleton } from '@/components/ui/table/data-table-skeleton';
-import { PageHeader } from '../../components/page-header';
+import { workspaceCenterMaxWidth } from '@/features/revcollect/lib/workspace-layout';
+import { MotionReveal } from '@/features/revcollect/motion/motion-primitives';
+import { cn } from '@/lib/utils';
 import { useAgingReport, useCustomers } from '../../api/queries';
 import { AGING_REPORT_AS_OF_DATE } from '../lib/aging-report';
 import type { AgingReportFilters } from '../../types';
@@ -39,45 +44,85 @@ export function AgingView() {
   );
 
   const { data, isPending } = useAgingReport(stableFilters);
+  const asOfLabel = formatAsOfDate(AGING_REPORT_AS_OF_DATE);
+  const hasPriorityFollowUps = useMemo(
+    () =>
+      data?.customerBreakdown.some((row) => row.risk === 'high' || row.days60PlusCents > 0) ??
+      false,
+    [data?.customerBreakdown]
+  );
+
+  const toolbar = (
+    <AgingToolbar customers={customers} filters={filters} onFiltersChange={setFilters} />
+  );
 
   if (isPending || !data) {
     return (
-      <div className='min-w-0 space-y-6'>
-        <PageHeader
-          title='Aging'
-          description={`Accounts receivable aging as of ${formatAsOfDate(AGING_REPORT_AS_OF_DATE)}.`}
-        />
-        <DataTableSkeleton
-          columnCount={4}
-          rowCount={4}
-          withViewOptions={false}
-          withPagination={false}
-        />
-        <DataTableSkeleton columnCount={8} rowCount={6} withViewOptions={false} />
-      </div>
+      <WorkspaceCanvas className='flex-col'>
+        <WorkspacePageTitle title='Aging' actions={toolbar} className='shrink-0' />
+        <div
+          className={cn('scroll-stable min-h-0 flex-1 overflow-y-auto', workspaceCenterMaxWidth)}
+        >
+          <p className='text-muted-foreground mb-6 text-sm'>
+            Accounts receivable aging as of {asOfLabel}.
+          </p>
+          <div className='space-y-6'>
+            <DataTableSkeleton
+              columnCount={4}
+              rowCount={4}
+              withViewOptions={false}
+              withPagination={false}
+            />
+            <DataTableSkeleton columnCount={8} rowCount={6} withViewOptions={false} />
+          </div>
+        </div>
+      </WorkspaceCanvas>
     );
   }
 
   return (
-    <div className='min-w-0 space-y-6 sm:space-y-8'>
-      <PageHeader
-        title='Aging'
-        description={`Accounts receivable aging as of ${formatAsOfDate(AGING_REPORT_AS_OF_DATE)}.`}
-        actions={
-          <AgingToolbar customers={customers} filters={filters} onFiltersChange={setFilters} />
-        }
-      />
-      <AgingSummaryStats summary={data.summary} />
-      <AgingPriorityActionCard
-        rows={data.customerBreakdown}
-        onViewAccounts={() => {
-          breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }}
-      />
-      <AgingBucketBarChart buckets={data.chartBuckets} />
-      <div ref={breakdownRef}>
-        <AgingCustomerBreakdownTable rows={data.customerBreakdown} />
+    <WorkspaceCanvas className='flex-col'>
+      <WorkspacePageTitle title='Aging' actions={toolbar} className='shrink-0' />
+      <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
+        <div className={cn(workspaceCenterMaxWidth, 'space-y-4 pb-4')}>
+          <p className='text-muted-foreground text-sm'>
+            Accounts receivable aging as of {asOfLabel}.
+          </p>
+
+          <MotionReveal>
+            <WorkspaceCard className='p-4 md:p-5'>
+              <AgingSummaryStats summary={data.summary} />
+            </WorkspaceCard>
+          </MotionReveal>
+
+          {hasPriorityFollowUps ? (
+            <MotionReveal>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgingPriorityActionCard
+                  rows={data.customerBreakdown}
+                  onViewAccounts={() => {
+                    breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                />
+              </WorkspaceCard>
+            </MotionReveal>
+          ) : null}
+
+          <MotionReveal>
+            <WorkspaceCard className='p-4 md:p-5'>
+              <AgingBucketBarChart buckets={data.chartBuckets} />
+            </WorkspaceCard>
+          </MotionReveal>
+
+          <MotionReveal>
+            <div ref={breakdownRef}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgingCustomerBreakdownTable rows={data.customerBreakdown} />
+              </WorkspaceCard>
+            </div>
+          </MotionReveal>
+        </div>
       </div>
-    </div>
+    </WorkspaceCanvas>
   );
 }

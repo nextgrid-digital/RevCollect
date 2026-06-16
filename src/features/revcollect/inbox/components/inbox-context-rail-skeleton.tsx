@@ -4,7 +4,7 @@ export function InboxContextRailSkeleton() {
   return (
     <div className='flex h-full min-h-0 w-full flex-col'>
       <div className='border-border/60 shrink-0 border-b px-3 py-3'>
-        <div className='space-y-2 rounded-[16px] bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+        <div className='bg-card space-y-2 rounded-2xl px-3 py-2 shadow-sm ring-1 ring-border/60'>
           <div className='flex items-center gap-3'>
             <Skeleton className='size-10 shrink-0 rounded-full' />
             <div className='min-w-0 flex-1 space-y-1.5'>

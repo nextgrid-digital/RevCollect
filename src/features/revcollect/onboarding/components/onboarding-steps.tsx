@@ -2,15 +2,22 @@
 
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
+import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
+import { WorkspaceCard } from '@/components/layout/workspace-card';
+import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIntegrationStatus } from '../../api/queries';
 
 export function OnboardingSteps() {
   const { data: integrationStatus, isPending } = useIntegrationStatus();
 
   if (isPending || !integrationStatus) {
-    return <p className='text-muted-foreground text-sm'>Loading onboarding steps…</p>;
+    return (
+      <WorkspaceCanvas className='flex-col'>
+        <WorkspacePageTitle title='Onboarding' className='shrink-0' />
+        <p className='text-muted-foreground text-sm'>Loading onboarding steps…</p>
+      </WorkspaceCanvas>
+    );
   }
 
   const steps = [
@@ -35,29 +42,34 @@ export function OnboardingSteps() {
   ];
 
   return (
-    <div className='grid max-w-2xl gap-4'>
-      {steps.map((step) => (
-        <Card key={step.title}>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2 text-base'>
-              {step.done ? (
-                <Icons.check className='text-primary size-4' />
-              ) : (
-                <span className='bg-muted size-4 rounded-full' />
-              )}
-              {step.title}
-            </CardTitle>
-            <CardDescription>{step.description}</CardDescription>
-          </CardHeader>
-          {!step.done ? (
-            <CardContent>
-              <Button asChild size='sm'>
-                <Link href={step.href}>Continue</Link>
-              </Button>
-            </CardContent>
-          ) : null}
-        </Card>
-      ))}
-    </div>
+    <WorkspaceCanvas className='flex-col'>
+      <WorkspacePageTitle title='Onboarding' className='shrink-0' />
+      <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
+        <div className='mx-auto flex w-full max-w-2xl flex-col gap-4 pb-6'>
+          {steps.map((step) => (
+            <WorkspaceCard key={step.title} className='p-4 md:p-5'>
+              <div className='flex flex-col gap-1'>
+                <h2 className='flex items-center gap-2 text-base font-semibold'>
+                  {step.done ? (
+                    <Icons.check className='text-primary size-4' />
+                  ) : (
+                    <span className='bg-muted size-4 rounded-full' />
+                  )}
+                  {step.title}
+                </h2>
+                <p className='text-muted-foreground text-sm'>{step.description}</p>
+              </div>
+              {!step.done ? (
+                <div className='mt-4'>
+                  <Button asChild size='sm'>
+                    <Link href={step.href}>Continue</Link>
+                  </Button>
+                </div>
+              ) : null}
+            </WorkspaceCard>
+          ))}
+        </div>
+      </div>
+    </WorkspaceCanvas>
   );
 }

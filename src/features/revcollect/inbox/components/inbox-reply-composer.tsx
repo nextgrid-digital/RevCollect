@@ -7,6 +7,7 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition
@@ -29,7 +30,9 @@ import {
   type CollectionTone
 } from '../composer-options';
 import { cn } from '@/lib/utils';
+import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
+import { scrollInboxThreadToBottomAfterLayout } from '../lib/scroll-inbox-reply-target';
 
 function InboxDraftButton({
   isLoading,
@@ -41,16 +44,14 @@ function InboxDraftButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type='button'
+    <MotionPressable
       disabled={isLoading}
       aria-busy={isLoading || undefined}
       onClick={onClick}
       className={cn(
         'inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5',
         'border border-transparent text-[11px] font-medium leading-none',
-        'transition-[color,background-color,box-shadow,transform] duration-150',
-        'active:scale-[0.98]',
+        'transition-[color,background-color,box-shadow] duration-150',
         'focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
         'disabled:pointer-events-none disabled:opacity-60',
         isDrafted
@@ -64,7 +65,7 @@ function InboxDraftButton({
         <Icons.sparkles className='size-3 shrink-0' />
       )}
       <span className='whitespace-nowrap'>Draft with RevCollect</span>
-    </button>
+    </MotionPressable>
   );
 }
 
@@ -250,6 +251,15 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       defaultAutoRun,
       setBodyIfChanged
     ]);
+
+    useLayoutEffect(() => {
+      if (!isDrafted || isAgentDraft) return;
+
+      const container = rootRef.current?.closest('[data-inbox-thread-scroll]');
+      if (!(container instanceof HTMLElement)) return;
+
+      void scrollInboxThreadToBottomAfterLayout(container, { behavior: 'auto' });
+    }, [isDrafted, isAgentDraft, body]);
 
     useEffect(() => {
       if (!autoRun) return;

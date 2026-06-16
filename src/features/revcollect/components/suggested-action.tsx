@@ -1,15 +1,64 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+export interface SuggestedActionOption {
+  label: string;
+  onAction?: () => void;
+  href?: string;
+  icon?: ReactNode;
+}
 
 interface SuggestedActionProps {
   label: string;
   description: string;
-  actionLabel: string;
+  actionLabel?: string;
   onAction?: () => void;
   href?: string;
+  actions?: SuggestedActionOption[];
   className?: string;
   compact?: boolean;
+}
+
+function SuggestedActionButton({
+  action,
+  compact
+}: {
+  action: SuggestedActionOption;
+  compact: boolean;
+}) {
+  const content = (
+    <>
+      {action.icon}
+      {action.label}
+    </>
+  );
+
+  if (action.href) {
+    return (
+      <Button
+        asChild
+        size={compact ? 'sm' : 'default'}
+        variant={compact ? 'outline' : 'default'}
+        className={cn(compact && 'h-7 gap-1.5 px-2.5 text-xs')}
+      >
+        <Link href={action.href}>{content}</Link>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type='button'
+      size={compact ? 'sm' : 'default'}
+      variant={compact ? 'outline' : 'default'}
+      className={cn(compact && 'h-7 gap-1.5 px-2.5 text-xs')}
+      onClick={action.onAction}
+    >
+      {content}
+    </Button>
+  );
 }
 
 export function SuggestedAction({
@@ -18,23 +67,22 @@ export function SuggestedAction({
   actionLabel,
   onAction,
   href,
+  actions,
   className,
   compact = false
 }: SuggestedActionProps) {
-  const actionButton = href ? (
-    <Button asChild size={compact ? 'sm' : 'default'} variant={compact ? 'outline' : 'default'}>
-      <Link href={href}>{actionLabel}</Link>
-    </Button>
-  ) : (
-    <Button
-      type='button'
-      size={compact ? 'sm' : 'default'}
-      variant={compact ? 'outline' : 'default'}
-      onClick={onAction}
-    >
-      {actionLabel}
-    </Button>
-  );
+  const resolvedActions = actions ?? (actionLabel ? [{ label: actionLabel, onAction, href }] : []);
+
+  const actionButtons =
+    resolvedActions.length > 1 ? (
+      <div className={cn('flex flex-wrap gap-1.5', compact ? 'mt-2' : 'gap-2')}>
+        {resolvedActions.map((action) => (
+          <SuggestedActionButton key={action.label} action={action} compact={compact} />
+        ))}
+      </div>
+    ) : resolvedActions[0] ? (
+      <SuggestedActionButton action={resolvedActions[0]} compact={compact} />
+    ) : null;
 
   if (compact) {
     return (
@@ -45,7 +93,9 @@ export function SuggestedAction({
         <p className='mt-0.5 truncate text-xs font-medium' title={description}>
           {description}
         </p>
-        <div className='mt-2'>{actionButton}</div>
+        {actionButtons ? (
+          <div className={resolvedActions.length === 1 ? 'mt-2' : undefined}>{actionButtons}</div>
+        ) : null}
       </div>
     );
   }
@@ -53,7 +103,7 @@ export function SuggestedAction({
   return (
     <div
       className={cn(
-        'bg-card border-border/60 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between',
+        'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between',
         className
       )}
     >
@@ -61,7 +111,11 @@ export function SuggestedAction({
         <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>{label}</p>
         <p className='text-foreground mt-1 text-sm leading-relaxed'>{description}</p>
       </div>
-      <div className='shrink-0'>{actionButton}</div>
+      {actionButtons ? (
+        <div className={cn('shrink-0', resolvedActions.length > 1 && 'sm:max-w-[14rem]')}>
+          {actionButtons}
+        </div>
+      ) : null}
     </div>
   );
 }

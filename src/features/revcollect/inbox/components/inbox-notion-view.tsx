@@ -24,9 +24,10 @@ export function InboxNotionView() {
           listFilter={listState.listFilter}
           onFilterChange={listState.setListFilter}
           allCount={listState.allCount}
+          needsAttentionCount={listState.needsAttentionCount}
           overdueCount={listState.overdueCount}
           draftsCount={listState.draftsCount}
-          repliedCount={listState.repliedCount}
+          upToDateCount={listState.upToDateCount}
           disputesCount={listState.disputesCount}
           filteredMessages={listState.filteredMessages}
           selectedId={sidePeekOpen ? peekMessageId : null}

@@ -22,6 +22,10 @@ import { AgentPageFooter } from './agent-page-footer';
 import { AgentPageIntro } from './agent-page-intro';
 import { AgentRiskThresholdsSection } from './agent-risk-thresholds-section';
 import { AgentSignatureSection } from './agent-signature-section';
+import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
+import { WorkspaceCard } from '@/components/layout/workspace-card';
+import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
+import { MotionStagger, MotionStaggerItem } from '@/features/revcollect/motion/motion-primitives';
 
 function normalizeAgentConfig(config: AgentConfig): AgentConfig {
   return {
@@ -228,83 +232,108 @@ export function AgentPage() {
   const isSaving = updateConfig.isPending || activateAgent.isPending;
 
   return (
-    <div className='mx-auto flex w-full max-w-3xl flex-col pb-6'>
-      <AgentPageIntro
-        isActive={draft.isActive}
-        priceMonthlyCents={addonStatus.priceMonthlyCents}
-        onActiveChange={handleActiveChange}
-      />
+    <WorkspaceCanvas className='flex-col'>
+      <WorkspacePageTitle title='Agent' className='shrink-0' />
+      <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
+        <div className='mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6'>
+          <WorkspaceCard className='p-4 md:p-5'>
+            <AgentPageIntro
+              isActive={draft.isActive}
+              priceMonthlyCents={addonStatus.priceMonthlyCents}
+              onActiveChange={handleActiveChange}
+            />
+          </WorkspaceCard>
 
-      <div className='mt-8'>
-        <AgentHowItWorks />
+          <WorkspaceCard className='p-4 md:p-5'>
+            <AgentHowItWorks />
+          </WorkspaceCard>
+
+          <MotionStagger className='space-y-4'>
+            <MotionStaggerItem index={0}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentFollowUpStyleSection
+                  value={draft.followUpStyle}
+                  onChange={handleFollowUpStyleChange}
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={1}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentRiskThresholdsSection
+                  thresholds={draft.riskThresholds}
+                  onChange={(riskThresholds) =>
+                    setDraft((prev) => (prev ? { ...prev, riskThresholds } : prev))
+                  }
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={2}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentCustomerOverridesSection
+                  overrides={draft.customerOverrides}
+                  customersById={customersById}
+                  availableCustomers={availableCustomers}
+                  onOverrideChange={handleOverrideChange}
+                  onNoteChange={handleNoteChange}
+                  onAddOverride={handleAddOverride}
+                  onRemoveOverride={handleRemoveOverride}
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={3}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentBehaviorsSection
+                  behaviors={draft.behaviors}
+                  onChange={(behaviors) =>
+                    setDraft((prev) => (prev ? { ...prev, behaviors } : prev))
+                  }
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={4}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentEscalationRulesSection
+                  value={draft.escalationRules}
+                  onChange={(escalationRules) =>
+                    setDraft((prev) => (prev ? { ...prev, escalationRules } : prev))
+                  }
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={5}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentSignatureSection
+                  value={draft.signature}
+                  onChange={(signature) =>
+                    setDraft((prev) => (prev ? { ...prev, signature } : prev))
+                  }
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+            <MotionStaggerItem index={6}>
+              <WorkspaceCard className='p-4 md:p-5'>
+                <AgentDigestPreviewSection
+                  digest={draft.digestPreview}
+                  digestHour={draft.behaviors.digestHour}
+                  riskThresholds={draft.riskThresholds}
+                />
+              </WorkspaceCard>
+            </MotionStaggerItem>
+          </MotionStagger>
+
+          <AgentPageFooter
+            priceMonthlyCents={addonStatus.priceMonthlyCents}
+            estimatedAiCostMonthlyCents={addonStatus.estimatedAiCostMonthlyCents}
+            subscribed={addonStatus.subscribed}
+            isActive={draft.isActive}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
+            onPreview={handlePreview}
+            onSave={handleSave}
+            onActivate={handleActivate}
+          />
+        </div>
       </div>
-
-      <div className='divide-border mt-8 divide-y'>
-        <div className='pb-8'>
-          <AgentFollowUpStyleSection
-            value={draft.followUpStyle}
-            onChange={handleFollowUpStyleChange}
-          />
-        </div>
-        <div className='py-8'>
-          <AgentRiskThresholdsSection
-            thresholds={draft.riskThresholds}
-            onChange={(riskThresholds) =>
-              setDraft((prev) => (prev ? { ...prev, riskThresholds } : prev))
-            }
-          />
-        </div>
-        <div className='py-8'>
-          <AgentCustomerOverridesSection
-            overrides={draft.customerOverrides}
-            customersById={customersById}
-            availableCustomers={availableCustomers}
-            onOverrideChange={handleOverrideChange}
-            onNoteChange={handleNoteChange}
-            onAddOverride={handleAddOverride}
-            onRemoveOverride={handleRemoveOverride}
-          />
-        </div>
-        <div className='py-8'>
-          <AgentBehaviorsSection
-            behaviors={draft.behaviors}
-            onChange={(behaviors) => setDraft((prev) => (prev ? { ...prev, behaviors } : prev))}
-          />
-        </div>
-        <div className='py-8'>
-          <AgentEscalationRulesSection
-            value={draft.escalationRules}
-            onChange={(escalationRules) =>
-              setDraft((prev) => (prev ? { ...prev, escalationRules } : prev))
-            }
-          />
-        </div>
-        <div className='py-8'>
-          <AgentSignatureSection
-            value={draft.signature}
-            onChange={(signature) => setDraft((prev) => (prev ? { ...prev, signature } : prev))}
-          />
-        </div>
-        <div className='pt-8'>
-          <AgentDigestPreviewSection
-            digest={draft.digestPreview}
-            digestHour={draft.behaviors.digestHour}
-            riskThresholds={draft.riskThresholds}
-          />
-        </div>
-      </div>
-
-      <AgentPageFooter
-        priceMonthlyCents={addonStatus.priceMonthlyCents}
-        estimatedAiCostMonthlyCents={addonStatus.estimatedAiCostMonthlyCents}
-        subscribed={addonStatus.subscribed}
-        isActive={draft.isActive}
-        hasUnsavedChanges={hasUnsavedChanges}
-        isSaving={isSaving}
-        onPreview={handlePreview}
-        onSave={handleSave}
-        onActivate={handleActivate}
-      />
-    </div>
+    </WorkspaceCanvas>
   );
 }

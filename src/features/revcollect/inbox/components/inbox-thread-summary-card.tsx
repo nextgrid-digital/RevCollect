@@ -5,7 +5,7 @@ interface InboxThreadSummaryCardProps {
 
 export function InboxThreadSummaryCard({ subject, summary }: InboxThreadSummaryCardProps) {
   return (
-    <div className='overflow-hidden rounded-[16px] bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800'>
+    <div className='bg-card overflow-hidden rounded-2xl shadow-sm ring-1 ring-border/60'>
       <div className='border-border/60 border-b px-4 py-3'>
         <span className='text-sm font-medium'>Summary</span>
       </div>
