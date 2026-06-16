@@ -144,7 +144,6 @@ export function InboxConversationPane({
             emails={threadEmails}
             customerName={customer.name}
             customerCompany={customer.company}
-            customerAvatarUrl={customer.avatarUrl}
             latestCustomerEmailId={replyToEmail?.id}
             replyIntentLabel={selectedMessage.replyIntentLabel}
           />

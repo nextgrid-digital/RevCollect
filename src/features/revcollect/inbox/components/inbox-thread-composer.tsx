@@ -8,16 +8,24 @@ interface InboxThreadComposerProps {
   agentDraftMeta?: AgentDraftMeta;
   aiDraftBase: string;
   customerStatus: CollectionStatus;
+  autoFocus?: boolean;
 }
 
 export function InboxThreadComposer({
   agentDraftMeta,
   aiDraftBase,
-  customerStatus
+  customerStatus,
+  autoFocus = false
 }: InboxThreadComposerProps) {
   if (agentDraftMeta) {
     return <InboxAgentDraftPanel draftMeta={agentDraftMeta} />;
   }
 
-  return <InboxFloatingComposer draft={aiDraftBase} customerStatus={customerStatus} />;
+  return (
+    <InboxFloatingComposer
+      draft={aiDraftBase}
+      customerStatus={customerStatus}
+      autoFocus={autoFocus}
+    />
+  );
 }

@@ -34,11 +34,9 @@ export function InboxNotionView() {
           getCustomerById={listState.getCustomerById}
           emptyMessage={listState.emptyMessage}
         />
-
-        {sidePeekOpen && peekMessageId ? (
-          <InboxPeekSidePanel messageId={peekMessageId} onClose={closePeek} />
-        ) : null}
       </div>
+
+      <InboxPeekSidePanel messageId={sidePeekOpen ? peekMessageId : null} onClose={closePeek} />
 
       <InboxPeekCenterDialog
         messageId={centerPeekOpen ? peekMessageId : null}

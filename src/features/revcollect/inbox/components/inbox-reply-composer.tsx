@@ -149,6 +149,7 @@ export interface InboxReplyComposerProps {
   bodyCollapsed?: boolean;
   variant?: 'default' | 'agent-draft';
   className?: string;
+  autoFocus?: boolean;
 }
 
 export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxReplyComposerProps>(
@@ -161,7 +162,8 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       defaultAutoRun = false,
       bodyCollapsed = false,
       variant = 'default',
-      className
+      className,
+      autoFocus = false
     },
     ref
   ) {
@@ -303,6 +305,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           fillWidth
           maxTextareaHeight={360}
           bodyCollapsed={bodyCollapsed}
+          autoFocus={autoFocus}
           className='px-0 pt-0 pb-0'
           value={body}
           onChange={setBody}

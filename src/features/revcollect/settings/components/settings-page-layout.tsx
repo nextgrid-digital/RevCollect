@@ -48,7 +48,7 @@ export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-6 md:flex-row md:gap-0'>
       <nav
-        className='border-border/60 flex shrink-0 flex-row gap-1 overflow-x-auto border-b pb-4 md:w-52 md:flex-col md:gap-0 md:overflow-visible md:border-r md:border-b-0 md:pb-0 md:pr-4'
+        className='border-border/60 bg-background sticky top-0 z-10 flex shrink-0 flex-row gap-1 overflow-x-auto border-b pb-4 md:w-52 md:flex-col md:gap-0 md:overflow-visible md:self-start md:border-r md:border-b-0 md:pb-0 md:pr-4'
         aria-label='Settings sections'
       >
         <p className='text-foreground hidden px-2 pb-3 text-sm font-semibold md:block'>Settings</p>
@@ -76,7 +76,7 @@ export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
         </ul>
       </nav>
 
-      <div className='min-h-0 flex-1 md:pl-6'>
+      <div className='scroll-stable min-h-0 flex-1 overflow-y-auto md:pl-6'>
         <SettingsPageContent tab={tab} />
       </div>
     </div>

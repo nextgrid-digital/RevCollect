@@ -3,7 +3,7 @@ import { SettingsPageLayout } from '@/features/revcollect/settings/components/se
 
 export default function SettingsAppearancePage() {
   return (
-    <PageContainer>
+    <PageContainer lockPageScroll>
       <SettingsPageLayout tab='appearance' />
     </PageContainer>
   );

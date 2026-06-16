@@ -7,12 +7,14 @@ interface InboxFloatingComposerProps {
   draft: string;
   customerStatus: CollectionStatus;
   defaultTone?: AgentConfig['tone'];
+  autoFocus?: boolean;
 }
 
 export function InboxFloatingComposer({
   draft,
   customerStatus,
-  defaultTone
+  defaultTone,
+  autoFocus = false
 }: InboxFloatingComposerProps) {
   return (
     <div id='inbox-thread-composer'>
@@ -20,6 +22,7 @@ export function InboxFloatingComposer({
         baseDraft={draft}
         customerStatus={customerStatus}
         defaultTone={defaultTone}
+        autoFocus={autoFocus}
       />
     </div>
   );

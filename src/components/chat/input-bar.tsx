@@ -282,7 +282,11 @@ export const InputBar = memo(function InputBar({
 
   useEffect(() => {
     if (!autoFocus) return;
-    textareaRef.current?.focus();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    });
   }, [autoFocus]);
 
   const handleSubmit = useCallback(() => {

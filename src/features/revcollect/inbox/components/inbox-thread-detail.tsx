@@ -11,6 +11,7 @@ import { InboxThreadAttachmentProvider } from './inbox-thread-attachment-context
 import { InboxThreadHeroAction } from './inbox-thread-hero-action';
 import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
+import { focusInboxComposer } from '../lib/focus-inbox-composer';
 
 interface InboxThreadDetailProps {
   messageId: string;
@@ -25,6 +26,7 @@ interface InboxThreadDetailProps {
 
 export function InboxThreadDetail({
   messageId,
+  variant = 'full',
   peekLayout = 'side',
   scrollToEmailId,
   className
@@ -57,12 +59,7 @@ export function InboxThreadDetail({
     document
       .getElementById('inbox-thread-composer')
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    requestAnimationFrame(() => {
-      const textarea = document.querySelector<HTMLElement>(
-        '#inbox-thread-composer textarea, #inbox-thread-composer [contenteditable="true"]'
-      );
-      textarea?.focus();
-    });
+    focusInboxComposer();
   }, []);
 
   useEffect(() => {
@@ -87,6 +84,11 @@ export function InboxThreadDetail({
       metadata: { customerId: selection.customer.id }
     });
   }, [messageId, selection]);
+
+  useEffect(() => {
+    if (variant !== 'peek' || !selection || selection.agentDraftMeta) return;
+    focusInboxComposer();
+  }, [messageId, selection, variant]);
 
   if (!selection) {
     return (
@@ -131,7 +133,6 @@ export function InboxThreadDetail({
                 emails={threadEmails}
                 customerName={customer.name}
                 customerCompany={customer.company}
-                customerAvatarUrl={customer.avatarUrl}
                 latestCustomerEmailId={replyToEmail?.id}
                 replyIntentLabel={message.replyIntentLabel}
               />
@@ -140,6 +141,7 @@ export function InboxThreadDetail({
                   agentDraftMeta={selection.agentDraftMeta}
                   aiDraftBase={selection.aiDraftBase}
                   customerStatus={customer.status}
+                  autoFocus={variant === 'peek'}
                 />
               </div>
             </div>

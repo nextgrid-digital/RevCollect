@@ -10,7 +10,6 @@ interface ConversationThreadProps {
   emails: ThreadEmail[];
   customerName: string;
   customerCompany: string;
-  customerAvatarUrl?: string;
   latestCustomerEmailId?: string;
   replyIntentLabel?: string;
 }
@@ -19,7 +18,6 @@ export function ConversationThread({
   emails,
   customerName,
   customerCompany,
-  customerAvatarUrl,
   latestCustomerEmailId,
   replyIntentLabel
 }: ConversationThreadProps) {
@@ -59,7 +57,6 @@ export function ConversationThread({
                 email={email}
                 senderName={senderName}
                 senderCompany={senderCompany}
-                customerAvatarUrl={customerAvatarUrl}
                 intentLabel={showIntent ? replyIntentLabel : undefined}
               />
             </div>
