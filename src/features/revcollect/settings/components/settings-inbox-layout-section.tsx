@@ -27,11 +27,10 @@ export function SettingsInboxLayoutSection() {
   };
 
   return (
-    <SettingsSection title='Inbox layout' className='py-6'>
+    <SettingsSection title='Inbox layout' className='hidden py-6 md:block'>
       <div className='space-y-4'>
         <p className='text-muted-foreground text-sm'>
-          Choose how threads open when you work in the inbox. You can also switch layouts from the
-          inbox menu.
+          Choose how threads open on desktop. Mobile always uses the workspace list and detail flow.
         </p>
         <RadioGroup
           value={mode}

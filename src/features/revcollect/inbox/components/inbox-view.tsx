@@ -1,14 +1,16 @@
 'use client';
 
 import { Suspense } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxOpenMode } from '@/features/revcollect/inbox/components/inbox-open-mode-context';
 import { InboxNotionView } from '@/features/revcollect/inbox/components/inbox-notion-view';
 import { InboxWorkspace } from '@/features/revcollect/inbox/components/inbox-workspace';
 
 function InboxViewContent() {
+  const isMobile = useIsMobile();
   const { mode } = useInboxOpenMode();
 
-  if (mode === 'workspace') {
+  if (isMobile || mode === 'workspace') {
     return <InboxWorkspace />;
   }
 

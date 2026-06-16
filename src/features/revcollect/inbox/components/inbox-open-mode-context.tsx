@@ -70,6 +70,8 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback(
     (nextMode: InboxOpenMode) => {
+      if (isMobile) return;
+
       setModeState(nextMode);
       writeInboxOpenMode(nextMode);
 
@@ -128,15 +130,17 @@ export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
     setPeekMessageId(null);
   }, []);
 
+  const effectiveMode = isMobile ? 'workspace' : mode;
+
   const value = useMemo(
     () => ({
-      mode,
+      mode: effectiveMode,
       setMode,
       peekMessageId,
       openMessage,
       closePeek
     }),
-    [closePeek, mode, openMessage, peekMessageId, setMode]
+    [closePeek, effectiveMode, openMessage, peekMessageId, setMode]
   );
 
   return <InboxOpenModeContext.Provider value={value}>{children}</InboxOpenModeContext.Provider>;

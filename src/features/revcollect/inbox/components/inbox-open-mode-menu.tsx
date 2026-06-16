@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   getInboxOpenModeIcon,
   INBOX_OPEN_MODES,
@@ -24,7 +25,12 @@ interface InboxOpenModeMenuProps {
 }
 
 export function InboxOpenModeMenu({ className }: InboxOpenModeMenuProps) {
+  const isMobile = useIsMobile();
   const { mode, setMode } = useInboxOpenMode();
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <DropdownMenu>

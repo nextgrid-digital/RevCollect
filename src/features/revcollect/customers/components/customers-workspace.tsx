@@ -50,8 +50,11 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
   );
 
   const listColumnMobile = (
-    <div className='bg-sidebar text-sidebar-foreground flex h-full min-h-0 w-full flex-col overflow-hidden'>
-      {listContent(true)}
+    <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
+      <CustomersListTitle className='h-8' />
+      <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+        {listContent(false)}
+      </WorkspaceCard>
     </div>
   );
 

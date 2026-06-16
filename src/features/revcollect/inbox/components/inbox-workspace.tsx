@@ -101,8 +101,11 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   );
 
   const listColumnMobile = (
-    <div className='bg-sidebar text-sidebar-foreground flex h-full min-h-0 w-full flex-col overflow-hidden'>
-      {listContent(true)}
+    <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
+      <InboxMessageListTitle className='h-8' />
+      <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+        {listContent(false)}
+      </WorkspaceCard>
     </div>
   );
 
@@ -141,24 +144,24 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
     threadColumn
   );
 
-  if (isMobile) {
-    return (
-      <div className='bg-background flex h-full min-h-0 w-full flex-1 overflow-hidden'>
-        {showListOnMobile ? listColumnMobile : null}
-        {showThreadOnMobile ? (
-          <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
-            <MobileWorkspaceBar backHref='/inbox' backLabel='Inbox' />
-            {threadColumn}
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
     <WorkspaceCanvas>
-      {listColumnDesktop}
-      {desktopWorkspace}
+      {isMobile ? (
+        <>
+          {showListOnMobile ? listColumnMobile : null}
+          {showThreadOnMobile ? (
+            <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
+              <MobileWorkspaceBar backHref='/inbox' backLabel='Inbox' />
+              {threadColumn}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <>
+          {listColumnDesktop}
+          {desktopWorkspace}
+        </>
+      )}
     </WorkspaceCanvas>
   );
 }

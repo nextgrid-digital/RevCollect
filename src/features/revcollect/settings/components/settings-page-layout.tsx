@@ -88,11 +88,11 @@ export function SettingsPageLayout({ tab }: SettingsPageLayoutProps) {
       </div>
 
       <div className='border-sidebar-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:hidden'>
-        <div className='border-sidebar-border shrink-0 border-b px-4 py-3'>
+        <div className='border-sidebar-border shrink-0 border-b py-3'>
           <WorkspacePageTitle title='Settings' />
         </div>
         <nav
-          className='border-sidebar-border flex shrink-0 gap-1 overflow-x-auto border-b px-4 py-3 whitespace-nowrap'
+          className='border-sidebar-border flex shrink-0 gap-1 overflow-x-auto border-b py-3 whitespace-nowrap'
           aria-label='Settings sections'
         >
           {NAV_ITEMS.map((item) => {
