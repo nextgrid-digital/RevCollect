@@ -1,5 +1,5 @@
 export const marketingNavLinks = [
-  { label: 'Features', href: '/#features' },
+  { label: 'Product', href: '/#product' },
   { label: 'Manifesto', href: '/manifesto' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Changelog', href: '/changelog' },
