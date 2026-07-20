@@ -18,8 +18,8 @@ export default function NotFound() {
         <Button onClick={() => router.back()} variant='default' size='lg'>
           Go back
         </Button>
-        <Button onClick={() => router.push('/dashboard')} variant='ghost' size='lg'>
-          Back to Home
+        <Button onClick={() => router.push('/inbox')} variant='ghost' size='lg'>
+          Back to Inbox
         </Button>
       </div>
     </div>

@@ -194,8 +194,8 @@ export interface IntegrationConnection {
 }
 
 export interface IntegrationStatus {
-  quickbooks: IntegrationConnection;
   gmail: IntegrationConnection;
+  xero: IntegrationConnection;
   stripe: IntegrationConnection;
 }
 

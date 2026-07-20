@@ -1,14 +1,18 @@
+import { Suspense } from 'react';
 import PageContainer from '@/components/layout/page-container';
-import { ConnectIntegrationView } from '@/features/revcollect/onboarding/components/connect-integration-view';
+import { ConnectGmailView } from '@/features/revcollect/onboarding/components/connect-gmail-view';
 
 export default function ConnectGmailPage() {
   return (
     <PageContainer compactMobile lockPageScroll flushTop flushX>
-      <ConnectIntegrationView
-        title='Gmail'
-        description='Connect the mailbox your team uses for customer outreach.'
-        provider='Gmail'
-      />
+      <Suspense fallback={null}>
+        <ConnectGmailView
+          nextStep={{
+            href: '/onboarding/connect-xero',
+            label: 'Connect Xero'
+          }}
+        />
+      </Suspense>
     </PageContainer>
   );
 }

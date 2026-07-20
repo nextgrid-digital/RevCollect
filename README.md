@@ -10,8 +10,8 @@ Built on [Next.js 16](https://nextjs.org), [shadcn/ui](https://ui.shadcn.com), a
 - **Customers** — searchable table with collection status, balance, and days overdue
 - **Aging report** — AR buckets (Current, 1–30, 31–60, 61–90, 90+)
 - **Agent** — configure tone, escalation rules, and email signature
-- **Settings** — workspace, integrations (QuickBooks, Gmail, Stripe), billing
-- **Onboarding** — connect accounting and email to get started
+- **Settings** — workspace, integrations (Xero, Gmail, Stripe), billing
+- **Onboarding** — connect email and accounting to get started
 
 Mock data lives in one place today (`src/features/revcollect/mock-data.ts`) so the UI can be swapped to Supabase later without rewriting screens.
 
@@ -19,17 +19,21 @@ Mock data lives in one place today (`src/features/revcollect/mock-data.ts`) so t
 
 | Route                            | Description                              |
 | -------------------------------- | ---------------------------------------- |
+| `/`                              | Welcome / opening page                   |
+| `/login`                         | Supabase sign-in                         |
+| `/signup`                        | Supabase sign-up                         |
+| `/auth/callback`                 | Auth email confirmation callback         |
 | `/inbox`                         | Collections inbox (default landing page) |
 | `/customers`                     | Customer list                            |
 | `/customers/[id]`                | Customer detail, invoices, activity      |
 | `/aging`                         | Aging report                             |
 | `/agent`                         | AI agent configuration                   |
 | `/settings`                      | General workspace settings               |
-| `/settings/integrations`         | QuickBooks, Gmail, Stripe                |
+| `/settings/integrations`         | Xero, Gmail, Stripe                      |
 | `/settings/billing`              | Plan and usage                           |
 | `/onboarding`                    | Setup checklist                          |
-| `/onboarding/connect-quickbooks` | QuickBooks connect flow                  |
-| `/onboarding/connect-gmail`      | Gmail connect flow                       |
+| `/onboarding/connect-gmail`      | Gmail connect flow (step 1)              |
+| `/onboarding/connect-xero`       | Xero connect flow (step 2)               |
 
 ## Tech stack
 

@@ -22,19 +22,48 @@ import {
 } from '@/components/ui/sidebar';
 import { navGroups } from '@/config/nav-config';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
+import { toast } from 'sonner';
 import { Icons } from '../icons';
 
-export default function AppSidebar() {
+interface AppSidebarProps {
+  user: {
+    name: string;
+    email: string;
+  };
+}
+
+export default function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const filteredGroups = useFilteredNavGroups(navGroups);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   React.useEffect(() => {
     setOpenMobile(false);
   }, [pathname, setOpenMobile]);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      toast.success('Signed out');
+      router.replace('/login');
+      router.refresh();
+    } catch {
+      toast.error('Could not sign out');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <Sidebar collapsible='icon'>
@@ -102,7 +131,7 @@ export default function AppSidebar() {
                   size='lg'
                   className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
                 >
-                  <span className='truncate'>Account</span>
+                  <span className='truncate'>{user.name}</span>
                   <Icons.chevronsDown className='ml-auto size-4' />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -113,14 +142,23 @@ export default function AppSidebar() {
                 sideOffset={4}
               >
                 <DropdownMenuLabel className='p-0 font-normal'>
-                  <div className='text-muted-foreground px-1 py-1.5 text-sm'>
-                    Sign in to manage your account
+                  <div className='px-1 py-1.5 text-left text-sm'>
+                    <p className='font-medium'>{user.name}</p>
+                    {user.email ? (
+                      <p className='text-muted-foreground truncate text-xs'>{user.email}</p>
+                    ) : null}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Icons.notification className='mr-2 h-4 w-4' />
-                  Notifications
+                <DropdownMenuItem
+                  disabled={isLoggingOut}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void handleLogout();
+                  }}
+                >
+                  <Icons.logout className='mr-2 h-4 w-4' />
+                  {isLoggingOut ? 'Signing out…' : 'Log out'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -22,16 +22,16 @@ export function OnboardingSteps() {
 
   const steps = [
     {
-      title: 'Connect QuickBooks',
-      description: 'Import customers, invoices, and payment status.',
-      href: '/onboarding/connect-quickbooks',
-      done: integrationStatus.quickbooks.connected
-    },
-    {
       title: 'Connect Gmail',
       description: 'Send and receive collection emails from your inbox.',
       href: '/onboarding/connect-gmail',
       done: integrationStatus.gmail.connected
+    },
+    {
+      title: 'Connect Xero',
+      description: 'Import customers, invoices, and payment status.',
+      href: '/onboarding/connect-xero',
+      done: integrationStatus.xero.connected
     },
     {
       title: 'Review your inbox',

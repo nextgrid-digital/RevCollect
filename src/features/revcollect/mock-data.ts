@@ -878,7 +878,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 14200000,
     followUpsSent: 3,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight:
       'Northwind typically pays within 45 days after a reminder. Sarah’s credit memo question may delay release until resolved.'
   },
@@ -887,7 +887,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 9800000,
     followUpsSent: 2,
     paymentTerms: 'Net-45',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight:
       'Harbor Foods disputes are usually documentation-driven. Providing shipping proof quickly has resolved similar cases in under a week.'
   },
@@ -896,7 +896,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 18600000,
     followUpsSent: 4,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight: 'Typically pays 20-25 days late. Payment velocity slowing over last 3 months.',
     deepAnalysis:
       'Ridgeline has requested 3-part installment plans before. Both times they honored the full schedule within 5 days of each due date. Approving the split is low risk. The 3-month timeline matches their cash flow cycle (Q2 is historically tight for construction firms).'
@@ -906,7 +906,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 22400000,
     followUpsSent: 5,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight:
       'Summit Retail often pays in partials before the full balance. Fee waiver requests are common but they usually remit the remainder within two weeks.'
   },
@@ -915,7 +915,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 12100000,
     followUpsSent: 3,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight:
       'Cold-chain disputes require POD and temperature logs. Once docs are attached, this customer has historically paid within ten business days.',
     deepAnalysis:
@@ -926,7 +926,7 @@ export const customerInboxContextByCustomerId: Record<string, CustomerInboxConte
     lifetimeValueCents: 15200000,
     followUpsSent: 3,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight: 'AP contact changes typically delay payment 2-3 weeks while new approver onboards.',
     deepAnalysis:
       'Escalation package sent to new AP contact after contact change. Resending with aging statement is low risk and may unblock overdue approvals without a call.'
@@ -1296,8 +1296,8 @@ export const agentAddonStatus: AgentAddonStatus = {
 };
 
 export const integrationStatus: IntegrationStatus = {
-  quickbooks: { connected: false, label: 'QuickBooks', detail: 'Not connected' },
   gmail: { connected: false, label: 'Gmail', detail: 'Not connected' },
+  xero: { connected: false, label: 'Xero', detail: 'Not connected' },
   stripe: { connected: true, label: 'Stripe', detail: 'Payments syncing' }
 };
 
@@ -1345,7 +1345,7 @@ export function getCustomerInboxContext(
     lifetimeValueCents: customer.balanceCents * 4,
     followUpsSent: followUpsSent || 1,
     paymentTerms: 'Net-30',
-    source: 'QuickBooks',
+    source: 'Xero',
     aiInsight: ''
   };
 }

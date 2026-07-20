@@ -11,13 +11,18 @@ import { toast } from 'sonner';
 interface ConnectIntegrationViewProps {
   title: string;
   description: string;
-  provider: 'QuickBooks' | 'Gmail';
+  provider: 'Xero' | 'Gmail';
+  nextStep?: {
+    href: string;
+    label: string;
+  };
 }
 
 export function ConnectIntegrationView({
   title,
   description,
-  provider
+  provider,
+  nextStep
 }: ConnectIntegrationViewProps) {
   const [connected, setConnected] = useState(false);
 
@@ -57,9 +62,9 @@ export function ConnectIntegrationView({
               <Button asChild variant='outline'>
                 <Link href='/onboarding'>Back to onboarding</Link>
               </Button>
-              {connected ? (
+              {connected && nextStep ? (
                 <Button asChild>
-                  <Link href='/inbox'>Go to inbox</Link>
+                  <Link href={nextStep.href}>{nextStep.label}</Link>
                 </Button>
               ) : null}
             </div>

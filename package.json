@@ -7,7 +7,7 @@
     "url": "https://github.com/Kiranism"
   },
   "scripts": {
-    "dev": "node scripts/postinstall.js 2>/dev/null; next dev",
+    "dev": "node scripts/postinstall.js && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "oxlint",
@@ -47,6 +47,8 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.45.0",
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.7",
     "@tabler/icons-react": "^3.40.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@tanstack/react-form": "^1.28.5",

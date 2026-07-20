@@ -10,6 +10,7 @@ import type {
   AgentConfig,
   AgingBucket,
   AgingReportFilters,
+  IntegrationStatus,
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
@@ -163,8 +164,14 @@ export function agentAddonQueryOptions() {
 export function integrationStatusQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.integrationStatus(),
-    queryFn: () => getRevCollectService().getIntegrationStatus(),
-    staleTime: MOCK_STALE_TIME
+    queryFn: async () => {
+      const response = await fetch('/api/integrations/status');
+      if (!response.ok) {
+        throw new Error('Failed to load integration status');
+      }
+      return response.json() as Promise<IntegrationStatus>;
+    },
+    staleTime: 30_000
   });
 }
 

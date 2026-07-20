@@ -9,14 +9,14 @@ import { SettingsSection } from './settings-section';
 
 const integrations = [
   {
-    key: 'quickbooks' as const,
-    href: '/onboarding/connect-quickbooks',
-    icon: Icons.billing
-  },
-  {
     key: 'gmail' as const,
     href: '/onboarding/connect-gmail',
     icon: Icons.inbox
+  },
+  {
+    key: 'xero' as const,
+    href: '/onboarding/connect-xero',
+    icon: Icons.billing
   },
   {
     key: 'stripe' as const,

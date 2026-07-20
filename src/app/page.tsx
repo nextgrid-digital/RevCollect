@@ -1,0 +1,22 @@
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { WelcomeView } from '@/features/revcollect/welcome/components/welcome-view';
+import { createClient } from '@/lib/supabase/server';
+import { hasSupabaseEnv } from '@/lib/supabase/env';
+
+export const metadata: Metadata = {
+  title: 'RevCollect',
+  description: 'Accounts receivable collections inbox for finance teams'
+};
+
+export default async function HomePage() {
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getClaims();
+    if (data?.claims) {
+      redirect('/inbox');
+    }
+  }
+
+  return <WelcomeView />;
+}
