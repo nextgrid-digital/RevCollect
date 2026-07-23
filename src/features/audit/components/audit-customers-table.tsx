@@ -3,13 +3,9 @@
 import { useMemo } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import type { AuditReport, CustomerBehavior } from '@/features/audit/lib';
+import type { AuditNarrative } from '@/features/audit/lib/audit-narrative';
 import { formatDays, formatMoney, formatTrend } from '@/features/audit/lib';
-import {
-  buildCreditDonorsCopy,
-  buildModelPayersCopy,
-  buildOneToWatchCopy,
-  termsLabel
-} from '@/features/audit/lib/report-copy';
+import { termsLabel } from '@/features/audit/lib/report-copy';
 import {
   ReportHeading,
   ReportKicker,
@@ -21,9 +17,10 @@ import { useDataTable } from '@/hooks/use-data-table';
 
 interface AuditCustomersTableProps {
   report: AuditReport;
+  narrative: AuditNarrative;
 }
 
-export function AuditCustomersTable({ report }: AuditCustomersTableProps) {
+export function AuditCustomersTable({ report, narrative }: AuditCustomersTableProps) {
   const rows = useMemo(
     () => report.customers.toSorted((a, b) => b.lifetimeBilled - a.lifetimeBilled),
     [report.customers]
@@ -115,9 +112,9 @@ export function AuditCustomersTable({ report }: AuditCustomersTableProps) {
       <ReportHeading>Who pays, who drags, and who is changing.</ReportHeading>
 
       <div className='grid gap-[21px] md:grid-cols-3'>
-        <InsightColumn title='Your model payers' body={buildModelPayersCopy(report)} />
-        <InsightColumn title='Your credit donors' body={buildCreditDonorsCopy(report)} />
-        <InsightColumn title='The one to watch' body={buildOneToWatchCopy(report)} />
+        <InsightColumn title='Your model payers' body={narrative.modelPayersCopy} />
+        <InsightColumn title='Your credit donors' body={narrative.creditDonorsCopy} />
+        <InsightColumn title='The one to watch' body={narrative.oneToWatchCopy} />
       </div>
 
       <div className='audit-table-shell'>

@@ -1,6 +1,6 @@
 import type { InvoiceRecord, RawInvoiceRow } from './types';
 
-const REQUIRED_HEADERS = [
+export const REQUIRED_HEADERS = [
   'InvoiceNumber',
   'Customer',
   'CustomerEmail',
@@ -16,7 +16,9 @@ const REQUIRED_HEADERS = [
   'DaysPastDue_Current'
 ] as const;
 
-function parseCsvLine(line: string): string[] {
+export type RequiredHeader = (typeof REQUIRED_HEADERS)[number];
+
+function parseDelimitedLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -32,7 +34,7 @@ function parseCsvLine(line: string): string[] {
       }
       continue;
     }
-    if (ch === ',' && !inQuotes) {
+    if (ch === delimiter && !inQuotes) {
       result.push(current);
       current = '';
       continue;
@@ -47,11 +49,13 @@ function parseDate(value: string): Date | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const d = new Date(`${trimmed}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
+  if (!Number.isNaN(d.getTime())) return d;
+  const fallback = new Date(trimmed);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
 function parseNumber(value: string): number | null {
-  const trimmed = value.trim();
+  const trimmed = value.trim().replace(/,/g, '');
   if (!trimmed) return null;
   const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;
@@ -63,39 +67,65 @@ export function parseTermsDays(terms: string): number {
   return Number(match[1]);
 }
 
-export function parseInvoicesCsv(csvText: string): InvoiceRecord[] {
-  const lines = csvText
-    .replace(/^\uFEFF/, '')
-    .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0);
+function escapeCsvCell(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
 
-  if (lines.length < 2) {
-    throw new Error('CSV must include a header row and at least one invoice.');
+/** Serialize invoice records back to CSV so recompute stays on the text path. */
+export function invoicesToCsv(records: InvoiceRecord[]): string {
+  const header = REQUIRED_HEADERS.join(',');
+  const lines = records.map((r) => {
+    const cells: Record<RequiredHeader, string> = {
+      InvoiceNumber: r.invoiceNumber,
+      Customer: r.customer,
+      CustomerEmail: r.customerEmail,
+      InvoiceDate: r.invoiceDate.toISOString().slice(0, 10),
+      Terms: r.terms,
+      DueDate: r.dueDate.toISOString().slice(0, 10),
+      Amount: String(r.amount),
+      Status: r.status,
+      PaymentDate: r.paymentDate ? r.paymentDate.toISOString().slice(0, 10) : '',
+      AmountPaid: String(r.amountPaid),
+      DaysToPay: r.daysToPay == null ? '' : String(r.daysToPay),
+      DaysPastDue_AtPayment: r.daysLateAtPayment == null ? '' : String(r.daysLateAtPayment),
+      DaysPastDue_Current: ''
+    };
+    return REQUIRED_HEADERS.map((h) => escapeCsvCell(cells[h])).join(',');
+  });
+  return [header, ...lines].join('\n');
+}
+
+export function headersIncludeRequired(headers: string[]): boolean {
+  const set = new Set(headers.map((h) => h.trim()));
+  return REQUIRED_HEADERS.every((h) => set.has(h));
+}
+
+export function rowsToInvoiceRecords(rows: Record<string, string>[]): InvoiceRecord[] {
+  if (rows.length === 0) {
+    throw new Error('Export must include a header row and at least one invoice.');
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+  const headers = Object.keys(rows[0]);
   for (const required of REQUIRED_HEADERS) {
     if (!headers.includes(required)) {
       throw new Error(`Missing required column: ${required}`);
     }
   }
 
-  const index = Object.fromEntries(headers.map((h, i) => [h, i])) as Record<
-    (typeof REQUIRED_HEADERS)[number],
-    number
-  >;
-
   const records: InvoiceRecord[] = [];
 
-  for (let rowIndex = 1; rowIndex < lines.length; rowIndex++) {
-    const cols = parseCsvLine(lines[rowIndex]);
-    const get = (key: (typeof REQUIRED_HEADERS)[number]) => (cols[index[key]] ?? '').trim();
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    const get = (key: RequiredHeader) => (row[key] ?? '').trim();
 
     const invoiceDate = parseDate(get('InvoiceDate'));
     const dueDate = parseDate(get('DueDate'));
     const amount = parseNumber(get('Amount'));
     if (!invoiceDate || !dueDate || amount === null) {
-      throw new Error(`Invalid invoice row ${rowIndex + 1}: check dates and amount.`);
+      throw new Error(`Invalid invoice row ${rowIndex + 2}: check dates and amount.`);
     }
 
     const status = get('Status');
@@ -122,6 +152,43 @@ export function parseInvoicesCsv(csvText: string): InvoiceRecord[] {
   }
 
   return records;
+}
+
+export function parseInvoicesDelimited(text: string, delimiter: ',' | '\t' = ','): InvoiceRecord[] {
+  const lines = text
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+
+  if (lines.length < 2) {
+    throw new Error('Export must include a header row and at least one invoice.');
+  }
+
+  const headers = parseDelimitedLine(lines[0], delimiter).map((h) => h.trim());
+  if (!headersIncludeRequired(headers)) {
+    const missing = REQUIRED_HEADERS.find((h) => !headers.includes(h));
+    throw new Error(`Missing required column: ${missing}`);
+  }
+
+  const rows: Record<string, string>[] = [];
+  for (let rowIndex = 1; rowIndex < lines.length; rowIndex++) {
+    const cols = parseDelimitedLine(lines[rowIndex], delimiter);
+    const row: Record<string, string> = {};
+    for (let i = 0; i < headers.length; i++) {
+      row[headers[i]] = cols[i] ?? '';
+    }
+    rows.push(row);
+  }
+
+  return rowsToInvoiceRecords(rows);
+}
+
+export function parseInvoicesCsv(csvText: string): InvoiceRecord[] {
+  return parseInvoicesDelimited(csvText, ',');
+}
+
+export function parseInvoicesTsv(tsvText: string): InvoiceRecord[] {
+  return parseInvoicesDelimited(tsvText, '\t');
 }
 
 export type { RawInvoiceRow };

@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import type { AuditReport, PriorityItem } from '@/features/audit/lib';
+import type { AuditNarrative } from '@/features/audit/lib/audit-narrative';
 import { formatDays, formatMoney } from '@/features/audit/lib';
-import { buildPriorityIntro, buildWhyOrderCopy } from '@/features/audit/lib/report-copy';
 import {
   ReportHeading,
   ReportKicker,
@@ -16,9 +16,10 @@ import { useDataTable } from '@/hooks/use-data-table';
 
 interface AuditPriorityTableProps {
   report: AuditReport;
+  narrative: AuditNarrative;
 }
 
-export function AuditPriorityTable({ report }: AuditPriorityTableProps) {
+export function AuditPriorityTable({ report, narrative }: AuditPriorityTableProps) {
   const rows = report.priority;
 
   const columns = useMemo<ColumnDef<PriorityItem>[]>(
@@ -83,7 +84,7 @@ export function AuditPriorityTable({ report }: AuditPriorityTableProps) {
     <ReportSection pageBreak>
       <ReportKicker>Where the energy goes</ReportKicker>
       <ReportHeading>The ten moves that release the most cash.</ReportHeading>
-      <ReportProse>{buildPriorityIntro(report)}</ReportProse>
+      <ReportProse>{narrative.priorityIntro}</ReportProse>
 
       <div className='audit-table-shell'>
         <div className='audit-report-table min-w-0'>
@@ -95,7 +96,7 @@ export function AuditPriorityTable({ report }: AuditPriorityTableProps) {
         <p className='font-audit-sans text-audit-ink text-[11px] font-semibold tracking-[0.08em] uppercase'>
           Why the order looks like this
         </p>
-        <ReportProse>{buildWhyOrderCopy(report)}</ReportProse>
+        <ReportProse>{narrative.whyOrderCopy}</ReportProse>
       </div>
     </ReportSection>
   );

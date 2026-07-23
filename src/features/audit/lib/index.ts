@@ -1,4 +1,5 @@
-export { parseInvoicesCsv, parseTermsDays } from './parse-invoices';
+export { parseInvoicesCsv, parseTermsDays, invoicesToCsv } from './parse-invoices';
+export { parseInvoicesFromFile, detectUploadFormat } from './parse-invoices-file';
 export { computeAuditReport, enrichInvoices, classifyBehavior } from './compute-audit';
 export {
   buildBehaviorRead,
@@ -14,3 +15,6 @@ export {
   BEHAVIOR_BAND_THRESHOLDS
 } from './benchmarks';
 export type * from './types';
+export type { AuditNarrative } from './audit-narrative';
+export { buildAuditFacts, buildFallbackNarrative } from './audit-narrative';
+export type { AuditUploadFormat, ParsedInvoiceUpload } from './parse-invoices-file';

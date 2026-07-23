@@ -1,9 +1,21 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { AuditCsvUploadDialog } from '@/features/audit/components/audit-csv-upload-dialog';
 import { AuditDashboard } from '@/features/audit/components/audit-dashboard';
 import { AuditIngestBar, type AuditDataSource } from '@/features/audit/components/audit-ingest-bar';
-import { computeAuditReport, parseInvoicesCsv, type AuditReport } from '@/features/audit/lib';
+import {
+  buildAuditFacts,
+  buildFallbackNarrative,
+  type AuditNarrative
+} from '@/features/audit/lib/audit-narrative';
+import {
+  computeAuditReport,
+  parseInvoicesCsv,
+  parseInvoicesFromFile,
+  type AuditReport,
+  type InvoiceRecord
+} from '@/features/audit/lib';
 import { toast } from 'sonner';
 
 const SAMPLE_CSV_URL = '/fixtures/audit/historical_invoices_250.csv';
@@ -26,8 +38,28 @@ function parseAnalysisDate(value: string): Date {
   return d;
 }
 
+async function fetchNarrative(report: AuditReport): Promise<AuditNarrative> {
+  const fallback = buildFallbackNarrative(report);
+  try {
+    const res = await fetch('/api/audit/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ facts: buildAuditFacts(report) })
+    });
+    if (!res.ok) {
+      const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error || `Summarize failed (${res.status})`);
+    }
+    const payload = (await res.json()) as { narrative: AuditNarrative };
+    return payload.narrative;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Summarize failed';
+    toast.message('Using template narrative', { description: message });
+    return fallback;
+  }
+}
+
 export function AuditWorkspace() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [companyName, setCompanyName] = useState(DEFAULT_COMPANY);
   const [analysisDate, setAnalysisDate] = useState(SAMPLE_ANALYSIS_DATE);
   const [csvText, setCsvText] = useState<string | null>(null);
@@ -35,16 +67,20 @@ export function AuditWorkspace() {
   const [dataSource, setDataSource] = useState<AuditDataSource>('none');
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
+  const [narrative, setNarrative] = useState<AuditNarrative | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const summarizeSeq = useRef(0);
 
-  function computeFromCsv(
+  function applyReport(
+    invoices: InvoiceRecord[],
     text: string,
     label: string,
     company: string,
     asOf: string,
     source: 'sample' | 'upload'
-  ) {
-    const invoices = parseInvoicesCsv(text);
+  ): AuditReport {
     const next = computeAuditReport({
       invoices,
       companyName: company.trim() || 'Your company',
@@ -54,6 +90,32 @@ export function AuditWorkspace() {
     setFileName(label);
     setDataSource(source);
     setReport(next);
+    setNarrative(buildFallbackNarrative(next));
+    return next;
+  }
+
+  function computeFromCsv(
+    text: string,
+    label: string,
+    company: string,
+    asOf: string,
+    source: 'sample' | 'upload'
+  ): AuditReport {
+    return applyReport(parseInvoicesCsv(text), text, label, company, asOf, source);
+  }
+
+  async function summarizeReport(next: AuditReport) {
+    const seq = ++summarizeSeq.current;
+    setIsSummarizing(true);
+    try {
+      const copy = await fetchNarrative(next);
+      if (seq !== summarizeSeq.current) return;
+      setNarrative(copy);
+    } finally {
+      if (seq === summarizeSeq.current) {
+        setIsSummarizing(false);
+      }
+    }
   }
 
   function handleLoadSample() {
@@ -65,7 +127,7 @@ export function AuditWorkspace() {
         const text = await res.text();
         setAnalysisDate(SAMPLE_ANALYSIS_DATE);
         setCompanyName(DEFAULT_COMPANY);
-        computeFromCsv(
+        const next = computeFromCsv(
           text,
           'historical_invoices_250.csv (sample)',
           DEFAULT_COMPANY,
@@ -73,6 +135,7 @@ export function AuditWorkspace() {
           'sample'
         );
         toast.success('Sample dataset loaded');
+        await summarizeReport(next);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Could not load sample';
         setError(message);
@@ -81,44 +144,50 @@ export function AuditWorkspace() {
     });
   }
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : '';
-      setError(null);
-      startTransition(() => {
-        try {
-          computeFromCsv(text, file.name, companyName, analysisDate, 'upload');
-          toast.success('Audit computed');
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Could not compute audit';
-          setReport(null);
-          setDataSource('none');
-          setError(message);
-          toast.error(message);
-        }
-      });
-    };
-    reader.onerror = () => {
-      setError('Could not read file');
-      toast.error('Could not read file');
-    };
-    reader.readAsText(file);
-    event.target.value = '';
+  function handleUploadFile(file: File) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const parsed = await parseInvoicesFromFile(file);
+        const label = parsed.sheetName != null ? `${file.name} · ${parsed.sheetName}` : file.name;
+        const next = applyReport(
+          parsed.invoices,
+          parsed.csvText,
+          label,
+          companyName,
+          analysisDate,
+          'upload'
+        );
+        toast.success('Audit computed');
+        await summarizeReport(next);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Could not compute audit';
+        setReport(null);
+        setNarrative(null);
+        setDataSource('none');
+        setError(message);
+        toast.error(message);
+      }
+    });
   }
 
   function handleRecompute() {
     if (!csvText || dataSource === 'none') {
-      toast.message('Upload a CSV or run the sample first');
+      toast.message('Upload an export or run the sample first');
       return;
     }
     setError(null);
-    startTransition(() => {
+    startTransition(async () => {
       try {
-        computeFromCsv(csvText, fileName ?? 'invoices.csv', companyName, analysisDate, dataSource);
+        const next = computeFromCsv(
+          csvText,
+          fileName ?? 'invoices.csv',
+          companyName,
+          analysisDate,
+          dataSource
+        );
         toast.success('Audit recomputed');
+        await summarizeReport(next);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Could not recompute';
         setError(message);
@@ -132,6 +201,8 @@ export function AuditWorkspace() {
     window.print();
   }
 
+  const busy = isPending || isSummarizing;
+
   return (
     <div className='flex min-h-svh flex-col'>
       <AuditIngestBar
@@ -142,23 +213,30 @@ export function AuditWorkspace() {
         error={error}
         hasReport={report !== null}
         hasCsv={csvText !== null}
-        isPending={isPending}
+        isPending={busy}
+        isSummarizing={isSummarizing}
         isDownloading={false}
-        fileInputRef={fileInputRef}
         onCompanyNameChange={setCompanyName}
         onAnalysisDateChange={(value) => setAnalysisDate(value || todayInputValue())}
-        onUploadClick={() => fileInputRef.current?.click()}
-        onFileChange={handleFileChange}
+        onUploadClick={() => setUploadOpen(true)}
         onLoadSample={handleLoadSample}
         onRecompute={handleRecompute}
         onDownloadPdf={handleDownloadPdf}
       />
+      <AuditCsvUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        isPending={busy}
+        onFileAccepted={handleUploadFile}
+      />
       <AuditDashboard
         report={report}
+        narrative={narrative}
         dataSource={dataSource}
-        isPending={isPending}
+        isPending={busy}
+        isSummarizing={isSummarizing}
         onLoadSample={handleLoadSample}
-        onUploadClick={() => fileInputRef.current?.click()}
+        onUploadClick={() => setUploadOpen(true)}
       />
     </div>
   );

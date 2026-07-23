@@ -1,18 +1,9 @@
 'use client';
 
 import type { AuditReport } from '@/features/audit/lib';
+import type { AuditNarrative } from '@/features/audit/lib/audit-narrative';
 import { formatMoney } from '@/features/audit/lib';
-import {
-  buildAgingNinetyCallout,
-  buildCoverClosing,
-  buildCoverTeaser,
-  buildInterestCopy,
-  buildInterestHeadline,
-  buildPage1Intro,
-  buildTermsGapCopy,
-  buildTermsRealityTitle,
-  formatPreparedDate
-} from '@/features/audit/lib/report-copy';
+import { buildTermsRealityTitle, formatPreparedDate } from '@/features/audit/lib/report-copy';
 import {
   ReportCaption,
   ReportHeading,
@@ -23,9 +14,10 @@ import {
 
 interface AuditOverviewProps {
   report: AuditReport;
+  narrative: AuditNarrative;
 }
 
-export function AuditOverview({ report }: AuditOverviewProps) {
+export function AuditOverview({ report, narrative }: AuditOverviewProps) {
   const { headline } = report;
   const stated = Math.round(headline.vwAvgTerms);
   const reality = Math.round(headline.vwAvgDaysToPay);
@@ -54,25 +46,28 @@ export function AuditOverview({ report }: AuditOverviewProps) {
             Where your money actually lies.
           </ReportHeading>
 
-          <ReportProse>{buildPage1Intro(report)}</ReportProse>
+          <ReportProse>{narrative.page1Intro}</ReportProse>
 
-          <div className='grid gap-7 border-y border-[var(--audit-rule)] py-7 sm:grid-cols-3'>
+          <div className='grid gap-[21px] py-2 sm:grid-cols-3'>
             <Figure
+              label='Open receivables'
               value={formatMoney(headline.openAr)}
-              caption={`Open receivables today, across ${headline.outstandingCount} invoices and ${headline.openCustomerCount} customers`}
+              caption={`Across ${headline.outstandingCount} invoices and ${headline.openCustomerCount} customers`}
             />
             <Figure
+              label='Avg monthly billing'
               value={formatMoney(headline.averageMonthlyBilling)}
-              caption='Your average monthly billing over the analyzed period'
+              caption='Over the analyzed billing period'
             />
             <Figure
+              label='Cash locked'
               value={formatMoney(headline.cashLocked)}
-              caption='Cash permanently parked with customers because of slow collection'
+              caption='Permanently parked with customers from slow collection'
             />
           </div>
 
-          <ReportProse>{buildCoverClosing(report)}</ReportProse>
-          <ReportProse>{buildCoverTeaser()}</ReportProse>
+          <ReportProse>{narrative.coverClosing}</ReportProse>
+          <ReportProse>{narrative.coverTeaser}</ReportProse>
         </div>
       </ReportSection>
 
@@ -97,7 +92,7 @@ export function AuditOverview({ report }: AuditOverviewProps) {
             </p>
           </div>
         </div>
-        <ReportProse>{buildTermsGapCopy(report)}</ReportProse>
+        <ReportProse>{narrative.termsGapCopy}</ReportProse>
 
         <div className='mt-4 flex flex-col gap-6'>
           <ReportKicker>Where the open {formatMoney(headline.openAr)} sits today</ReportKicker>
@@ -111,12 +106,12 @@ export function AuditOverview({ report }: AuditOverviewProps) {
               </div>
             ))}
           </div>
-          <ReportProse>{buildAgingNinetyCallout(report)}</ReportProse>
+          <ReportProse>{narrative.agingNinetyCallout}</ReportProse>
           <div className='audit-panel-sage flex flex-col gap-3 p-7 sm:p-[42px]'>
             <p className='font-audit-serif text-audit-ink text-[23px] leading-snug font-normal sm:text-[28px]'>
-              {buildInterestHeadline(report)}
+              {narrative.interestHeadline}
             </p>
-            <ReportProse>{buildInterestCopy(report)}</ReportProse>
+            <ReportProse>{narrative.interestCopy}</ReportProse>
           </div>
         </div>
       </ReportSection>
@@ -124,9 +119,12 @@ export function AuditOverview({ report }: AuditOverviewProps) {
   );
 }
 
-function Figure({ value, caption }: { value: string; caption: string }) {
+function Figure({ label, value, caption }: { label: string; value: string; caption: string }) {
   return (
-    <div className='flex flex-col gap-3'>
+    <div className='audit-panel-cream flex flex-col gap-3 p-7 shadow-none'>
+      <p className='font-audit-sans text-audit-ink text-[11px] font-semibold tracking-[0.08em] uppercase'>
+        {label}
+      </p>
       <p className='font-audit-serif text-audit-ink text-3xl font-normal tracking-tight tabular-nums sm:text-4xl'>
         {value}
       </p>

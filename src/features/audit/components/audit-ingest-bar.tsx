@@ -17,12 +17,11 @@ interface AuditIngestBarProps {
   hasReport: boolean;
   hasCsv: boolean;
   isPending: boolean;
+  isSummarizing: boolean;
   isDownloading: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onCompanyNameChange: (value: string) => void;
   onAnalysisDateChange: (value: string) => void;
   onUploadClick: () => void;
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadSample: () => void;
   onRecompute: () => void;
   onDownloadPdf: () => void;
@@ -37,12 +36,11 @@ export function AuditIngestBar({
   hasReport,
   hasCsv,
   isPending,
+  isSummarizing,
   isDownloading,
-  fileInputRef,
   onCompanyNameChange,
   onAnalysisDateChange,
   onUploadClick,
-  onFileChange,
   onLoadSample,
   onRecompute,
   onDownloadPdf
@@ -60,7 +58,12 @@ export function AuditIngestBar({
                 <span className='audit-pill text-[12px]'>Demo dataset — fictional invoices</span>
               ) : null}
               {dataSource === 'upload' ? (
-                <span className='audit-pill text-[12px]'>Live CSV — formulas run on your file</span>
+                <span className='audit-pill text-[12px]'>
+                  Live export — formulas run on your file
+                </span>
+              ) : null}
+              {isSummarizing ? (
+                <span className='audit-pill text-[12px]'>Writing narrative with Gemini…</span>
               ) : null}
               {fileName ? (
                 <span className='font-audit-sans text-audit-muted text-[12px]'>{fileName}</span>
@@ -123,7 +126,7 @@ export function AuditIngestBar({
           </div>
           <div className='flex flex-col gap-1.5 sm:col-span-2'>
             <Label className='font-audit-sans text-audit-muted text-[12px] font-medium'>
-              Invoices CSV
+              Invoice export
             </Label>
             <div className='flex flex-wrap gap-2'>
               <Button
@@ -134,7 +137,7 @@ export function AuditIngestBar({
                 disabled={isPending}
               >
                 <Icons.upload className='size-4' />
-                Upload CSV
+                Upload
               </Button>
               <Button
                 type='button'
@@ -145,13 +148,6 @@ export function AuditIngestBar({
               >
                 Run sample
               </Button>
-              <input
-                ref={fileInputRef}
-                type='file'
-                accept='.csv,text/csv'
-                className='hidden'
-                onChange={onFileChange}
-              />
             </div>
           </div>
         </div>

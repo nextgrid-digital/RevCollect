@@ -1,7 +1,8 @@
 'use client';
 
 import type { AuditReport } from '@/features/audit/lib';
-import { buildFixReleaseCopy, FIX_HABITS } from '@/features/audit/lib/report-copy';
+import type { AuditNarrative } from '@/features/audit/lib/audit-narrative';
+import { FIX_HABITS } from '@/features/audit/lib/report-copy';
 import {
   ReportHeading,
   ReportKicker,
@@ -11,9 +12,10 @@ import {
 
 interface AuditFixProps {
   report: AuditReport;
+  narrative: AuditNarrative;
 }
 
-export function AuditFix({ report }: AuditFixProps) {
+export function AuditFix({ narrative }: AuditFixProps) {
   return (
     <ReportSection pageBreak>
       <ReportKicker>The Fix</ReportKicker>
@@ -33,7 +35,7 @@ export function AuditFix({ report }: AuditFixProps) {
         ))}
       </div>
 
-      <ReportProse>{buildFixReleaseCopy(report)}</ReportProse>
+      <ReportProse>{narrative.fixReleaseCopy}</ReportProse>
 
       <div className='audit-panel-sage flex flex-col gap-3 p-7 sm:p-[42px]'>
         <p className='font-audit-serif text-audit-ink text-[23px] font-normal sm:text-[28px]'>
