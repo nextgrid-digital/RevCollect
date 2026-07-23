@@ -98,3 +98,227 @@
   /* Apply the reveal animation */
   animation: reveal 0.4s ease-in-out forwards;
 }
+
+/* Scoped AR audit — Ease Health botanical system */
+.audit-shell {
+  --audit-ink: #0f3e17;
+  --audit-charcoal: #222222;
+  --audit-canvas: #fffefc;
+  --audit-keylime: #e1f4df;
+  --audit-mint: #cfe7d3;
+  --audit-sage: #b1dbb8;
+  --audit-slate: #b6ced5;
+  --audit-surface: #fffefc;
+  --audit-muted: #5a6b5c;
+  --audit-muted-strong: #3d4f40;
+  --audit-rule: #efeeeb;
+  --audit-forest-shadow: #0c2f10;
+  --audit-radius: 14px;
+  --audit-font-serif: var(--font-lora), ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --audit-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--audit-font-serif);
+  background: var(--audit-canvas);
+  color: var(--audit-charcoal);
+  font-family: var(--audit-font-sans);
+}
+
+.audit-shell .text-audit-ink {
+  color: var(--audit-ink);
+}
+
+.audit-shell .text-audit-charcoal {
+  color: var(--audit-charcoal);
+}
+
+.audit-shell .text-audit-muted {
+  color: var(--audit-muted);
+}
+
+.audit-shell .text-audit-muted-strong {
+  color: var(--audit-muted-strong);
+}
+
+.audit-shell .font-audit-sans {
+  font-family: var(--audit-font-sans);
+}
+
+.audit-shell .font-audit-serif {
+  font-family: var(--audit-font-serif);
+}
+
+.audit-panel-keylime {
+  background: var(--audit-keylime);
+  border-radius: var(--audit-radius);
+  box-shadow: none;
+}
+
+.audit-panel-sage {
+  background: var(--audit-sage);
+  border-radius: var(--audit-radius);
+  box-shadow: none;
+}
+
+.audit-panel-mint {
+  background: var(--audit-mint);
+  border-radius: var(--audit-radius);
+  box-shadow: none;
+}
+
+.audit-panel-slate {
+  background: var(--audit-slate);
+  border-radius: var(--audit-radius);
+  box-shadow: none;
+}
+
+.audit-panel-cream {
+  background: var(--audit-surface);
+  border-radius: var(--audit-radius);
+  box-shadow: none;
+}
+
+.audit-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--audit-surface);
+  color: var(--audit-ink);
+  padding: 9px 14px;
+  font-family: var(--audit-font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.audit-print-root {
+  background: var(--audit-canvas);
+  color: var(--audit-charcoal);
+  font-family: var(--audit-font-sans);
+}
+
+.audit-print-root h1,
+.audit-print-root h2,
+.audit-print-root h3 {
+  font-family: var(--audit-font-serif);
+  font-weight: 400;
+  color: var(--audit-ink);
+}
+
+.audit-print-root .audit-report-table > .flex.flex-col {
+  gap: 0;
+}
+
+.audit-print-root .audit-report-table [class*='rounded-lg'][class*='border'] {
+  border-radius: var(--audit-radius);
+  border-color: var(--audit-rule);
+  background: var(--audit-surface);
+  box-shadow: none;
+}
+
+.audit-print-root .audit-report-table thead {
+  background: var(--audit-mint);
+  font-family: var(--audit-font-sans);
+}
+
+.audit-print-root .audit-report-table tbody {
+  font-family: var(--audit-font-sans);
+  color: var(--audit-charcoal);
+}
+
+.audit-print-root .audit-report-table th {
+  color: var(--audit-ink);
+  font-weight: 600;
+}
+
+.audit-print-root .audit-report-table td {
+  color: var(--audit-charcoal);
+  border-color: var(--audit-rule);
+}
+
+.audit-print-root .audit-page-break {
+  break-before: page;
+}
+
+.audit-report-section + .audit-report-section {
+  border-top: none;
+}
+
+.audit-table-shell {
+  background: var(--audit-slate);
+  border-radius: var(--audit-radius);
+  padding: 28px;
+  box-shadow: none;
+}
+
+.audit-table-shell .audit-report-table [class*='rounded-lg'][class*='border'] {
+  border: none;
+  background: var(--audit-surface);
+}
+
+.audit-ingest {
+  flex-shrink: 0;
+  background: var(--audit-canvas);
+  border-bottom: 1px solid var(--audit-rule);
+  color: var(--audit-charcoal);
+  font-family: var(--audit-font-sans);
+}
+
+.audit-btn-forest {
+  background: var(--audit-ink) !important;
+  color: var(--audit-canvas) !important;
+  border-color: transparent !important;
+  border-radius: var(--audit-radius) !important;
+  box-shadow: none !important;
+}
+
+.audit-btn-forest:hover:not(:disabled) {
+  background: var(--audit-forest-shadow) !important;
+}
+
+.audit-btn-ivory {
+  background: var(--audit-keylime) !important;
+  color: var(--audit-ink) !important;
+  border-color: transparent !important;
+  border-radius: var(--audit-radius) !important;
+  box-shadow: none !important;
+}
+
+.audit-btn-outline {
+  background: transparent !important;
+  color: var(--audit-charcoal) !important;
+  border: 1px solid var(--audit-rule) !important;
+  border-radius: var(--audit-radius) !important;
+  box-shadow: none !important;
+}
+
+/* Audit report — browser Print / Save as PDF */
+@media print {
+  body {
+    background: #fffefc !important;
+    color: #222222 !important;
+  }
+
+  .audit-shell,
+  .audit-print-root {
+    background: #fffefc !important;
+    height: auto !important;
+  }
+
+  .audit-report-section.audit-page-break {
+    break-before: page;
+  }
+
+  .audit-print-root {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .audit-print-root .break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  .audit-print-root [data-slot='scroll-area-viewport'] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+}

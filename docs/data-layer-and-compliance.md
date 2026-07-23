@@ -4,26 +4,26 @@ Single source of truth for how RevCollect stores, processes, and deletes persona
 
 ## Roles
 
-| Party | Role | Responsibility |
-|-------|------|----------------|
-| RevCollect customer (bookkeeper / business) | **Data controller** | Decides what data to sync, whom to contact, and when to send collections emails |
-| RevCollect (Nextgrid Digital) | **Data processor** | Processes data on the controller's behalf to provide collections follow-up |
-| Anthropic / OpenAI | **Sub-processor** | Inference-only LLM API calls for draft generation and classification |
-| Resend / Postmark | **Sub-processor** | Email delivery |
-| Supabase | **Sub-processor** | Database hosting (encrypted at rest) |
-| Vercel | **Sub-processor** | Application hosting |
-| Clerk | **Sub-processor** | Authentication and organization (workspace) management |
-| Stripe | **Sub-processor** | Billing |
-| Xero / QuickBooks | **Data source** (not sub-processor) | OAuth-synced invoice and contact data; governed by partner API terms |
+| Party                                       | Role                                | Responsibility                                                                  |
+| ------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------- |
+| RevCollect customer (bookkeeper / business) | **Data controller**                 | Decides what data to sync, whom to contact, and when to send collections emails |
+| RevCollect (Nextgrid Digital)               | **Data processor**                  | Processes data on the controller's behalf to provide collections follow-up      |
+| Anthropic / OpenAI                          | **Sub-processor**                   | Inference-only LLM API calls for draft generation and classification            |
+| Resend / Postmark                           | **Sub-processor**                   | Email delivery                                                                  |
+| Supabase                                    | **Sub-processor**                   | Database hosting (encrypted at rest)                                            |
+| Vercel                                      | **Sub-processor**                   | Application hosting                                                             |
+| Clerk                                       | **Sub-processor**                   | Authentication and organization (workspace) management                          |
+| Stripe                                      | **Sub-processor**                   | Billing                                                                         |
+| Xero / QuickBooks                           | **Data source** (not sub-processor) | OAuth-synced invoice and contact data; governed by partner API terms            |
 
 ## Data categories
 
-| Category | Examples | Sensitivity |
-|----------|----------|-------------|
-| Contact information | Names, email addresses, phone numbers of the controller's clients | High |
-| Financial data | Invoice amounts, payment history, outstanding balances, aging buckets | High |
-| Communication content | Email subject, body, attachments, SMS content | **Highest** |
-| Behavioral metadata | Response times, reply intent classification, payment patterns, DSO | Medium |
+| Category              | Examples                                                              | Sensitivity |
+| --------------------- | --------------------------------------------------------------------- | ----------- |
+| Contact information   | Names, email addresses, phone numbers of the controller's clients     | High        |
+| Financial data        | Invoice amounts, payment history, outstanding balances, aging buckets | High        |
+| Communication content | Email subject, body, attachments, SMS content                         | **Highest** |
+| Behavioral metadata   | Response times, reply intent classification, payment patterns, DSO    | Medium      |
 
 ## Entity-relationship model
 
@@ -85,16 +85,16 @@ erDiagram
 
 ### PII field classification
 
-| Table | Column | Classification | Notes |
-|-------|--------|----------------|-------|
-| `customers` | `name`, `email`, `company` | PII | Controller's end-customer |
-| `invoices` | `number`, `amount_cents`, `due_date` | Financial PII | Linked to customer |
-| `thread_emails` | `subject`, `body_ciphertext` | **Sensitive PII** | Field-level AES-256-GCM encryption |
-| `thread_emails` | `from`, `to`, `cc` | PII | Email addresses |
-| `email_attachments` | `filename`, storage path | Metadata | Binary in Supabase Storage |
-| `timeline_events` | `title`, `description` | May contain PII | Derived from communications |
-| `agent_drafts` | `body` | Sensitive | AI-generated; same encryption as emails |
-| `audit_log` | `metadata` | Must not contain email bodies | IDs and action types only |
+| Table               | Column                               | Classification                | Notes                                   |
+| ------------------- | ------------------------------------ | ----------------------------- | --------------------------------------- |
+| `customers`         | `name`, `email`, `company`           | PII                           | Controller's end-customer               |
+| `invoices`          | `number`, `amount_cents`, `due_date` | Financial PII                 | Linked to customer                      |
+| `thread_emails`     | `subject`, `body_ciphertext`         | **Sensitive PII**             | Field-level AES-256-GCM encryption      |
+| `thread_emails`     | `from`, `to`, `cc`                   | PII                           | Email addresses                         |
+| `email_attachments` | `filename`, storage path             | Metadata                      | Binary in Supabase Storage              |
+| `timeline_events`   | `title`, `description`               | May contain PII               | Derived from communications             |
+| `agent_drafts`      | `body`                               | Sensitive                     | AI-generated; same encryption as emails |
+| `audit_log`         | `metadata`                           | Must not contain email bodies | IDs and action types only               |
 
 ## Tenant isolation
 
@@ -113,12 +113,12 @@ Server Actions call `SET LOCAL app.tenant_id = '<uuid>'` at the start of each tr
 
 ## Retention policy
 
-| Trigger | Action | Enforced by |
-|---------|--------|-------------|
-| Active subscription | Retain all data | Default |
-| Subscription cancelled | **30 days** after `cancelled_at`, run `delete_tenant()` | `purge_cancelled_tenants()` daily job |
-| Email body age | **24 months** after `sent_at`, purge `body_ciphertext` (keep metadata row) | `purge_expired_email_content()` daily job |
-| Tenant opt-out flag | `tenants.retain_email_beyond_24mo = true` skips 24-month purge | Per-tenant setting |
+| Trigger                | Action                                                                     | Enforced by                               |
+| ---------------------- | -------------------------------------------------------------------------- | ----------------------------------------- |
+| Active subscription    | Retain all data                                                            | Default                                   |
+| Subscription cancelled | **30 days** after `cancelled_at`, run `delete_tenant()`                    | `purge_cancelled_tenants()` daily job     |
+| Email body age         | **24 months** after `sent_at`, purge `body_ciphertext` (keep metadata row) | `purge_expired_email_content()` daily job |
+| Tenant opt-out flag    | `tenants.retain_email_beyond_24mo = true` skips 24-month purge             | Per-tenant setting                        |
 
 Constants (also in `src/features/revcollect/api/types.ts`):
 
@@ -177,11 +177,11 @@ Published at `/sub-processors`. Internal copy maintained in sync with legal page
 
 ## Certification roadmap (deferred)
 
-| Milestone | Target | Notes |
-|-----------|--------|-------|
-| SOC 2 Type I | Month 12–18 | Mid-market procurement |
-| SOC 2 Type II | Month 24 | Enterprise |
-| ISO 27001 | Only if EU enterprise | Overkill for SMB |
+| Milestone     | Target                | Notes                  |
+| ------------- | --------------------- | ---------------------- |
+| SOC 2 Type I  | Month 12–18           | Mid-market procurement |
+| SOC 2 Type II | Month 24              | Enterprise             |
+| ISO 27001     | Only if EU enterprise | Overkill for SMB       |
 
 ## Related documents
 

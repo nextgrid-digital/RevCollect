@@ -4,22 +4,22 @@ Internal playbook for personal data breaches and security incidents. Review annu
 
 ## Roles
 
-| Role | Responsibility |
-|------|----------------|
+| Role                                | Responsibility                                         |
+| ----------------------------------- | ------------------------------------------------------ |
 | Privacy contact (initially founder) | Owns external communications, regulatory notifications |
-| Engineering lead | Containment, forensics, remediation |
-| Legal counsel (when engaged) | Regulatory filing review |
+| Engineering lead                    | Containment, forensics, remediation                    |
+| Legal counsel (when engaged)        | Regulatory filing review                               |
 
 Contact: privacy@revcollect.app, security@revcollect.app
 
 ## Severity tiers
 
-| Tier | Description | Example |
-|------|-------------|---------|
-| S1 Critical | Confirmed exfiltration of customer PII or email content | Database dump leaked |
-| S2 High | Unauthorized access to production systems, no confirmed exfiltration | Compromised admin credential |
-| S3 Medium | Vulnerability with plausible exploit path | RLS policy gap on staging |
-| S4 Low | Minor issue, no customer data at risk | Dependency CVE with no exploit |
+| Tier        | Description                                                          | Example                        |
+| ----------- | -------------------------------------------------------------------- | ------------------------------ |
+| S1 Critical | Confirmed exfiltration of customer PII or email content              | Database dump leaked           |
+| S2 High     | Unauthorized access to production systems, no confirmed exfiltration | Compromised admin credential   |
+| S3 Medium   | Vulnerability with plausible exploit path                            | RLS policy gap on staging      |
+| S4 Low      | Minor issue, no customer data at risk                                | Dependency CVE with no exploit |
 
 ## Response timeline
 

@@ -17,23 +17,23 @@ Mock data lives in one place today (`src/features/revcollect/mock-data.ts`) so t
 
 ## Routes
 
-| Route                            | Description                              |
-| -------------------------------- | ---------------------------------------- |
-| `/`                              | Welcome / opening page                   |
-| `/login`                         | Supabase sign-in                         |
-| `/signup`                        | Supabase sign-up                         |
-| `/auth/callback`                 | Auth email confirmation callback         |
-| `/inbox`                         | Collections inbox (default landing page) |
-| `/customers`                     | Customer list                            |
-| `/customers/[id]`                | Customer detail, invoices, activity      |
-| `/aging`                         | Aging report                             |
-| `/agent`                         | AI agent configuration                   |
-| `/settings`                      | General workspace settings               |
-| `/settings/integrations`         | Xero, Gmail, Stripe                      |
-| `/settings/billing`              | Plan and usage                           |
-| `/onboarding`                    | Setup checklist                          |
-| `/onboarding/connect-gmail`      | Gmail connect flow (step 1)              |
-| `/onboarding/connect-xero`       | Xero connect flow (step 2)               |
+| Route                       | Description                              |
+| --------------------------- | ---------------------------------------- |
+| `/`                         | Welcome / opening page                   |
+| `/login`                    | Supabase sign-in                         |
+| `/signup`                   | Supabase sign-up                         |
+| `/auth/callback`            | Auth email confirmation callback         |
+| `/inbox`                    | Collections inbox (default landing page) |
+| `/customers`                | Customer list                            |
+| `/customers/[id]`           | Customer detail, invoices, activity      |
+| `/aging`                    | Aging report                             |
+| `/agent`                    | AI agent configuration                   |
+| `/settings`                 | General workspace settings               |
+| `/settings/integrations`    | Xero, Gmail, Stripe                      |
+| `/settings/billing`         | Plan and usage                           |
+| `/onboarding`               | Setup checklist                          |
+| `/onboarding/connect-gmail` | Gmail connect flow (step 1)              |
+| `/onboarding/connect-xero`  | Xero connect flow (step 2)               |
 
 ## Tech stack
 

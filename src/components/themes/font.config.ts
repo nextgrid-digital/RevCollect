@@ -1,5 +1,6 @@
 import {
   Architects_Daughter,
+  Cormorant_Garamond,
   DM_Sans,
   Fira_Code,
   Geist,
@@ -7,6 +8,7 @@ import {
   Instrument_Sans,
   Inter,
   JetBrains_Mono,
+  Lora,
   Merriweather,
   Mulish,
   Playfair_Display,
@@ -85,6 +87,18 @@ const fontMerriweather = Merriweather({
   variable: '--font-merriweather'
 });
 
+const fontCormorantGaramond = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300'],
+  variable: '--font-cormorant-garamond'
+});
+
+const fontLora = Lora({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-lora'
+});
+
 const fontPlayfairDisplay = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-playfair-display'
@@ -104,5 +118,7 @@ export const fontVariables = cn(
   fontSpaceMono.variable,
   fontJetBrainsMono.variable,
   fontMerriweather.variable,
+  fontCormorantGaramond.variable,
+  fontLora.variable,
   fontPlayfairDisplay.variable
 );

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { WelcomeView } from '@/features/revcollect/welcome/components/welcome-view';
+import { Suspense } from 'react';
+import { AuthPage } from '@/components/auth-page';
 import { createClient } from '@/lib/supabase/server';
 import { hasSupabaseEnv } from '@/lib/supabase/env';
 
@@ -18,5 +19,9 @@ export default async function HomePage() {
     }
   }
 
-  return <WelcomeView />;
+  return (
+    <Suspense fallback={null}>
+      <AuthPage />
+    </Suspense>
+  );
 }

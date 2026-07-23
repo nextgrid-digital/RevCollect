@@ -16,12 +16,7 @@ export function InboxDeepAnalysisCard({ text, onUseRecommendation }: InboxDeepAn
         {text}
       </p>
       {onUseRecommendation ? (
-        <Button
-          type='button'
-          size='sm'
-          className='mt-2 w-full'
-          onClick={onUseRecommendation}
-        >
+        <Button type='button' size='sm' className='mt-2 w-full' onClick={onUseRecommendation}>
           Use recommendation
         </Button>
       ) : null}

@@ -3,6 +3,7 @@ import {
   IconAlertCircle,
   IconAlertTriangle,
   IconArrowRight,
+  IconAt,
   IconBell,
   IconBold,
   IconBox,
@@ -147,6 +148,7 @@ export const Icons = {
   github: IconBrandGithub,
   twitter: IconBrandTwitter,
   logo: IconCommand,
+  at: IconAt,
 
   // Communication
   chat: IconMessage,

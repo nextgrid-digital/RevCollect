@@ -11,14 +11,14 @@ Engineering rules for all LLM usage in RevCollect. Mandatory for backend sprint 
 
 ## Allowed logging
 
-| Field | Allowed |
-|-------|---------|
-| `tenant_id` | Yes |
-| `thread_id` / `message_id` | Yes |
-| `model` name | Yes |
-| `token_count` | Yes |
-| `latency_ms` | Yes |
-| Email body / full prompt | **No** |
+| Field                                   | Allowed                  |
+| --------------------------------------- | ------------------------ |
+| `tenant_id`                             | Yes                      |
+| `thread_id` / `message_id`              | Yes                      |
+| `model` name                            | Yes                      |
+| `token_count`                           | Yes                      |
+| `latency_ms`                            | Yes                      |
+| Email body / full prompt                | **No**                   |
 | Customer name / email in error messages | **No** (scrub in Sentry) |
 
 ## Implementation checklist

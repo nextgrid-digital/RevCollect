@@ -10,14 +10,14 @@ RevCollect syncs invoice and contact data from Xero to help small businesses fol
 
 Xero prohibits using API data to train AI/ML models. RevCollect complies as follows:
 
-| Activity | Permitted | Our approach |
-|----------|-----------|--------------|
-| Display invoice/contact data in UI | Yes | Structured sync to Postgres with tenant isolation |
-| Use data as LLM prompt context for one-off inference | Yes | Context assembly → single API call → discard |
-| Store API responses for service delivery | Yes | Encrypted at rest, retention policy enforced |
-| Fine-tune models on Xero data | **No** | No fine-tuning pipeline exists |
-| Build training datasets from Xero data | **No** | No export to training pipelines |
-| Log full prompts to analytics | **No** | Audit logs contain IDs only |
+| Activity                                             | Permitted | Our approach                                      |
+| ---------------------------------------------------- | --------- | ------------------------------------------------- |
+| Display invoice/contact data in UI                   | Yes       | Structured sync to Postgres with tenant isolation |
+| Use data as LLM prompt context for one-off inference | Yes       | Context assembly → single API call → discard      |
+| Store API responses for service delivery             | Yes       | Encrypted at rest, retention policy enforced      |
+| Fine-tune models on Xero data                        | **No**    | No fine-tuning pipeline exists                    |
+| Build training datasets from Xero data               | **No**    | No export to training pipelines                   |
+| Log full prompts to analytics                        | **No**    | Audit logs contain IDs only                       |
 
 ## Architecture
 

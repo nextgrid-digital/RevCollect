@@ -11,7 +11,9 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/signup' ||
-    pathname.startsWith('/auth/')
+    pathname.startsWith('/auth/') ||
+    pathname === '/audit' ||
+    pathname.startsWith('/audit/')
   );
 }
 
@@ -37,7 +39,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       );
     }
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
+    loginUrl.pathname = '/';
     loginUrl.searchParams.set('error', 'missing_supabase_env');
     return NextResponse.redirect(loginUrl);
   }
@@ -71,7 +73,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     }
 
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
+    loginUrl.pathname = '/';
     loginUrl.search = '';
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', pathname);

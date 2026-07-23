@@ -56,7 +56,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
         throw error;
       }
       toast.success('Signed out');
-      router.replace('/login');
+      router.replace('/');
       router.refresh();
     } catch {
       toast.error('Could not sign out');

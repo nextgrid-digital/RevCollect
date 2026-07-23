@@ -20,6 +20,8 @@ interface DataTableProps<TData> extends React.ComponentProps<'div'> {
   onRowClick?: (row: TData) => void;
   getRowAriaLabel?: (row: TData) => string;
   emptyMessage?: string;
+  /** Hide the pagination footer (e.g. when all rows are shown on one page). */
+  hidePagination?: boolean;
 }
 
 export function DataTable<TData>({
@@ -28,7 +30,8 @@ export function DataTable<TData>({
   children,
   onRowClick,
   getRowAriaLabel,
-  emptyMessage = 'No results.'
+  emptyMessage = 'No results.',
+  hidePagination = false
 }: DataTableProps<TData>) {
   return (
     <div className='flex flex-col space-y-4'>
@@ -105,10 +108,15 @@ export function DataTable<TData>({
           <ScrollBar orientation='horizontal' />
         </ScrollArea>
       </div>
-      <div className='flex flex-col gap-2.5'>
-        <DataTablePagination table={table} />
-        {actionBar && table.getFilteredSelectedRowModel().rows.length > 0 && actionBar}
-      </div>
+      {hidePagination ? null : (
+        <div className='flex flex-col gap-2.5'>
+          <DataTablePagination table={table} />
+          {actionBar && table.getFilteredSelectedRowModel().rows.length > 0 && actionBar}
+        </div>
+      )}
+      {hidePagination && actionBar && table.getFilteredSelectedRowModel().rows.length > 0 ? (
+        <div className='flex flex-col gap-2.5'>{actionBar}</div>
+      ) : null}
     </div>
   );
 }
