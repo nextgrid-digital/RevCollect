@@ -4,6 +4,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AUDIT_CONTROLS, AUDIT_FIELDS } from '@/features/audit/lib/ui-copy';
 import { cn } from '@/lib/utils';
 
 export type AuditDataSource = 'none' | 'sample' | 'upload';
@@ -54,16 +55,13 @@ export function AuditIngestBar({
               AR Audit
             </p>
             <div className='flex flex-wrap items-center gap-2'>
-              {dataSource === 'sample' ? (
-                <span className='audit-pill text-[12px]'>Demo dataset — fictional invoices</span>
-              ) : null}
               {dataSource === 'upload' ? (
                 <span className='audit-pill text-[12px]'>
-                  Live export — formulas run on your file
+                  Live export: formulas run on your file
                 </span>
               ) : null}
               {isSummarizing ? (
-                <span className='audit-pill text-[12px]'>Writing narrative with Gemini…</span>
+                <span className='audit-pill text-[12px]'>Writing narrative…</span>
               ) : null}
               {fileName ? (
                 <span className='font-audit-sans text-audit-muted text-[12px]'>{fileName}</span>
@@ -77,8 +75,9 @@ export function AuditIngestBar({
               className={cn('audit-btn-outline shadow-none')}
               onClick={onRecompute}
               disabled={isPending || !hasCsv}
+              title={AUDIT_CONTROLS.recomputeHelper}
             >
-              Recompute
+              {AUDIT_CONTROLS.recompute}
             </Button>
             <Button
               type='button'
@@ -87,11 +86,18 @@ export function AuditIngestBar({
               onClick={onDownloadPdf}
               isLoading={isDownloading}
               disabled={!hasReport}
+              title={AUDIT_CONTROLS.downloadHelper}
             >
-              Download PDF
+              {AUDIT_CONTROLS.downloadPdf}
             </Button>
           </div>
         </div>
+
+        {dataSource === 'sample' ? (
+          <p className='font-audit-sans text-audit-charcoal audit-panel-keylime p-3 text-[13px] leading-[1.5]'>
+            {AUDIT_CONTROLS.sampleBanner}
+          </p>
+        ) : null}
 
         <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
           <div className='flex flex-col gap-1.5'>
@@ -99,22 +105,25 @@ export function AuditIngestBar({
               htmlFor='company'
               className='font-audit-sans text-audit-muted text-[12px] font-medium'
             >
-              Prepared for
+              {AUDIT_FIELDS.preparedFor}
             </Label>
             <Input
               id='company'
               value={companyName}
               onChange={(e) => onCompanyNameChange(e.target.value)}
-              placeholder='Customer legal name'
+              placeholder={AUDIT_FIELDS.preparedForPlaceholder}
               className='rounded-[14px] border-[var(--audit-rule)] bg-[var(--audit-surface)] shadow-none'
             />
+            <p className='font-audit-sans text-audit-muted text-[11px]'>
+              {AUDIT_FIELDS.preparedForHelper}
+            </p>
           </div>
           <div className='flex flex-col gap-1.5'>
             <Label
               htmlFor='asof'
               className='font-audit-sans text-audit-muted text-[12px] font-medium'
             >
-              Analysis date
+              {AUDIT_FIELDS.analysisDate}
             </Label>
             <Input
               id='asof'
@@ -123,10 +132,13 @@ export function AuditIngestBar({
               onChange={(e) => onAnalysisDateChange(e.target.value)}
               className='rounded-[14px] border-[var(--audit-rule)] bg-[var(--audit-surface)] shadow-none'
             />
+            <p className='font-audit-sans text-audit-muted text-[11px]'>
+              {AUDIT_FIELDS.analysisDateHelper}
+            </p>
           </div>
           <div className='flex flex-col gap-1.5 sm:col-span-2'>
             <Label className='font-audit-sans text-audit-muted text-[12px] font-medium'>
-              Invoice export
+              {AUDIT_FIELDS.invoiceExport}
             </Label>
             <div className='flex flex-wrap gap-2'>
               <Button
@@ -137,7 +149,7 @@ export function AuditIngestBar({
                 disabled={isPending}
               >
                 <Icons.upload className='size-4' />
-                Upload
+                {AUDIT_CONTROLS.upload}
               </Button>
               <Button
                 type='button'
@@ -146,9 +158,12 @@ export function AuditIngestBar({
                 onClick={onLoadSample}
                 isLoading={isPending}
               >
-                Run sample
+                {AUDIT_CONTROLS.runSample}
               </Button>
             </div>
+            <p className='font-audit-sans text-audit-muted text-[11px]'>
+              {AUDIT_FIELDS.invoiceExportHelper}
+            </p>
           </div>
         </div>
 

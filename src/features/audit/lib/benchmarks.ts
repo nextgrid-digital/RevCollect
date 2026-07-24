@@ -11,7 +11,7 @@ export const BEHAVIOR_BAND_THRESHOLDS = {
   deterioratingMinTrendDays: 8
 } as const;
 
-/** Guidance only — not computed peers */
+/** Guidance only; not computed peers */
 export const HEALTHY_GAP_GUIDANCE_DAYS = { min: 5, max: 10 } as const;
 export const STRUCTURAL_GAP_GUIDANCE_DAYS = { min: 15, max: 20 } as const;
 
@@ -36,7 +36,7 @@ export function buildBenchmarkRows(report: AuditReport): BenchmarkRow[] {
       label: 'Contractual terms (benchmark)',
       value: `${stated} days`,
       detail:
-        'Value-weighted Net terms from your invoice Terms column — the promise you made on paper.',
+        'Value-weighted Net terms from your invoice Terms column: the promise you made on paper.',
       kind: 'metric'
     },
     {
@@ -57,7 +57,7 @@ export function buildBenchmarkRows(report: AuditReport): BenchmarkRow[] {
       id: 'ninety',
       label: '90+ concentration',
       value: `${over90Share.toFixed(1)}% of open AR`,
-      detail: `${formatMoney(headline.aging['90+'])} is more than 90 days past due — recovery odds fall sharply here.`,
+      detail: `${formatMoney(headline.aging['90+'])} is more than 90 days past due. Recovery odds fall sharply here.`,
       kind: 'metric'
     },
     {
@@ -70,8 +70,8 @@ export function buildBenchmarkRows(report: AuditReport): BenchmarkRow[] {
     {
       id: 'peer',
       label: 'Healthy SMB guidance',
-      value: `Within ~${HEALTHY_GAP_GUIDANCE_DAYS.min}–${HEALTHY_GAP_GUIDANCE_DAYS.max}d of terms`,
-      detail: `A ${STRUCTURAL_GAP_GUIDANCE_DAYS.min}–${STRUCTURAL_GAP_GUIDANCE_DAYS.max} day structural gap is a working-capital problem, not a reporting quirk. Guidance only — not peer data.`,
+      value: `Within ~${HEALTHY_GAP_GUIDANCE_DAYS.min}-${HEALTHY_GAP_GUIDANCE_DAYS.max}d of terms`,
+      detail: `A ${STRUCTURAL_GAP_GUIDANCE_DAYS.min}-${STRUCTURAL_GAP_GUIDANCE_DAYS.max} day structural gap is a working-capital problem, not a reporting quirk. Guidance only; not peer data.`,
       kind: 'guidance'
     }
   ];
@@ -85,7 +85,7 @@ export function gapVsHealthyGuidance(extraCreditDays: number): {
     return { status: 'healthy', label: 'Within healthy guidance band' };
   }
   if (extraCreditDays < STRUCTURAL_GAP_GUIDANCE_DAYS.min) {
-    return { status: 'watch', label: 'Above healthy band — watch closely' };
+    return { status: 'watch', label: 'Above healthy band; watch closely' };
   }
-  return { status: 'structural', label: 'Structural gap — working capital at risk' };
+  return { status: 'structural', label: 'Structural gap: working capital at risk' };
 }

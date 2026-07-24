@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { AuditReport } from './types';
+import { sanitizeNarrative } from './gemini-voice';
 import {
   buildAgingNinetyCallout,
   buildCoverClosing,
@@ -35,7 +36,7 @@ export const auditNarrativeSchema = z.object({
 
 export type AuditNarrative = z.infer<typeof auditNarrativeSchema>;
 
-/** Compact facts for the model — numbers stay authoritative; AI only writes prose. */
+/** Compact facts for the model. Numbers stay authoritative; AI only writes prose. */
 export function buildAuditFacts(report: AuditReport) {
   const watch = report.customers.find((c) => c.customer === report.oneToWatch);
   const donors = report.customers.filter((c) => report.creditDonors.includes(c.customer));
@@ -100,7 +101,7 @@ export function buildAuditFacts(report: AuditReport) {
 }
 
 export function buildFallbackNarrative(report: AuditReport): AuditNarrative {
-  return {
+  return sanitizeNarrative({
     page1Intro: buildPage1Intro(report),
     coverClosing: buildCoverClosing(report),
     coverTeaser: buildCoverTeaser(),
@@ -114,5 +115,5 @@ export function buildFallbackNarrative(report: AuditReport): AuditNarrative {
     creditDonorsCopy: buildCreditDonorsCopy(report),
     oneToWatchCopy: buildOneToWatchCopy(report),
     fixReleaseCopy: buildFixReleaseCopy(report)
-  };
+  });
 }

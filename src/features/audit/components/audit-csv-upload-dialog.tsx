@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import { AUDIT_ERRORS, AUDIT_UPLOAD } from '@/features/audit/lib/ui-copy';
 import { cn } from '@/lib/utils';
 
 interface AuditCsvUploadDialogProps {
@@ -40,7 +41,7 @@ export function AuditCsvUploadDialog({
     (accepted: File[], rejected: FileRejection[]) => {
       setLocalError(null);
       if (rejected.length > 0) {
-        setLocalError('Please drop a .csv, .tsv, .xlsx, or .xls file');
+        setLocalError(AUDIT_ERRORS.wrongType);
         return;
       }
       const file = accepted[0];
@@ -77,11 +78,10 @@ export function AuditCsvUploadDialog({
       <DialogContent className='audit-shell gap-5 border-[var(--audit-rule)] bg-[var(--audit-canvas)] sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle className='font-audit-serif text-audit-ink text-2xl font-normal'>
-            Upload invoice history
+            {AUDIT_UPLOAD.title}
           </DialogTitle>
           <DialogDescription className='font-audit-sans text-audit-charcoal text-[14px]'>
-            Drop a CSV or Excel export of historical invoices. Numbers are computed locally;
-            narrative summary uses Gemini.
+            {AUDIT_UPLOAD.formats}
           </DialogDescription>
         </DialogHeader>
 
@@ -97,10 +97,16 @@ export function AuditCsvUploadDialog({
           <input {...getInputProps()} />
           <Icons.upload className='text-audit-ink size-8' />
           <p className='font-audit-sans text-audit-ink text-[14px] font-medium'>
-            {isDragActive ? 'Drop file to upload' : 'Drag & drop your export here'}
+            {isDragActive ? AUDIT_UPLOAD.zoneActive : AUDIT_UPLOAD.zoneLabel}
           </p>
-          <p className='font-audit-sans text-audit-muted text-[12px]'>
-            or click to browse · .csv · .tsv · .xlsx · .xls
+        </div>
+
+        <div className='flex flex-col gap-2'>
+          <p className='font-audit-sans text-audit-charcoal text-[13px] leading-[1.5]'>
+            {AUDIT_UPLOAD.columnsHelper}
+          </p>
+          <p className='font-audit-sans text-audit-muted text-[12px] leading-[1.5]'>
+            {AUDIT_UPLOAD.privacy}
           </p>
         </div>
 

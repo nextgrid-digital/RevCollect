@@ -83,7 +83,7 @@ interface ReportSectionProps {
   pageBreak?: boolean;
 }
 
-/** Continuous report section — not a viewport slide. */
+/** Continuous report section; not a viewport slide. */
 export function ReportSection({ children, className, pageBreak = false }: ReportSectionProps) {
   return (
     <section

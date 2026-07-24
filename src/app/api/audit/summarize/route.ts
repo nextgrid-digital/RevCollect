@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auditNarrativeSchema, type AuditNarrative } from '@/features/audit/lib/audit-narrative';
+import { buildGeminiNarrativePrompt, sanitizeNarrative } from '@/features/audit/lib/gemini-voice';
 
 const requestSchema = z.object({
   facts: z.record(z.string(), z.unknown())
@@ -26,22 +27,7 @@ async function generateWithGemini(facts: Record<string, unknown>): Promise<Audit
 
   const model = process.env.GEMINI_MODEL?.trim() || 'gemini-flash-latest';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-  const prompt = `You write narrative copy for a RevCollect AR Collection Audit report.
-Tone: calm, editorial, direct — like a senior collections advisor. No hype, no emojis, no markdown.
-
-Rules:
-- Use ONLY the numbers and names in FACTS. Do not invent customers, amounts, or day counts.
-- Prefer the preformatted moneyLabels strings when mentioning dollars.
-- Keep each field to 1–3 sentences (coverTeaser: 1–2 sentences).
-- Do not change recommended first moves; you may reference them in whyOrderCopy.
-- Return STRICT JSON only, with exactly these keys:
-  page1Intro, coverClosing, coverTeaser, termsGapCopy, agingNinetyCallout,
-  interestHeadline, interestCopy, priorityIntro, whyOrderCopy,
-  modelPayersCopy, creditDonorsCopy, oneToWatchCopy, fixReleaseCopy
-
-FACTS:
-${JSON.stringify(facts, null, 2)}`;
+  const prompt = buildGeminiNarrativePrompt(JSON.stringify(facts, null, 2));
 
   const res = await fetch(url, {
     method: 'POST',
@@ -71,7 +57,8 @@ ${JSON.stringify(facts, null, 2)}`;
     throw new Error('Gemini returned an empty response');
   }
 
-  return auditNarrativeSchema.parse(extractJsonObject(text));
+  const parsed = auditNarrativeSchema.parse(extractJsonObject(text));
+  return sanitizeNarrative(parsed);
 }
 
 export async function POST(request: Request) {

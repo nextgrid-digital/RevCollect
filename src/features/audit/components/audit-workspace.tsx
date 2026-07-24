@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useRef, useState } from 'react';
 import { AuditCsvUploadDialog } from '@/features/audit/components/audit-csv-upload-dialog';
 import { AuditDashboard } from '@/features/audit/components/audit-dashboard';
 import { AuditIngestBar, type AuditDataSource } from '@/features/audit/components/audit-ingest-bar';
@@ -16,11 +16,15 @@ import {
   type AuditReport,
   type InvoiceRecord
 } from '@/features/audit/lib';
+import { AUDIT_ERRORS, AUDIT_SHARE_NUDGE, mapAuditError } from '@/features/audit/lib/ui-copy';
 import { toast } from 'sonner';
 
 const SAMPLE_CSV_URL = '/fixtures/audit/historical_invoices_250.csv';
 const DEFAULT_COMPANY = 'Summit Field Services LLC';
 const SAMPLE_ANALYSIS_DATE = '2026-07-22';
+const MIN_INVOICES = 30;
+/** Keep the processing panel up long enough that the report never "pops in" instantly. */
+const MIN_PROCESSING_MS = 2400;
 
 function todayInputValue(): string {
   const d = new Date();
@@ -36,6 +40,18 @@ function parseAnalysisDate(value: string): Date {
     throw new Error('Invalid analysis date');
   }
   return d;
+}
+
+function assertEnoughInvoices(count: number) {
+  if (count < MIN_INVOICES) {
+    throw new Error(AUDIT_ERRORS.tooFewRows);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 async function fetchNarrative(report: AuditReport): Promise<AuditNarrative> {
@@ -68,10 +84,40 @@ export function AuditWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [narrative, setNarrative] = useState<AuditNarrative | null>(null);
+  const [runStats, setRunStats] = useState<{
+    invoiceCount: number;
+    customerCount: number;
+  } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isRunning, setIsRunning] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const summarizeSeq = useRef(0);
+  const runSeq = useRef(0);
+  const runStartedAt = useRef(0);
+
+  function beginRun(): number {
+    runSeq.current += 1;
+    runStartedAt.current = Date.now();
+    setIsRunning(true);
+    setIsSummarizing(false);
+    setError(null);
+    setReport(null);
+    setNarrative(null);
+    setRunStats(null);
+    return runSeq.current;
+  }
+
+  function failRun(message: string, clearSource = false) {
+    setReport(null);
+    setNarrative(null);
+    setRunStats(null);
+    if (clearSource) {
+      setDataSource('none');
+    }
+    setError(message);
+    setIsSummarizing(false);
+    setIsRunning(false);
+    toast.error(message);
+  }
 
   function applyReport(
     invoices: InvoiceRecord[],
@@ -81,6 +127,7 @@ export function AuditWorkspace() {
     asOf: string,
     source: 'sample' | 'upload'
   ): AuditReport {
+    assertEnoughInvoices(invoices.length);
     const next = computeAuditReport({
       invoices,
       companyName: company.trim() || 'Your company',
@@ -89,8 +136,10 @@ export function AuditWorkspace() {
     setCsvText(text);
     setFileName(label);
     setDataSource(source);
-    setReport(next);
-    setNarrative(buildFallbackNarrative(next));
+    setRunStats({
+      invoiceCount: next.headline.invoiceCount,
+      customerCount: next.customers.length
+    });
     return next;
   }
 
@@ -104,27 +153,31 @@ export function AuditWorkspace() {
     return applyReport(parseInvoicesCsv(text), text, label, company, asOf, source);
   }
 
-  async function summarizeReport(next: AuditReport) {
-    const seq = ++summarizeSeq.current;
+  async function publishReport(next: AuditReport, seq: number) {
     setIsSummarizing(true);
-    try {
-      const copy = await fetchNarrative(next);
-      if (seq !== summarizeSeq.current) return;
-      setNarrative(copy);
-    } finally {
-      if (seq === summarizeSeq.current) {
-        setIsSummarizing(false);
-      }
+    const copy = await fetchNarrative(next);
+    const waitMs = MIN_PROCESSING_MS - (Date.now() - runStartedAt.current);
+    if (waitMs > 0) {
+      await sleep(waitMs);
     }
+    if (seq !== runSeq.current) return;
+
+    // Publish and leave the busy state in one update so the report never paints while computing.
+    setReport(next);
+    setNarrative(copy);
+    setIsSummarizing(false);
+    setIsRunning(false);
+    toast.success(auditDoneToast(next));
   }
 
   function handleLoadSample() {
-    setError(null);
-    startTransition(async () => {
+    const seq = beginRun();
+    void (async () => {
       try {
         const res = await fetch(SAMPLE_CSV_URL);
         if (!res.ok) throw new Error('Could not load sample dataset');
         const text = await res.text();
+        if (seq !== runSeq.current) return;
         setAnalysisDate(SAMPLE_ANALYSIS_DATE);
         setCompanyName(DEFAULT_COMPANY);
         const next = computeFromCsv(
@@ -134,21 +187,20 @@ export function AuditWorkspace() {
           SAMPLE_ANALYSIS_DATE,
           'sample'
         );
-        toast.success('Sample dataset loaded');
-        await summarizeReport(next);
+        await publishReport(next, seq);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not load sample';
-        setError(message);
-        toast.error(message);
+        if (seq !== runSeq.current) return;
+        failRun(mapAuditError(err instanceof Error ? err.message : 'Could not load sample'));
       }
-    });
+    })();
   }
 
   function handleUploadFile(file: File) {
-    setError(null);
-    startTransition(async () => {
+    const seq = beginRun();
+    void (async () => {
       try {
         const parsed = await parseInvoicesFromFile(file);
+        if (seq !== runSeq.current) return;
         const label = parsed.sheetName != null ? `${file.name} · ${parsed.sheetName}` : file.name;
         const next = applyReport(
           parsed.invoices,
@@ -158,17 +210,15 @@ export function AuditWorkspace() {
           analysisDate,
           'upload'
         );
-        toast.success('Audit computed');
-        await summarizeReport(next);
+        await publishReport(next, seq);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not compute audit';
-        setReport(null);
-        setNarrative(null);
-        setDataSource('none');
-        setError(message);
-        toast.error(message);
+        if (seq !== runSeq.current) return;
+        failRun(
+          mapAuditError(err instanceof Error ? err.message : 'Could not compute audit'),
+          true
+        );
       }
-    });
+    })();
   }
 
   function handleRecompute() {
@@ -176,8 +226,8 @@ export function AuditWorkspace() {
       toast.message('Upload an export or run the sample first');
       return;
     }
-    setError(null);
-    startTransition(async () => {
+    const seq = beginRun();
+    void (async () => {
       try {
         const next = computeFromCsv(
           csvText,
@@ -186,22 +236,25 @@ export function AuditWorkspace() {
           analysisDate,
           dataSource
         );
-        toast.success('Audit recomputed');
-        await summarizeReport(next);
+        if (seq !== runSeq.current) return;
+        await publishReport(next, seq);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not recompute';
-        setError(message);
-        toast.error(message);
+        if (seq !== runSeq.current) return;
+        failRun(mapAuditError(err instanceof Error ? err.message : 'Could not recompute'));
       }
-    });
+    })();
   }
 
   function handleDownloadPdf() {
-    if (!report) return;
+    if (!report || isRunning) return;
     window.print();
+    toast.message(AUDIT_SHARE_NUDGE);
   }
 
-  const busy = isPending || isSummarizing;
+  const busy = isRunning;
+  // Never hand the report to the dashboard while a run is in progress.
+  const visibleReport = busy ? null : report;
+  const visibleNarrative = busy ? null : narrative;
 
   return (
     <div className='flex min-h-svh flex-col'>
@@ -211,7 +264,7 @@ export function AuditWorkspace() {
         fileName={fileName}
         dataSource={dataSource}
         error={error}
-        hasReport={report !== null}
+        hasReport={visibleReport !== null}
         hasCsv={csvText !== null}
         isPending={busy}
         isSummarizing={isSummarizing}
@@ -230,14 +283,20 @@ export function AuditWorkspace() {
         onFileAccepted={handleUploadFile}
       />
       <AuditDashboard
-        report={report}
-        narrative={narrative}
+        report={visibleReport}
+        narrative={visibleNarrative}
         dataSource={dataSource}
         isPending={busy}
         isSummarizing={isSummarizing}
+        invoiceCount={runStats?.invoiceCount ?? null}
+        customerCount={runStats?.customerCount ?? null}
         onLoadSample={handleLoadSample}
         onUploadClick={() => setUploadOpen(true)}
       />
     </div>
   );
+}
+
+function auditDoneToast(report: AuditReport): string {
+  return `Done. ${report.headline.invoiceCount} invoices analyzed across ${report.customers.length} customers.`;
 }

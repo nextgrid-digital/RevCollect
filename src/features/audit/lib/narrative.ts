@@ -85,7 +85,7 @@ export function formatDays(value: number | null, digits = 0): string {
 }
 
 export function formatTrend(value: number | null): string {
-  if (value === null || Number.isNaN(value)) return '—';
+  if (value === null || Number.isNaN(value)) return '-';
   const rounded = Math.round(value * 10) / 10;
   const sign = rounded > 0 ? '+' : '';
   return `${sign}${rounded}`;
