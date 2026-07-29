@@ -18,8 +18,14 @@ const draftSchema = z.object({
   currency: z.coerce.string(),
   confidence: z.coerce.number().finite(),
   notes: z
-    .union([z.string(), z.null(), z.undefined()])
-    .transform((value) => (typeof value === 'string' ? value : undefined)),
+    .any()
+    .optional()
+    .transform((value) => {
+      if (value == null) return undefined;
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+      return undefined;
+    }),
   selected: z.coerce.boolean()
 });
 
