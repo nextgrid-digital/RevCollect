@@ -5,7 +5,7 @@ import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
 
 export const runtime = 'nodejs';
 
-const MAX_DRAFTS = 200;
+const MAX_DRAFTS = 500;
 
 function asString(value: unknown, fallback = ''): string {
   if (value == null) return fallback;

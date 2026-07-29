@@ -75,8 +75,8 @@ export function ImportInvoicesView() {
       toast.error('Select at least one invoice');
       return;
     }
-    if (selected.length > 200) {
-      toast.error('Select at most 200 invoices at a time');
+    if (selected.length > 500) {
+      toast.error('Select at most 500 invoices at a time');
       return;
     }
 
