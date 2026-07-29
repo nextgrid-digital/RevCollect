@@ -37,7 +37,7 @@ export function ImportInvoicesView() {
 
   function handleExtract() {
     if (files.length === 0) {
-      toast.error('Choose at least one PDF');
+      toast.error('Choose at least one file');
       return;
     }
 
@@ -111,10 +111,10 @@ export function ImportInvoicesView() {
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <WorkspaceCard className='mx-auto w-full max-w-5xl space-y-6 p-4 md:p-5'>
           <div className='space-y-1'>
-            <h2 className='text-lg font-semibold'>Import PDF invoices into Xero</h2>
+            <h2 className='text-lg font-semibold'>Import invoices into Xero</h2>
             <p className='text-muted-foreground text-sm'>
-              Upload invoice PDFs, review the extracted fields, then create AUTHORISED sales
-              invoices in your connected Xero organisation.
+              Upload invoice files (PDF, Excel, CSV, or Word), review the extracted fields, then
+              create AUTHORISED sales invoices in your connected Xero organisation.
             </p>
           </div>
 
@@ -130,11 +130,11 @@ export function ImportInvoicesView() {
           ) : (
             <>
               <div className='space-y-3'>
-                <Label htmlFor='invoice-pdfs'>PDF files</Label>
+                <Label htmlFor='invoice-files'>Invoice files</Label>
                 <Input
-                  id='invoice-pdfs'
+                  id='invoice-files'
                   type='file'
-                  accept='application/pdf,.pdf'
+                  accept='.pdf,.xlsx,.xls,.csv,.docx,.doc'
                   multiple
                   onChange={(event) => {
                     setFiles(Array.from(event.target.files ?? []));
@@ -185,7 +185,7 @@ export function ImportInvoicesView() {
                           />
                           <div className='min-w-0 flex-1 space-y-3'>
                             <div className='flex flex-wrap items-center gap-2'>
-                              <Icons.fileTypePdf className='size-4 shrink-0' />
+                              <Icons.page className='size-4 shrink-0' />
                               <p className='truncate text-sm font-medium'>{draft.sourceFileName}</p>
                               <span className='text-muted-foreground text-xs'>
                                 confidence {Math.round(draft.confidence * 100)}%
