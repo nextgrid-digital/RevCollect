@@ -1,7 +1,12 @@
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import path from 'path';
 import type { EncryptedPayload } from './token-crypto';
 import { decryptSecret, encryptSecret } from './token-crypto';
+import {
+  deleteIntegrationSecret,
+  readIntegrationSecret,
+  writeIntegrationSecret
+} from './integration-secret-store';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
 export interface GmailConnectionRecord {
   email: string;
@@ -9,15 +14,17 @@ export interface GmailConnectionRecord {
   connectedAt: string;
 }
 
-type GmailConnectionStoreFile = Record<string, GmailConnectionRecord>;
+const LEGACY_STORE_PATH = path.join(
+  process.cwd(),
+  '.data',
+  'integrations',
+  'gmail-connections.json'
+);
 
-const STORE_DIR = path.join(process.cwd(), '.data', 'integrations');
-const STORE_PATH = path.join(STORE_DIR, 'gmail-connections.json');
-
-async function readStore(): Promise<GmailConnectionStoreFile> {
+async function readLegacyStore(): Promise<Record<string, GmailConnectionRecord>> {
   try {
-    const raw = await readFile(STORE_PATH, 'utf8');
-    return JSON.parse(raw) as GmailConnectionStoreFile;
+    const raw = await readFile(LEGACY_STORE_PATH, 'utf8');
+    return JSON.parse(raw) as Record<string, GmailConnectionRecord>;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return {};
@@ -26,18 +33,18 @@ async function readStore(): Promise<GmailConnectionStoreFile> {
   }
 }
 
-async function writeStore(store: GmailConnectionStoreFile): Promise<void> {
-  await mkdir(STORE_DIR, { recursive: true });
-  await writeFile(STORE_PATH, JSON.stringify(store, null, 2), 'utf8');
-}
+export async function getGmailConnection(
+  appTenantId: string
+): Promise<GmailConnectionRecord | null> {
+  const record = await readIntegrationSecret<GmailConnectionRecord>('gmail', appTenantId);
+  if (record) return record;
 
-export async function getGmailConnection(tenantId: string): Promise<GmailConnectionRecord | null> {
-  const store = await readStore();
-  return store[tenantId] ?? null;
+  const legacy = await readLegacyStore();
+  return legacy[appTenantId] ?? null;
 }
 
 export async function saveGmailConnection(
-  tenantId: string,
+  appTenantId: string,
   input: { email: string; refreshToken: string }
 ): Promise<GmailConnectionRecord> {
   const record: GmailConnectionRecord = {
@@ -46,15 +53,16 @@ export async function saveGmailConnection(
     connectedAt: new Date().toISOString()
   };
 
-  const store = await readStore();
-  store[tenantId] = record;
-  await writeStore(store);
-
+  await writeIntegrationSecret('gmail', appTenantId, record);
   return record;
 }
 
-export async function getGmailRefreshToken(tenantId: string): Promise<string | null> {
-  const connection = await getGmailConnection(tenantId);
+export async function getGmailRefreshToken(appTenantId: string): Promise<string | null> {
+  const connection = await getGmailConnection(appTenantId);
   if (!connection) return null;
   return decryptSecret(connection.refreshToken);
+}
+
+export async function deleteGmailConnection(appTenantId: string): Promise<void> {
+  await deleteIntegrationSecret('gmail', appTenantId);
 }

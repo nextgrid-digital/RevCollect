@@ -14,6 +14,7 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
+import type { RevCollectService } from './service';
 import type { DataAccessEvent, TenantId } from './types';
 
 export const revcollectKeys = {
@@ -51,13 +52,13 @@ export const revcollectKeys = {
   agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const
 };
 
-const MOCK_STALE_TIME = Infinity;
+const AR_STALE_TIME_MS = 60_000;
 
 export function inboxMessagesQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.inboxMessages(),
     queryFn: () => getRevCollectService().listInboxMessages(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -66,7 +67,7 @@ export function inboxSelectionQueryOptions(messageId: string | null) {
     queryKey: revcollectKeys.inboxSelection(messageId ?? ''),
     queryFn: () => getRevCollectService().getInboxSelectionData(messageId!),
     enabled: !!messageId,
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -74,7 +75,7 @@ export function customersQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.customers(),
     queryFn: () => getRevCollectService().listCustomers(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -82,7 +83,7 @@ export function customerQueryOptions(id: string) {
   return queryOptions({
     queryKey: revcollectKeys.customer(id),
     queryFn: () => getRevCollectService().getCustomerById(id),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -93,7 +94,7 @@ export function customerContextQueryOptions(customerId: string) {
       const context = await getRevCollectService().getCustomerContext(customerId);
       return context;
     },
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -101,7 +102,7 @@ export function invoicesForCustomerQueryOptions(customerId: string) {
   return queryOptions({
     queryKey: revcollectKeys.invoicesForCustomer(customerId),
     queryFn: () => getRevCollectService().getInvoicesForCustomer(customerId),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -109,7 +110,7 @@ export function agingBucketsQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.agingBuckets(),
     queryFn: () => getRevCollectService().getAgingBuckets(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -118,6 +119,20 @@ export function agingReportQueryOptions(filters: AgingReportFilters) {
     queryKey: revcollectKeys.agingReport(filters),
     queryFn: async () => {
       const service = getRevCollectService();
+      if ('getAgingReport' in service && typeof service.getAgingReport === 'function') {
+        return (
+          service as RevCollectService & {
+            getAgingReport: (filters: AgingReportFilters) => Promise<{
+              summary: Awaited<ReturnType<RevCollectService['getAgingReportSummary']>>;
+              chartBuckets: Awaited<ReturnType<RevCollectService['getAgingChartBuckets']>>;
+              customerBreakdown: Awaited<
+                ReturnType<RevCollectService['getAgingCustomerBreakdown']>
+              >;
+            }>;
+          }
+        ).getAgingReport(filters);
+      }
+
       const [summary, chartBuckets, customerBreakdown] = await Promise.all([
         service.getAgingReportSummary(filters),
         service.getAgingChartBuckets(filters),
@@ -125,7 +140,7 @@ export function agingReportQueryOptions(filters: AgingReportFilters) {
       ]);
       return { summary, chartBuckets, customerBreakdown };
     },
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -133,7 +148,7 @@ export function invoicesByBucketQueryOptions(bucket: AgingBucket) {
   return queryOptions({
     queryKey: revcollectKeys.invoicesByBucket(bucket),
     queryFn: () => getRevCollectService().getInvoicesByBucket(bucket),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -141,7 +156,7 @@ export function timelineQueryOptions(customerId: string) {
   return queryOptions({
     queryKey: revcollectKeys.timeline(customerId),
     queryFn: () => getRevCollectService().getTimelineForCustomer(customerId),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -149,7 +164,7 @@ export function agentConfigQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.agentConfig(),
     queryFn: () => getRevCollectService().getAgentConfig(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -157,7 +172,7 @@ export function agentAddonQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.agentAddon(),
     queryFn: () => getRevCollectService().getAgentAddonStatus(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -179,7 +194,7 @@ export function workspaceGeneralSettingsQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.workspaceGeneralSettings(),
     queryFn: () => getRevCollectService().getWorkspaceGeneralSettings(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -248,7 +263,7 @@ export function useInboxThreadForCustomer(customerId: string | undefined) {
     queryKey: revcollectKeys.inboxThreadForCustomer(customerId ?? ''),
     queryFn: () => getRevCollectService().getInboxThreadForCustomer(customerId!),
     enabled: !!customerId,
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -257,7 +272,7 @@ export function useThreadEmails(threadId: string | undefined) {
     queryKey: [...revcollectKeys.inbox(), 'thread', threadId ?? ''] as const,
     queryFn: () => getRevCollectService().getThreadEmails(threadId!),
     enabled: !!threadId,
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 
@@ -332,7 +347,7 @@ export function useAgentDraftCount() {
   return useQuery({
     queryKey: revcollectKeys.agentDraftCount(),
     queryFn: () => getRevCollectService().countAgentDraftsReady(),
-    staleTime: MOCK_STALE_TIME
+    staleTime: AR_STALE_TIME_MS
   });
 }
 

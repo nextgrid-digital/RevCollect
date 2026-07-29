@@ -1,6 +1,10 @@
 import { randomBytes } from 'crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import {
+  canPersistIntegrations,
+  getIntegrationStorageErrorCode
+} from '@/lib/integrations/integration-storage';
 import { buildXeroAuthUrl, getXeroOAuthConfig } from '@/lib/integrations/xero-oauth';
 
 const OAUTH_STATE_COOKIE = 'xero_oauth_state';
@@ -12,6 +16,12 @@ export async function GET() {
   if (!config) {
     return NextResponse.redirect(
       new URL('/onboarding/connect-xero?error=missing_xero_credentials', APP_URL)
+    );
+  }
+
+  if (!canPersistIntegrations()) {
+    return NextResponse.redirect(
+      new URL(`/onboarding/connect-xero?error=${getIntegrationStorageErrorCode()}`, APP_URL)
     );
   }
 

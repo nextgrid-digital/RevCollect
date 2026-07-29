@@ -14,6 +14,12 @@ import { toast } from 'sonner';
 const ERROR_MESSAGES: Record<string, string> = {
   missing_xero_credentials:
     'Xero OAuth is not configured. Add XERO_CLIENT_ID, XERO_CLIENT_SECRET, and EMAIL_ENCRYPTION_KEY to your environment.',
+  missing_integration_storage:
+    'Production storage is not configured. Add SUPABASE_SECRET_KEY on Vercel, redeploy, then reconnect Xero.',
+  integration_storage_failed:
+    'Connected to Xero but could not save the token. Check SUPABASE_SECRET_KEY and the integration_secrets table.',
+  xero_redirect_mismatch:
+    'Xero redirect URI mismatch. Set XERO_OAUTH_REDIRECT_URI to https://app.revcollect.ai/api/integrations/xero/callback on Vercel and in the Xero developer app.',
   missing_refresh_token: 'Xero did not return a refresh token. Try connecting again.',
   invalid_oauth_state: 'OAuth session expired. Please try connecting again.',
   no_xero_organisation: 'No Xero organisation was returned. Check your Xero account and try again.',

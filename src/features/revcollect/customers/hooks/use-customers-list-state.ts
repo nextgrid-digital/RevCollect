@@ -36,7 +36,7 @@ function getListEmptyMessage(
 }
 
 export function useCustomersListState() {
-  const { data: customers = [], isPending } = useCustomers();
+  const { data: customers = [], isPending, isError, error } = useCustomers();
   const { data: agentConfig } = useAgentConfig();
   const [searchQuery, setSearchQuery] = useState('');
   const [riskFilter, setRiskFilter] = useState<CustomerRiskFilter>('all');
@@ -81,6 +81,8 @@ export function useCustomersListState() {
   return {
     customers,
     isPending,
+    isError,
+    errorMessage: isError && error instanceof Error ? error.message : null,
     searchQuery,
     setSearchQuery,
     riskFilter,

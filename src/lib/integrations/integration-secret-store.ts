@@ -1,0 +1,132 @@
+import { createAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import path from 'path';
+
+export type IntegrationProvider = 'xero' | 'gmail';
+
+const STORE_DIR = path.join(process.cwd(), '.data', 'integrations');
+
+function filePath(provider: IntegrationProvider, tenantKey: string): string {
+  return path.join(STORE_DIR, `${provider}-${tenantKey}.json`);
+}
+
+async function readFromFile<T>(
+  provider: IntegrationProvider,
+  tenantKey: string
+): Promise<T | null> {
+  try {
+    const raw = await readFile(filePath(provider, tenantKey), 'utf8');
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeToFile<T>(
+  provider: IntegrationProvider,
+  tenantKey: string,
+  value: T
+): Promise<void> {
+  await mkdir(STORE_DIR, { recursive: true });
+  await writeFile(filePath(provider, tenantKey), JSON.stringify(value, null, 2), 'utf8');
+}
+
+async function deleteFromFile(provider: IntegrationProvider, tenantKey: string): Promise<void> {
+  try {
+    const { unlink } = await import('fs/promises');
+    await unlink(filePath(provider, tenantKey));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function readFromSupabase<T>(
+  provider: IntegrationProvider,
+  tenantKey: string
+): Promise<T | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('integration_secrets')
+    .select('secret')
+    .eq('tenant_key', tenantKey)
+    .eq('provider', provider)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to read ${provider} integration: ${error.message}`);
+  }
+
+  return (data?.secret as T | undefined) ?? null;
+}
+
+async function writeToSupabase<T>(
+  provider: IntegrationProvider,
+  tenantKey: string,
+  value: T
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('integration_secrets').upsert(
+    {
+      tenant_key: tenantKey,
+      provider,
+      secret: value,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: 'tenant_key,provider' }
+  );
+
+  if (error) {
+    throw new Error(`Failed to save ${provider} integration: ${error.message}`);
+  }
+}
+
+async function deleteFromSupabase(provider: IntegrationProvider, tenantKey: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('integration_secrets')
+    .delete()
+    .eq('tenant_key', tenantKey)
+    .eq('provider', provider);
+
+  if (error) {
+    throw new Error(`Failed to delete ${provider} integration: ${error.message}`);
+  }
+}
+
+export async function readIntegrationSecret<T>(
+  provider: IntegrationProvider,
+  tenantKey: string
+): Promise<T | null> {
+  if (hasSupabaseAdminEnv()) {
+    return readFromSupabase<T>(provider, tenantKey);
+  }
+  return readFromFile<T>(provider, tenantKey);
+}
+
+export async function writeIntegrationSecret<T>(
+  provider: IntegrationProvider,
+  tenantKey: string,
+  value: T
+): Promise<void> {
+  if (hasSupabaseAdminEnv()) {
+    await writeToSupabase(provider, tenantKey, value);
+    return;
+  }
+  await writeToFile(provider, tenantKey, value);
+}
+
+export async function deleteIntegrationSecret(
+  provider: IntegrationProvider,
+  tenantKey: string
+): Promise<void> {
+  if (hasSupabaseAdminEnv()) {
+    await deleteFromSupabase(provider, tenantKey);
+  }
+  await deleteFromFile(provider, tenantKey);
+}

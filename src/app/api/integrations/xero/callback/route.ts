@@ -1,5 +1,10 @@
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  canPersistIntegrations,
+  getIntegrationStorageErrorCode,
+  mapIntegrationSaveError
+} from '@/lib/integrations/integration-storage';
 import { saveXeroConnection } from '@/lib/integrations/xero-connection-store';
 import {
   exchangeXeroAuthCode,
@@ -21,6 +26,10 @@ export async function GET(request: NextRequest) {
   const config = getXeroOAuthConfig();
   if (!config) {
     return redirectWithError('missing_xero_credentials');
+  }
+
+  if (!canPersistIntegrations()) {
+    return redirectWithError(getIntegrationStorageErrorCode());
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -64,7 +73,8 @@ export async function GET(request: NextRequest) {
     const successUrl = new URL('/onboarding/connect-xero', APP_URL);
     successUrl.searchParams.set('connected', '1');
     return NextResponse.redirect(successUrl);
-  } catch {
-    return redirectWithError('xero_connect_failed');
+  } catch (error) {
+    console.error('[xero/callback] connect failed:', error);
+    return redirectWithError(mapIntegrationSaveError(error));
   }
 }

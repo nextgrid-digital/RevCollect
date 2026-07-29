@@ -1,7 +1,12 @@
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import path from 'path';
 import type { EncryptedPayload } from './token-crypto';
 import { decryptSecret, encryptSecret } from './token-crypto';
+import {
+  deleteIntegrationSecret,
+  readIntegrationSecret,
+  writeIntegrationSecret
+} from './integration-secret-store';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import path from 'path';
 
 export interface XeroConnectionRecord {
   tenantId: string;
@@ -10,15 +15,17 @@ export interface XeroConnectionRecord {
   connectedAt: string;
 }
 
-type XeroConnectionStoreFile = Record<string, XeroConnectionRecord>;
+const LEGACY_STORE_PATH = path.join(
+  process.cwd(),
+  '.data',
+  'integrations',
+  'xero-connections.json'
+);
 
-const STORE_DIR = path.join(process.cwd(), '.data', 'integrations');
-const STORE_PATH = path.join(STORE_DIR, 'xero-connections.json');
-
-async function readStore(): Promise<XeroConnectionStoreFile> {
+async function readLegacyStore(): Promise<Record<string, XeroConnectionRecord>> {
   try {
-    const raw = await readFile(STORE_PATH, 'utf8');
-    return JSON.parse(raw) as XeroConnectionStoreFile;
+    const raw = await readFile(LEGACY_STORE_PATH, 'utf8');
+    return JSON.parse(raw) as Record<string, XeroConnectionRecord>;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return {};
@@ -27,18 +34,34 @@ async function readStore(): Promise<XeroConnectionStoreFile> {
   }
 }
 
-async function writeStore(store: XeroConnectionStoreFile): Promise<void> {
-  await mkdir(STORE_DIR, { recursive: true });
-  await writeFile(STORE_PATH, JSON.stringify(store, null, 2), 'utf8');
+async function migrateLegacyRecord(
+  appTenantId: string,
+  record: XeroConnectionRecord
+): Promise<void> {
+  await writeIntegrationSecret('xero', appTenantId, record);
+
+  const legacy = await readLegacyStore();
+  if (!legacy[appTenantId]) return;
+
+  delete legacy[appTenantId];
+  await mkdir(path.dirname(LEGACY_STORE_PATH), { recursive: true });
+  await writeFile(LEGACY_STORE_PATH, JSON.stringify(legacy, null, 2), 'utf8');
 }
 
-export async function getXeroConnection(tenantId: string): Promise<XeroConnectionRecord | null> {
-  const store = await readStore();
-  return store[tenantId] ?? null;
+export async function getXeroConnection(appTenantId: string): Promise<XeroConnectionRecord | null> {
+  const record = await readIntegrationSecret<XeroConnectionRecord>('xero', appTenantId);
+  if (record) return record;
+
+  const legacy = await readLegacyStore();
+  const legacyRecord = legacy[appTenantId];
+  if (!legacyRecord) return null;
+
+  await migrateLegacyRecord(appTenantId, legacyRecord);
+  return legacyRecord;
 }
 
 export async function saveXeroConnection(
-  tenantId: string,
+  appTenantId: string,
   input: { xeroTenantId: string; organisationName: string; refreshToken: string }
 ): Promise<XeroConnectionRecord> {
   const record: XeroConnectionRecord = {
@@ -48,15 +71,37 @@ export async function saveXeroConnection(
     connectedAt: new Date().toISOString()
   };
 
-  const store = await readStore();
-  store[tenantId] = record;
-  await writeStore(store);
-
+  await writeIntegrationSecret('xero', appTenantId, record);
   return record;
 }
 
-export async function getXeroRefreshToken(tenantId: string): Promise<string | null> {
-  const connection = await getXeroConnection(tenantId);
+export async function getXeroRefreshToken(appTenantId: string): Promise<string | null> {
+  const connection = await getXeroConnection(appTenantId);
   if (!connection) return null;
   return decryptSecret(connection.refreshToken);
+}
+
+export async function updateXeroRefreshToken(
+  appTenantId: string,
+  refreshToken: string
+): Promise<void> {
+  const connection = await getXeroConnection(appTenantId);
+  if (!connection) {
+    throw new Error('Xero connection not found');
+  }
+
+  await writeIntegrationSecret('xero', appTenantId, {
+    ...connection,
+    refreshToken: encryptSecret(refreshToken)
+  });
+}
+
+export async function deleteXeroConnection(appTenantId: string): Promise<void> {
+  await deleteIntegrationSecret('xero', appTenantId);
+
+  const legacy = await readLegacyStore();
+  if (!legacy[appTenantId]) return;
+
+  delete legacy[appTenantId];
+  await writeFile(LEGACY_STORE_PATH, JSON.stringify(legacy, null, 2), 'utf8');
 }

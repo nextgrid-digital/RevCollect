@@ -43,6 +43,13 @@ export function CustomersList({ selectedId, showListTitle = true, className }: C
       >
         {listState.isPending ? (
           <p className='text-sidebar-foreground/70 px-4 py-12 text-center text-sm'>Loading…</p>
+        ) : listState.isError ? (
+          <div className='space-y-2 px-4 py-12 text-center text-sm'>
+            <p className='text-destructive'>Could not load customers from Xero.</p>
+            <p className='text-muted-foreground'>
+              {listState.errorMessage ?? 'Reconnect Xero in Settings → Integrations.'}
+            </p>
+          </div>
         ) : listState.filteredCustomers.length === 0 ? (
           <p className='text-sidebar-foreground/70 px-4 py-12 text-center text-sm'>
             {listState.emptyMessage}

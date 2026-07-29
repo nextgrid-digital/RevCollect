@@ -109,3 +109,53 @@ export async function fetchXeroConnections(accessToken: string): Promise<XeroCon
 
   return response.json() as Promise<XeroConnection[]>;
 }
+
+export interface XeroRefreshedTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export function isXeroInvalidGrantError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('invalid_grant') || message.includes('Refresh token has been consumed');
+}
+
+export async function refreshXeroAccessToken(
+  config: XeroOAuthConfig,
+  refreshToken: string
+): Promise<XeroRefreshedTokens> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken
+  });
+
+  const response = await fetch(XERO_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: getBasicAuthHeader(config),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    const error = new Error(`Xero token refresh failed: ${response.status} ${detail}`);
+    if (isXeroInvalidGrantError(error)) {
+      error.name = 'XeroInvalidGrantError';
+    }
+    throw error;
+  }
+
+  const payload = (await response.json()) as XeroTokenResponse;
+  if (!payload.access_token) {
+    throw new Error('Xero token refresh did not return an access token');
+  }
+
+  return {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token ?? refreshToken,
+    expiresIn: payload.expires_in
+  };
+}
