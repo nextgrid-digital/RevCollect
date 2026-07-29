@@ -75,13 +75,33 @@ export function ImportInvoicesView() {
       toast.error('Select at least one invoice');
       return;
     }
+    if (selected.length > 200) {
+      toast.error('Select at most 200 invoices at a time');
+      return;
+    }
+
+    const draftsPayload = selected.map((draft) => ({
+      id: String(draft.id ?? ''),
+      sourceFileName: String(draft.sourceFileName ?? 'import'),
+      customerName: String(draft.customerName ?? ''),
+      customerEmail: String(draft.customerEmail ?? ''),
+      invoiceNumber: String(draft.invoiceNumber ?? ''),
+      issueDate: String(draft.issueDate ?? ''),
+      dueDate: String(draft.dueDate ?? ''),
+      description: String(draft.description ?? ''),
+      amount: Number(draft.amount) || 0,
+      currency: String(draft.currency ?? 'USD') || 'USD',
+      confidence: Number(draft.confidence) || 0,
+      notes: typeof draft.notes === 'string' ? draft.notes : undefined,
+      selected: true
+    }));
 
     startCreate(async () => {
       try {
         const response = await fetch('/api/integrations/xero/import/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ drafts: selected })
+          body: JSON.stringify({ drafts: draftsPayload })
         });
         const payload = (await response.json()) as {
           results?: InvoiceImportCreateResult[];
