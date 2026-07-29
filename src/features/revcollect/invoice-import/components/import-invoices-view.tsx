@@ -115,7 +115,17 @@ export function ImportInvoicesView() {
         void queryClient.invalidateQueries({ queryKey: revcollectKeys.customers() });
         void queryClient.invalidateQueries({ queryKey: revcollectKeys.invoices() });
         void queryClient.invalidateQueries({ queryKey: revcollectKeys.agingBuckets() });
-        toast.success(`Created ${payload.createdCount ?? 0} invoice(s) in Xero`);
+
+        const createdCount = payload.createdCount ?? 0;
+        const failed = (payload.results ?? []).filter((result) => !result.ok);
+        if (createdCount === 0) {
+          const sample = failed[0]?.error ?? 'No invoices were created';
+          toast.error(`Created 0 invoices. ${sample}`);
+        } else if (failed.length > 0) {
+          toast.success(`Created ${createdCount}, ${failed.length} failed`);
+        } else {
+          toast.success(`Created ${createdCount} invoice(s) in Xero`);
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Create failed');
       }
@@ -275,9 +285,13 @@ export function ImportInvoicesView() {
               ) : null}
 
               {results.length > 0 ? (
-                <div className='space-y-2'>
+                <div className='space-y-2 rounded-lg border border-border p-4'>
                   <p className='text-sm font-medium'>Results</p>
-                  <ul className='space-y-1 text-sm'>
+                  <p className='text-muted-foreground text-xs'>
+                    {results.filter((result) => result.ok).length} created,{' '}
+                    {results.filter((result) => !result.ok).length} failed
+                  </p>
+                  <ul className='max-h-64 space-y-1 overflow-y-auto text-sm'>
                     {results.map((result) => (
                       <li key={result.id}>
                         {result.ok ? (

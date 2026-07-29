@@ -4,6 +4,7 @@ import { createXeroInvoicesFromDrafts } from '@/features/revcollect/invoice-impo
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
 
 export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 const MAX_DRAFTS = 500;
 

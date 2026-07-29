@@ -37,8 +37,12 @@ export interface XeroInvoiceContact {
   Name?: string;
 }
 
+export interface XeroValidationError {
+  Message?: string;
+}
+
 export interface XeroInvoice {
-  InvoiceID: string;
+  InvoiceID?: string;
   InvoiceNumber?: string;
   Type?: string;
   Status?: string;
@@ -48,6 +52,8 @@ export interface XeroInvoice {
   AmountDue?: number;
   Total?: number;
   Contact?: XeroInvoiceContact;
+  HasErrors?: boolean;
+  ValidationErrors?: XeroValidationError[];
 }
 
 interface XeroContactsResponse {
@@ -56,6 +62,10 @@ interface XeroContactsResponse {
 
 interface XeroInvoicesResponse {
   Invoices?: XeroInvoice[];
+  Message?: string;
+  Elements?: Array<{
+    ValidationErrors?: XeroValidationError[];
+  }>;
 }
 
 interface ArCacheEntry {
@@ -149,7 +159,27 @@ async function xeroRequest<T>(
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Xero API ${path} failed: ${response.status} ${detail}`);
+    let message = `Xero API ${path} failed: ${response.status}`;
+    try {
+      const parsed = JSON.parse(detail) as {
+        Message?: string;
+        Detail?: string;
+        Elements?: Array<{ ValidationErrors?: Array<{ Message?: string }> }>;
+      };
+      const validation = parsed.Elements?.flatMap((element) =>
+        (element.ValidationErrors ?? []).map((error) => error.Message).filter(Boolean)
+      );
+      if (validation && validation.length > 0) {
+        message = validation.slice(0, 3).join('; ');
+      } else if (parsed.Message || parsed.Detail) {
+        message = [parsed.Message, parsed.Detail].filter(Boolean).join(': ');
+      }
+    } catch {
+      if (detail.trim()) {
+        message = `${message} ${detail.slice(0, 300)}`;
+      }
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;
@@ -320,5 +350,22 @@ export async function createXeroSalesInvoices(
   });
 
   clearXeroArCache();
-  return created.Invoices ?? [];
+
+  const createdInvoices = created.Invoices ?? [];
+  const firstErrors = createdInvoices
+    .flatMap((invoice) => (invoice.ValidationErrors ?? []).map((error) => error.Message))
+    .filter((message): message is string => Boolean(message));
+
+  if (createdInvoices.length === 0 && created.Message) {
+    throw new Error(created.Message);
+  }
+
+  if (
+    firstErrors.length > 0 &&
+    createdInvoices.every((invoice) => !invoice.InvoiceID || invoice.HasErrors)
+  ) {
+    throw new Error(firstErrors.slice(0, 3).join('; '));
+  }
+
+  return createdInvoices;
 }

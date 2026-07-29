@@ -1,9 +1,12 @@
 import {
   createXeroSalesInvoices,
+  findOrCreateXeroContact,
   getXeroAccessContext,
   type CreateXeroInvoiceInput
 } from '@/lib/integrations/xero-api';
 import type { InvoiceImportCreateResult, InvoiceImportDraft } from './types';
+
+const CREATE_BATCH_SIZE = 25;
 
 function isValidDraft(draft: InvoiceImportDraft): string | null {
   if (!draft.customerName.trim()) return 'Customer name is required';
@@ -18,6 +21,9 @@ export async function createXeroInvoicesFromDrafts(
 ): Promise<InvoiceImportCreateResult[]> {
   const context = await getXeroAccessContext();
   const results: InvoiceImportCreateResult[] = [];
+  const contactIdByName = new Map<string, string>();
+
+  const validDrafts: InvoiceImportDraft[] = [];
 
   for (const draft of drafts) {
     const validationError = isValidDraft(draft);
@@ -30,42 +36,102 @@ export async function createXeroInvoicesFromDrafts(
       });
       continue;
     }
+    validDrafts.push(draft);
+  }
 
-    const payload: CreateXeroInvoiceInput = {
-      contactName: draft.customerName.trim(),
-      contactEmail: draft.customerEmail.trim() || undefined,
-      invoiceNumber: draft.invoiceNumber.trim() || undefined,
-      date: draft.issueDate,
-      dueDate: draft.dueDate,
-      status: 'AUTHORISED',
-      reference: draft.sourceFileName,
-      lineItems: [
-        {
-          description: draft.description.trim() || `Invoice ${draft.invoiceNumber || draft.id}`,
-          quantity: 1,
-          unitAmount: draft.amount
-        }
-      ]
-    };
-
+  for (const draft of validDrafts) {
+    const name = draft.customerName.trim();
+    if (contactIdByName.has(name)) continue;
     try {
-      const created = await createXeroSalesInvoices(context, [payload]);
-      const invoice = created[0];
-      results.push({
-        id: draft.id,
-        sourceFileName: draft.sourceFileName,
-        ok: Boolean(invoice?.InvoiceID),
-        xeroInvoiceId: invoice?.InvoiceID,
-        xeroInvoiceNumber: invoice?.InvoiceNumber,
-        error: invoice?.InvoiceID ? undefined : 'Xero did not return an invoice id'
+      const contact = await findOrCreateXeroContact(context, {
+        name,
+        email: draft.customerEmail.trim() || undefined
       });
+      contactIdByName.set(name, contact.ContactID);
     } catch (error) {
+      contactIdByName.set(
+        name,
+        `__error__:${error instanceof Error ? error.message : 'Failed to create contact'}`
+      );
+    }
+  }
+
+  const ready: Array<{ draft: InvoiceImportDraft; payload: CreateXeroInvoiceInput }> = [];
+
+  for (const draft of validDrafts) {
+    const name = draft.customerName.trim();
+    const contactId = contactIdByName.get(name) ?? '';
+    if (!contactId || contactId.startsWith('__error__:')) {
       results.push({
         id: draft.id,
         sourceFileName: draft.sourceFileName,
         ok: false,
-        error: error instanceof Error ? error.message : 'Failed to create invoice in Xero'
+        error: contactId.startsWith('__error__:')
+          ? contactId.slice('__error__:'.length)
+          : 'Contact could not be resolved in Xero'
       });
+      continue;
+    }
+
+    ready.push({
+      draft,
+      payload: {
+        contactId,
+        contactName: name,
+        contactEmail: draft.customerEmail.trim() || undefined,
+        invoiceNumber: draft.invoiceNumber.trim() || undefined,
+        date: draft.issueDate,
+        dueDate: draft.dueDate,
+        status: 'AUTHORISED',
+        reference: draft.sourceFileName,
+        lineItems: [
+          {
+            description: draft.description.trim() || `Invoice ${draft.invoiceNumber || draft.id}`,
+            quantity: 1,
+            unitAmount: draft.amount
+          }
+        ]
+      }
+    });
+  }
+
+  for (let i = 0; i < ready.length; i += CREATE_BATCH_SIZE) {
+    const batch = ready.slice(i, i + CREATE_BATCH_SIZE);
+    try {
+      const created = await createXeroSalesInvoices(
+        context,
+        batch.map((item) => item.payload)
+      );
+
+      for (let index = 0; index < batch.length; index++) {
+        const draft = batch[index].draft;
+        const invoice = created[index];
+        const validationMessage = invoice?.ValidationErrors?.map((error) => error.Message)
+          .filter(Boolean)
+          .join('; ');
+
+        results.push({
+          id: draft.id,
+          sourceFileName: draft.sourceFileName,
+          ok: Boolean(invoice?.InvoiceID) && !invoice?.HasErrors,
+          xeroInvoiceId: invoice?.InvoiceID,
+          xeroInvoiceNumber: invoice?.InvoiceNumber,
+          error:
+            invoice?.InvoiceID && !invoice.HasErrors
+              ? undefined
+              : validationMessage || 'Xero did not create this invoice'
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create invoice in Xero';
+      for (const item of batch) {
+        results.push({
+          id: item.draft.id,
+          sourceFileName: item.draft.sourceFileName,
+          ok: false,
+          error: message
+        });
+      }
     }
   }
 
