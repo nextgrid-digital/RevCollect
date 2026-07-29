@@ -6,7 +6,9 @@ export default function ConnectXeroPage() {
   return (
     <PageContainer compactMobile lockPageScroll flushTop flushX>
       <Suspense fallback={null}>
-        <ConnectXeroView nextStep={{ href: '/inbox', label: 'Go to inbox' }} />
+        <ConnectXeroView
+          nextStep={{ href: '/onboarding/import-invoices', label: 'Import invoices' }}
+        />
       </Suspense>
     </PageContainer>
   );

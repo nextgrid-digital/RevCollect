@@ -50,11 +50,18 @@ export function SettingsIntegrationsView() {
           >
             <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
               <p className='text-muted-foreground text-sm'>{item.detail}</p>
-              {!item.connected ? (
-                <Button asChild size='sm' variant='outline'>
-                  <Link href={href}>Connect</Link>
-                </Button>
-              ) : null}
+              <div className='flex flex-wrap gap-2'>
+                {!item.connected ? (
+                  <Button asChild size='sm' variant='outline'>
+                    <Link href={href}>Connect</Link>
+                  </Button>
+                ) : null}
+                {key === 'xero' && item.connected ? (
+                  <Button asChild size='sm' variant='outline'>
+                    <Link href='/onboarding/import-invoices'>Import PDFs</Link>
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </SettingsSection>
         );

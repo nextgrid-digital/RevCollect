@@ -34,6 +34,12 @@ export function OnboardingSteps() {
       done: integrationStatus.xero.connected
     },
     {
+      title: 'Import PDF invoices',
+      description: 'Upload invoice PDFs and create them as open invoices in Xero.',
+      href: '/onboarding/import-invoices',
+      done: false
+    },
+    {
       title: 'Review your inbox',
       description: 'Start approving AI-drafted follow-ups.',
       href: '/inbox',

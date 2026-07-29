@@ -120,24 +120,31 @@ export async function getXeroAccessContext(
   return promise;
 }
 
-async function xeroGet<T>(
+async function xeroRequest<T>(
   context: XeroAccessContext,
+  method: 'GET' | 'POST' | 'PUT',
   path: string,
-  query?: Record<string, string>
+  options?: {
+    query?: Record<string, string>;
+    body?: unknown;
+  }
 ): Promise<T> {
   const url = new URL(`${XERO_ACCOUNTING_BASE}${path}`);
-  if (query) {
-    for (const [key, value] of Object.entries(query)) {
+  if (options?.query) {
+    for (const [key, value] of Object.entries(options.query)) {
       url.searchParams.set(key, value);
     }
   }
 
   const response = await fetch(url, {
+    method,
     headers: {
       Authorization: `Bearer ${context.accessToken}`,
       'Xero-Tenant-Id': context.xeroTenantId,
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+      ...(options?.body ? { 'Content-Type': 'application/json' } : {})
+    },
+    body: options?.body ? JSON.stringify(options.body) : undefined
   });
 
   if (!response.ok) {
@@ -146,6 +153,14 @@ async function xeroGet<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+async function xeroGet<T>(
+  context: XeroAccessContext,
+  path: string,
+  query?: Record<string, string>
+): Promise<T> {
+  return xeroRequest<T>(context, 'GET', path, { query });
 }
 
 export async function fetchXeroContacts(context: XeroAccessContext): Promise<XeroContact[]> {
@@ -193,4 +208,117 @@ export async function fetchXeroAccountsReceivable(appTenantId?: string): Promise
 
 export function clearXeroArCache(): void {
   arCache.clear();
+}
+
+export interface CreateXeroContactInput {
+  name: string;
+  email?: string;
+}
+
+export interface CreateXeroInvoiceLineInput {
+  description: string;
+  quantity: number;
+  unitAmount: number;
+  accountCode?: string;
+}
+
+export interface CreateXeroInvoiceInput {
+  contactId?: string;
+  contactName?: string;
+  contactEmail?: string;
+  invoiceNumber?: string;
+  reference?: string;
+  date: string;
+  dueDate: string;
+  status?: 'DRAFT' | 'AUTHORISED';
+  lineItems: CreateXeroInvoiceLineInput[];
+}
+
+function defaultSalesAccountCode(): string {
+  return process.env.XERO_SALES_ACCOUNT_CODE?.trim() || '200';
+}
+
+export async function findOrCreateXeroContact(
+  context: XeroAccessContext,
+  input: CreateXeroContactInput
+): Promise<XeroContact> {
+  const name = input.name.trim();
+  if (!name) {
+    throw new Error('Contact name is required');
+  }
+
+  const escapedName = name.replaceAll('"', '');
+  const existing = await xeroGet<XeroContactsResponse>(context, '/Contacts', {
+    where: `Name=="${escapedName}"`
+  });
+  const match = existing.Contacts?.find((contact) => contact.Name?.trim() === name);
+  if (match?.ContactID) {
+    return match;
+  }
+
+  const created = await xeroRequest<XeroContactsResponse>(context, 'POST', '/Contacts', {
+    body: {
+      Contacts: [
+        {
+          Name: name,
+          EmailAddress: input.email?.trim() || undefined,
+          IsCustomer: true
+        }
+      ]
+    }
+  });
+
+  const contact = created.Contacts?.[0];
+  if (!contact?.ContactID) {
+    throw new Error(`Failed to create Xero contact for ${name}`);
+  }
+  return contact;
+}
+
+export async function createXeroSalesInvoices(
+  context: XeroAccessContext,
+  invoices: CreateXeroInvoiceInput[]
+): Promise<XeroInvoice[]> {
+  if (invoices.length === 0) return [];
+
+  const accountCode = defaultSalesAccountCode();
+  const payloadInvoices = [];
+
+  for (const invoice of invoices) {
+    let contactId = invoice.contactId;
+    if (!contactId) {
+      if (!invoice.contactName) {
+        throw new Error('Each invoice needs a contactId or contactName');
+      }
+      const contact = await findOrCreateXeroContact(context, {
+        name: invoice.contactName,
+        email: invoice.contactEmail
+      });
+      contactId = contact.ContactID;
+    }
+
+    payloadInvoices.push({
+      Type: 'ACCREC',
+      Contact: { ContactID: contactId },
+      Date: invoice.date,
+      DueDate: invoice.dueDate,
+      InvoiceNumber: invoice.invoiceNumber || undefined,
+      Reference: invoice.reference || undefined,
+      Status: invoice.status ?? 'AUTHORISED',
+      LineAmountTypes: 'Exclusive',
+      LineItems: invoice.lineItems.map((line) => ({
+        Description: line.description,
+        Quantity: line.quantity,
+        UnitAmount: line.unitAmount,
+        AccountCode: line.accountCode || accountCode
+      }))
+    });
+  }
+
+  const created = await xeroRequest<XeroInvoicesResponse>(context, 'POST', '/Invoices', {
+    body: { Invoices: payloadInvoices }
+  });
+
+  clearXeroArCache();
+  return created.Invoices ?? [];
 }
