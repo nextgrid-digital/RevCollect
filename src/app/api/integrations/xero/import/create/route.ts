@@ -53,7 +53,16 @@ const draftSchema = z.preprocess(
         if (typeof notes === 'number' || typeof notes === 'boolean') return String(notes);
         return undefined;
       })(),
-      selected: asBoolean(value.selected, true)
+      selected: asBoolean(value.selected, true),
+      invoiceAmount: value.invoiceAmount == null ? undefined : asNumber(value.invoiceAmount),
+      openAmount: value.openAmount == null ? undefined : asNumber(value.openAmount),
+      amountPaid: value.amountPaid == null ? undefined : asNumber(value.amountPaid),
+      status: value.status == null ? undefined : asString(value.status),
+      paymentDate: value.paymentDate == null ? undefined : asString(value.paymentDate),
+      daysPastDue: value.daysPastDue == null ? undefined : asNumber(value.daysPastDue),
+      daysToPay: value.daysToPay == null ? undefined : asNumber(value.daysToPay),
+      bucket: value.bucket == null ? undefined : asString(value.bucket),
+      termsDays: value.termsDays == null ? undefined : asNumber(value.termsDays)
     };
   },
   z.object({
@@ -69,7 +78,16 @@ const draftSchema = z.preprocess(
     currency: z.string(),
     confidence: z.number().finite(),
     notes: z.string().optional(),
-    selected: z.boolean()
+    selected: z.boolean(),
+    invoiceAmount: z.number().finite().optional(),
+    openAmount: z.number().finite().optional(),
+    amountPaid: z.number().finite().optional(),
+    status: z.string().optional(),
+    paymentDate: z.string().optional(),
+    daysPastDue: z.number().finite().optional(),
+    daysToPay: z.number().finite().optional(),
+    bucket: z.string().optional(),
+    termsDays: z.number().finite().optional()
   })
 );
 

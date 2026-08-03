@@ -93,7 +93,16 @@ export function ImportInvoicesView() {
       currency: String(draft.currency ?? 'USD') || 'USD',
       confidence: Number(draft.confidence) || 0,
       notes: typeof draft.notes === 'string' ? draft.notes : undefined,
-      selected: true
+      selected: true,
+      invoiceAmount: draft.invoiceAmount,
+      openAmount: draft.openAmount,
+      amountPaid: draft.amountPaid,
+      status: draft.status,
+      paymentDate: draft.paymentDate,
+      daysPastDue: draft.daysPastDue,
+      daysToPay: draft.daysToPay,
+      bucket: draft.bucket,
+      termsDays: draft.termsDays
     }));
 
     startCreate(async () => {
@@ -191,7 +200,16 @@ export function ImportInvoicesView() {
               {drafts.length > 0 ? (
                 <div className='space-y-4'>
                   <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <p className='text-sm font-medium'>Review before creating</p>
+                    <div className='space-y-1'>
+                      <p className='text-sm font-medium'>Review before creating</p>
+                      <p className='text-muted-foreground text-xs'>
+                        {drafts.filter((draft) => draft.selected).length} selected · {drafts.length}{' '}
+                        extracted
+                        {drafts.some((draft) => draft.openAmount != null)
+                          ? ' · Amount uses OpenAmount when present'
+                          : ''}
+                      </p>
+                    </div>
                     <Button
                       type='button'
                       onClick={handleCreate}
@@ -216,7 +234,14 @@ export function ImportInvoicesView() {
                           <div className='min-w-0 flex-1 space-y-3'>
                             <div className='flex flex-wrap items-center gap-2'>
                               <Icons.page className='size-4 shrink-0' />
-                              <p className='truncate text-sm font-medium'>{draft.sourceFileName}</p>
+                              <p className='truncate text-sm font-medium'>
+                                {draft.invoiceNumber || draft.sourceFileName}
+                              </p>
+                              {draft.status ? (
+                                <span className='bg-muted rounded px-1.5 py-0.5 text-xs'>
+                                  {draft.status}
+                                </span>
+                              ) : null}
                               <span className='text-muted-foreground text-xs'>
                                 confidence {Math.round(draft.confidence * 100)}%
                               </span>
@@ -257,7 +282,7 @@ export function ImportInvoicesView() {
                                 onChange={(value) => updateDraft(draft.id, { dueDate: value })}
                               />
                               <Field
-                                label='Amount'
+                                label='Amount (to Xero)'
                                 type='number'
                                 value={String(draft.amount)}
                                 onChange={(value) =>
@@ -266,6 +291,59 @@ export function ImportInvoicesView() {
                                   })
                                 }
                               />
+                              {draft.invoiceAmount != null ? (
+                                <Field
+                                  label='Invoice amount'
+                                  type='number'
+                                  value={String(draft.invoiceAmount)}
+                                  onChange={(value) =>
+                                    updateDraft(draft.id, {
+                                      invoiceAmount: Number(value) || 0
+                                    })
+                                  }
+                                />
+                              ) : null}
+                              {draft.openAmount != null ? (
+                                <Field
+                                  label='Open amount'
+                                  type='number'
+                                  value={String(draft.openAmount)}
+                                  onChange={(value) =>
+                                    updateDraft(draft.id, {
+                                      openAmount: Number(value) || 0
+                                    })
+                                  }
+                                />
+                              ) : null}
+                              {draft.amountPaid != null ? (
+                                <Field
+                                  label='Amount paid'
+                                  type='number'
+                                  value={String(draft.amountPaid)}
+                                  onChange={(value) =>
+                                    updateDraft(draft.id, {
+                                      amountPaid: Number(value) || 0
+                                    })
+                                  }
+                                />
+                              ) : null}
+                              {draft.paymentDate ? (
+                                <Field
+                                  label='Payment date'
+                                  type='date'
+                                  value={draft.paymentDate}
+                                  onChange={(value) =>
+                                    updateDraft(draft.id, { paymentDate: value })
+                                  }
+                                />
+                              ) : null}
+                              {draft.status ? (
+                                <Field
+                                  label='Status'
+                                  value={draft.status}
+                                  onChange={(value) => updateDraft(draft.id, { status: value })}
+                                />
+                              ) : null}
                               <div className='sm:col-span-2 lg:col-span-3'>
                                 <Field
                                   label='Description'
