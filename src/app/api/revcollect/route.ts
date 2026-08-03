@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getXeroRevCollectService } from '@/features/revcollect/api/xero-service';
+import { clearXeroArCache } from '@/lib/integrations/xero-api';
 import type {
   AgingBucket,
   AgingReportFilters,
@@ -8,6 +9,7 @@ import type {
 } from '@/features/revcollect/types';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function parseAgingFilters(request: NextRequest): AgingReportFilters {
   const period = (request.nextUrl.searchParams.get('period') ?? 'this_month') as AgingReportPeriod;
@@ -20,6 +22,10 @@ export async function GET(request: NextRequest) {
   const op = request.nextUrl.searchParams.get('op');
   if (!op) {
     return NextResponse.json({ error: 'Missing op' }, { status: 400 });
+  }
+
+  if (request.nextUrl.searchParams.get('refresh') === '1') {
+    clearXeroArCache();
   }
 
   const service = getXeroRevCollectService();

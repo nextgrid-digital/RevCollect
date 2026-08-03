@@ -49,6 +49,7 @@ import {
   IconPlugConnected,
   IconReportMoney,
   IconRobot,
+  IconRefresh,
   IconInfoCircle,
   IconItalic,
   IconLayoutDashboard,
@@ -120,6 +121,7 @@ export const Icons = {
   search: IconSearch,
   settings: IconSettings,
   trash: IconTrash,
+  refresh: IconRefresh,
 
   // Navigation / Chevrons
   chevronDown: IconChevronDown,

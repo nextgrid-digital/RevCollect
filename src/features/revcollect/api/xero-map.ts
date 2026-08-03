@@ -84,7 +84,11 @@ export function isOpenReceivableInvoice(invoice: XeroInvoice): boolean {
   if (!OPEN_INVOICE_STATUSES.has(status) && status !== 'PAID') {
     return false;
   }
-  return (invoice.AmountDue ?? 0) > 0.0001;
+  const amountDue =
+    typeof invoice.AmountDue === 'number' ? invoice.AmountDue : (invoice.Total ?? 0);
+  // PAID with zero due should not appear in AR dashboard.
+  if (status === 'PAID') return amountDue > 0.0001;
+  return amountDue > 0.0001;
 }
 
 export function mapXeroInvoice(invoice: XeroInvoice): Invoice | null {

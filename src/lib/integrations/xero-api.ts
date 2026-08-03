@@ -194,17 +194,40 @@ async function xeroGet<T>(
 }
 
 export async function fetchXeroContacts(context: XeroAccessContext): Promise<XeroContact[]> {
-  const data = await xeroGet<XeroContactsResponse>(context, '/Contacts', {
-    where: 'ContactStatus=="ACTIVE"'
-  });
-  return data.Contacts ?? [];
+  const contacts: XeroContact[] = [];
+  let page = 1;
+
+  while (page <= 50) {
+    const data = await xeroGet<XeroContactsResponse>(context, '/Contacts', {
+      where: 'ContactStatus=="ACTIVE"',
+      page: String(page)
+    });
+    const batch = data.Contacts ?? [];
+    contacts.push(...batch);
+    if (batch.length < 100) break;
+    page += 1;
+  }
+
+  return contacts;
 }
 
 export async function fetchXeroInvoices(context: XeroAccessContext): Promise<XeroInvoice[]> {
-  const data = await xeroGet<XeroInvoicesResponse>(context, '/Invoices', {
-    where: 'Type=="ACCREC"'
-  });
-  return (data.Invoices ?? []).filter((invoice) => {
+  const invoices: XeroInvoice[] = [];
+  let page = 1;
+
+  while (page <= 50) {
+    const data = await xeroGet<XeroInvoicesResponse>(context, '/Invoices', {
+      where: 'Type=="ACCREC"',
+      page: String(page),
+      order: 'UpdatedDateUTC DESC'
+    });
+    const batch = data.Invoices ?? [];
+    invoices.push(...batch);
+    if (batch.length < 100) break;
+    page += 1;
+  }
+
+  return invoices.filter((invoice) => {
     const status = invoice.Status ?? '';
     return status !== 'DELETED' && status !== 'VOIDED' && status !== 'DRAFT';
   });
