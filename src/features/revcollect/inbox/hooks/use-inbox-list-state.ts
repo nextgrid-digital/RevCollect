@@ -25,7 +25,9 @@ function getListEmptyMessage(
   if (searchQuery.trim() && !hasResults) {
     return 'No threads match your search';
   }
-  if (filter === 'all') return 'No threads';
+  if (filter === 'all') {
+    return 'No open Xero invoices yet. Refresh from Xero, or connect Gmail for email threads.';
+  }
   if (filter === 'needs_attention') return 'No threads need attention';
   if (filter === 'overdue') return 'No overdue threads';
   if (filter === 'drafts') return 'No AI drafts ready';

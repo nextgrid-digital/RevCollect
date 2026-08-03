@@ -265,20 +265,38 @@ export function buildSyntheticInboxFromInvoices(
   const customerById = new Map(customers.map((customer) => [customer.id, customer]));
 
   return invoices
-    .filter((invoice) => getDaysOverdueFromDueDate(invoice.dueDate) > 0)
-    .toSorted((a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate))
+    .filter((invoice) => invoice.amountCents > 0)
+    .toSorted((a, b) => {
+      const daysDiff = getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate);
+      if (daysDiff !== 0) return daysDiff;
+      return b.amountCents - a.amountCents;
+    })
     .map((invoice) => {
       const days = getDaysOverdueFromDueDate(invoice.dueDate);
       const customer = customerById.get(invoice.customerId);
+      const amount = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(invoice.amountCents / 100);
+
+      const overdue = days > 0;
+      const subject = overdue
+        ? `Invoice ${invoice.number} overdue`
+        : `Invoice ${invoice.number} outstanding`;
+      const preview = overdue
+        ? `${customer?.name ?? 'Customer'} · ${amount} · ${days} day${days === 1 ? '' : 's'} past due`
+        : `${customer?.name ?? 'Customer'} · ${amount} · due ${invoice.dueDate}`;
+
       return {
         id: `xero-inv-${invoice.id}`,
         customerId: invoice.customerId,
-        subject: `Invoice ${invoice.number} overdue`,
-        preview: `${customer?.name ?? 'Customer'} · ${days} day${days === 1 ? '' : 's'} past due`,
+        subject,
+        preview,
         receivedAt: new Date().toISOString(),
-        unread: true,
+        unread: overdue,
         channel: 'email' as const,
-        suggestedAction: 'Draft follow-up',
+        suggestedAction: overdue ? 'Draft follow-up' : 'Review invoice',
         agentDraftReady: false
       };
     });

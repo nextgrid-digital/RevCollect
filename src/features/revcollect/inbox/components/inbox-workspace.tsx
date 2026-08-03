@@ -7,6 +7,7 @@ import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { XeroConnectPrompt } from '@/features/revcollect/components/xero-connect-prompt';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
 import { useInboxListState } from '../hooks/use-inbox-list-state';
 import { preserveInboxListQueryPath } from '../lib/inbox-list-query';
@@ -110,30 +111,33 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   );
 
   return (
-    <WorkspaceCanvas>
-      {isMobile ? (
-        <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
-          {activeMessageId ? (
-            <WorkspacePageTitle
-              className='h-8 shrink-0'
-              breadcrumbs={[{ label: 'Inbox', href: inboxListHref }, { label: messageSubject }]}
-            />
-          ) : (
-            <InboxMessageListTitle className='h-8 shrink-0' />
-          )}
-          {showListOnMobile ? (
-            <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
-              {listContent(false)}
-            </WorkspaceCard>
-          ) : null}
-          {showThreadOnMobile ? threadColumn : null}
-        </div>
-      ) : (
-        <>
-          {listColumnDesktop}
-          {desktopWorkspace}
-        </>
-      )}
-    </WorkspaceCanvas>
+    <div className='flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-hidden'>
+      <XeroConnectPrompt />
+      <WorkspaceCanvas>
+        {isMobile ? (
+          <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
+            {activeMessageId ? (
+              <WorkspacePageTitle
+                className='h-8 shrink-0'
+                breadcrumbs={[{ label: 'Inbox', href: inboxListHref }, { label: messageSubject }]}
+              />
+            ) : (
+              <InboxMessageListTitle className='h-8 shrink-0' />
+            )}
+            {showListOnMobile ? (
+              <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
+                {listContent(false)}
+              </WorkspaceCard>
+            ) : null}
+            {showThreadOnMobile ? threadColumn : null}
+          </div>
+        ) : (
+          <>
+            {listColumnDesktop}
+            {desktopWorkspace}
+          </>
+        )}
+      </WorkspaceCanvas>
+    </div>
   );
 }
