@@ -3,9 +3,13 @@ import { randomUUID } from 'crypto';
 import type { InvoiceImportDraft } from './types';
 import { emptyInvoiceDraft } from './extract-invoice-from-pdf';
 
+/** Xero rejects line amounts above this. */
+const MAX_XERO_LINE_AMOUNT = 999_999_999_999.99;
+
 function normalizeDate(value: unknown): string {
   if (!value) return '';
   if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
     return value.toISOString().slice(0, 10);
   }
   const str = String(value).trim();
@@ -20,12 +24,38 @@ function normalizeDate(value: unknown): string {
 }
 
 function normalizeAmount(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return Math.abs(value);
-  const cleaned = String(value ?? '')
-    .replace(/[^0-9.\-]/g, '')
-    .trim();
+  // Dates accidentally mapped to Amount become huge digit strings — never treat as money.
+  if (value instanceof Date) return 0;
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const amount = Math.abs(value);
+    if (amount > MAX_XERO_LINE_AMOUNT) return 0;
+    return amount;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!raw || /[a-z]/i.test(raw.replace(/[eE]/g, ''))) {
+    // Reject date-like / textual values (e.g. "Sat Feb 01 2025...")
+    if (/[a-z]/i.test(raw)) return 0;
+  }
+
+  // Support 25,350 and 25.350,00 style amounts
+  let cleaned = raw.replace(/[^0-9.,\-]/g, '');
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    cleaned = cleaned.replace(/,/g, '');
+  } else if (cleaned.includes(',') && !cleaned.includes('.')) {
+    const parts = cleaned.split(',');
+    cleaned =
+      parts.length === 2 && parts[1].length <= 2
+        ? `${parts[0].replace(/\./g, '')}.${parts[1]}`
+        : cleaned.replace(/,/g, '');
+  }
+
   const num = Number.parseFloat(cleaned);
-  return Number.isFinite(num) ? Math.abs(num) : 0;
+  if (!Number.isFinite(num)) return 0;
+  const amount = Math.abs(num);
+  if (amount > MAX_XERO_LINE_AMOUNT) return 0;
+  return amount;
 }
 
 function todayIso(): string {
@@ -48,27 +78,43 @@ interface HeaderMap {
   amount: number;
 }
 
-const HEADER_PATTERNS: Record<keyof HeaderMap, RegExp> = {
-  customer: /customer|client|company|buyer|bill\s*to|name/i,
-  email: /email|e-mail/i,
-  invoiceNumber: /invoice\s*#|invoice\s*no|inv\s*#|number/i,
-  issueDate: /issue|invoice\s*date|date/i,
-  dueDate: /due|payment\s*date/i,
-  description: /desc|memo|notes|line|item|subject/i,
-  amount: /amount|total|balance|due|value/i
-};
+/** More specific patterns first. Each column may only bind to one field. */
+const HEADER_MATCHERS: Array<{ key: keyof HeaderMap; pattern: RegExp }> = [
+  { key: 'email', pattern: /^(customer)?e-?mail$/i },
+  { key: 'invoiceNumber', pattern: /^(invoice)?(#|no\.?|number)$|^inv(?:oice)?(?:number|#)?$/i },
+  { key: 'issueDate', pattern: /^(invoice)?date$|^issue(date)?$/i },
+  { key: 'dueDate', pattern: /^due(date)?$/i },
+  { key: 'amount', pattern: /^amount$|^total$|^balance$|^value$/i },
+  { key: 'customer', pattern: /^(customer|client|company|buyer|name)$|^billto$/i },
+  { key: 'description', pattern: /^(desc(ription)?|memo|notes|subject)$/i },
+  // Looser fallbacks (still exclusive — skips AmountPaid, DaysPastDue, PaymentDate)
+  { key: 'email', pattern: /email|e-mail/i },
+  { key: 'invoiceNumber', pattern: /invoice.*number|inv(?:oice)?(?:\s*#)?/i },
+  { key: 'issueDate', pattern: /invoice.*date|issue/i },
+  { key: 'dueDate', pattern: /due.*date/i },
+  { key: 'amount', pattern: /amount(?!\s*paid)|^(total|balance|value)$/i },
+  { key: 'customer', pattern: /customer|client|company|buyer|bill\s*to/i },
+  { key: 'description', pattern: /desc|memo|notes|subject/i }
+];
 
 function detectHeaders(row: unknown[]): HeaderMap | null {
   const map: Partial<HeaderMap> = {};
-  for (let i = 0; i < row.length; i++) {
-    const cell = String(row[i] ?? '').trim();
-    if (!cell) continue;
-    for (const [key, pattern] of Object.entries(HEADER_PATTERNS) as [keyof HeaderMap, RegExp][]) {
-      if (map[key] === undefined && pattern.test(cell)) {
+  const usedColumns = new Set<number>();
+
+  for (const { key, pattern } of HEADER_MATCHERS) {
+    if (map[key] !== undefined) continue;
+    for (let i = 0; i < row.length; i++) {
+      if (usedColumns.has(i)) continue;
+      const cell = String(row[i] ?? '').trim();
+      if (!cell) continue;
+      if (pattern.test(cell)) {
         map[key] = i;
+        usedColumns.add(i);
+        break;
       }
     }
   }
+
   if (map.customer === undefined && map.amount === undefined) return null;
   return {
     customer: map.customer ?? -1,
@@ -83,7 +129,9 @@ function detectHeaders(row: unknown[]): HeaderMap | null {
 
 function cell(row: unknown[], index: number): string {
   if (index < 0 || index >= row.length) return '';
-  return String(row[index] ?? '').trim();
+  const value = row[index];
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value ?? '').trim();
 }
 
 export function extractDraftsFromSpreadsheet(
@@ -128,11 +176,16 @@ export function extractDraftsFromSpreadsheet(
       invoiceNumber: cell(row, headerMap.invoiceNumber),
       issueDate: normalizeDate(row[headerMap.issueDate]) || todayIso(),
       dueDate: normalizeDate(row[headerMap.dueDate]) || plus30(),
-      description: cell(row, headerMap.description) || `Row ${i + 1} from ${fileName}`,
+      description:
+        cell(row, headerMap.description) ||
+        `Invoice ${cell(row, headerMap.invoiceNumber) || i + 1}`,
       amount,
       currency: 'USD',
-      confidence: customerName && amount > 0 ? 0.8 : 0.3,
-      notes: undefined,
+      confidence: customerName && amount > 0 ? 0.9 : 0.3,
+      notes:
+        amount <= 0
+          ? 'Amount missing or invalid — check the Amount column in your spreadsheet.'
+          : undefined,
       selected: Boolean(customerName) && amount > 0
     });
   }

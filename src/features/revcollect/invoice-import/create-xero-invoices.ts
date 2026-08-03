@@ -11,6 +11,9 @@ const CREATE_BATCH_SIZE = 25;
 function isValidDraft(draft: InvoiceImportDraft): string | null {
   if (!draft.customerName.trim()) return 'Customer name is required';
   if (!(draft.amount > 0)) return 'Amount must be greater than 0';
+  if (draft.amount > 999_999_999_999.99) {
+    return 'Amount exceeds Xero maximum (check spreadsheet Amount column)';
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.issueDate)) return 'Issue date must be YYYY-MM-DD';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.dueDate)) return 'Due date must be YYYY-MM-DD';
   return null;
