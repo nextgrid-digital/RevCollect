@@ -103,16 +103,29 @@ export class XeroRevCollectService implements RevCollectService {
     const invoiceId = messageId.startsWith('xero-inv-')
       ? messageId.slice('xero-inv-'.length)
       : undefined;
-    const focusInvoice = customerInvoices.find((invoice) => invoice.id === invoiceId);
+    const focusInvoice = invoiceId
+      ? customerInvoices.find((invoice) => invoice.id === invoiceId)
+      : customerInvoices.toSorted(
+          (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
+        )[0];
     const days = focusInvoice
       ? getDaysOverdueFromDueDate(focusInvoice.dueDate)
       : customer.daysOverdue;
 
+    const invoiceSummary =
+      customerInvoices.length === 1
+        ? `Invoice ${customerInvoices[0].number}`
+        : `${customerInvoices.length} open invoices (${customerInvoices.map((invoice) => invoice.number).join(', ')})`;
+
     const placeholderBody = focusInvoice
-      ? `Invoice ${focusInvoice.number} is ${days} day${days === 1 ? '' : 's'} past due (${new Intl.NumberFormat(
-          'en-US',
-          { style: 'currency', currency: 'USD' }
-        ).format(focusInvoice.amountCents / 100)}). Connect Gmail to sync real email threads.`
+      ? `${invoiceSummary} totaling ${new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(customer.balanceCents / 100)}. ${
+          days > 0
+            ? `Oldest overdue item is ${days} day${days === 1 ? '' : 's'} past due.`
+            : 'Nothing is overdue yet.'
+        } Connect Gmail to sync real email threads.`
       : 'Connect Gmail to sync real collection email threads for this customer.';
 
     const threadEmails: ThreadEmail[] = [

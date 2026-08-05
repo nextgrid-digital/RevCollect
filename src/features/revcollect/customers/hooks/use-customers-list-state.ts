@@ -29,7 +29,9 @@ function getListEmptyMessage(
     return 'No customers match your search';
   }
 
-  if (filter === 'all') return 'No customers yet';
+  if (filter === 'all') {
+    return 'No customers with open Xero balances. Click Refresh from Xero after invoices are awaiting payment.';
+  }
   if (filter === 'high') return 'No high-risk customers';
   if (filter === 'watch') return 'No customers on watch';
   return 'No healthy customers';

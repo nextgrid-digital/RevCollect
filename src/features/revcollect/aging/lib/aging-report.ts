@@ -11,7 +11,7 @@ import type {
   Invoice
 } from '../../types';
 
-export const AGING_REPORT_AS_OF_DATE = '2026-06-15';
+export const AGING_REPORT_AS_OF_DATE = new Date().toISOString().slice(0, 10);
 
 const CHART_BUCKET_ORDER: AgingReportBucket[] = ['current', '1-15', '16-30', '31-60', '60+'];
 
@@ -253,9 +253,9 @@ export function buildAgingReportSummary(
     currentCents,
     overdueCents,
     weightedAvgDsoDays,
-    totalArDeltaPct: 8,
-    currentDeltaPct: 12,
-    overdueDeltaPct: 15,
-    dsoDeltaDays: 4
+    totalArDeltaPct: 0,
+    currentDeltaPct: 0,
+    overdueDeltaPct: 0,
+    dsoDeltaDays: 0
   };
 }

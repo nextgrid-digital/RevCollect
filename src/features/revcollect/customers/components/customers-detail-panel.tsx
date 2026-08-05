@@ -38,7 +38,7 @@ interface CustomersDetailPanelProps {
 
 function sortOutstandingInvoices(invoices: Invoice[]): Invoice[] {
   return [...invoices]
-    .filter((invoice) => invoice.status !== 'current')
+    .filter((invoice) => invoice.amountCents > 0)
     .sort((a, b) => {
       const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
       const statusDiff = statusOrder[a.status] - statusOrder[b.status];
@@ -196,7 +196,7 @@ export function CustomersDetailPanel({
                 {outstandingInvoices.length > 0 ? (
                   <MotionStaggerItem index={3}>
                     <section className='space-y-2'>
-                      <InboxContextSectionLabel>Outstanding invoices</InboxContextSectionLabel>
+                      <InboxContextSectionLabel>{`Outstanding invoices (${outstandingInvoices.length})`}</InboxContextSectionLabel>
                       <div className='space-y-2'>
                         {outstandingInvoices.map((invoice) => (
                           <CustomerOutstandingInvoiceCard
@@ -211,7 +211,7 @@ export function CustomersDetailPanel({
                 ) : (
                   <MotionStaggerItem index={3}>
                     <section className='space-y-2'>
-                      <InboxContextSectionLabel>Outstanding invoices</InboxContextSectionLabel>
+                      <InboxContextSectionLabel>Outstanding invoices (0)</InboxContextSectionLabel>
                       <p className='text-muted-foreground px-1 text-sm'>No open invoices.</p>
                     </section>
                   </MotionStaggerItem>

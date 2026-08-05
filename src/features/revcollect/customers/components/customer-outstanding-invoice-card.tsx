@@ -32,7 +32,7 @@ export function CustomerOutstandingInvoiceCard({
   followUpHref
 }: CustomerOutstandingInvoiceCardProps) {
   const daysOverdue = getDaysOverdueFromDueDate(invoice.dueDate);
-  const showOverdue = daysOverdue > 0 && invoice.status !== 'current';
+  const showOverdue = daysOverdue > 0;
 
   return (
     <div className='bg-card flex flex-col gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 ring-border/60 sm:flex-row sm:items-center sm:justify-between'>

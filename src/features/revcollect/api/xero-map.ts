@@ -116,8 +116,9 @@ function mapInvoiceStatus(
   daysOverdue: number,
   amountCents: number
 ): CollectionStatus {
-  if (amountCents <= 0 || xeroStatus === 'PAID') return 'current';
+  if (amountCents <= 0) return 'current';
   if (daysOverdue > 0) return 'overdue';
+  if (xeroStatus === 'PAID') return 'due_soon';
   return 'due_soon';
 }
 
@@ -262,41 +263,46 @@ export function buildSyntheticInboxFromInvoices(
   invoices: Invoice[],
   customers: Customer[]
 ): InboxMessage[] {
-  const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+  const openByCustomer = new Map<string, Invoice[]>();
+  for (const invoice of invoices) {
+    if (invoice.amountCents <= 0) continue;
+    const list = openByCustomer.get(invoice.customerId) ?? [];
+    list.push(invoice);
+    openByCustomer.set(invoice.customerId, list);
+  }
 
-  return invoices
-    .filter((invoice) => invoice.amountCents > 0)
-    .toSorted((a, b) => {
-      const daysDiff = getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate);
-      if (daysDiff !== 0) return daysDiff;
-      return b.amountCents - a.amountCents;
-    })
-    .map((invoice) => {
-      const days = getDaysOverdueFromDueDate(invoice.dueDate);
-      const customer = customerById.get(invoice.customerId);
-      const amount = new Intl.NumberFormat('en-US', {
+  return customers
+    .filter((customer) => (openByCustomer.get(customer.id)?.length ?? 0) > 0)
+    .toSorted((a, b) => b.balanceCents - a.balanceCents)
+    .map((customer) => {
+      const customerInvoices = (openByCustomer.get(customer.id) ?? []).toSorted(
+        (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
+      );
+      const overdueCount = customerInvoices.filter(
+        (invoice) => getDaysOverdueFromDueDate(invoice.dueDate) > 0
+      ).length;
+      const total = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
         maximumFractionDigits: 0
-      }).format(invoice.amountCents / 100);
-
-      const overdue = days > 0;
-      const subject = overdue
-        ? `Invoice ${invoice.number} overdue`
-        : `Invoice ${invoice.number} outstanding`;
-      const preview = overdue
-        ? `${customer?.name ?? 'Customer'} · ${amount} · ${days} day${days === 1 ? '' : 's'} past due`
-        : `${customer?.name ?? 'Customer'} · ${amount} · due ${invoice.dueDate}`;
+      }).format(customer.balanceCents / 100);
+      const invoiceLabel =
+        customerInvoices.length === 1
+          ? `Invoice ${customerInvoices[0].number}`
+          : `${customerInvoices.length} invoices`;
 
       return {
-        id: `xero-inv-${invoice.id}`,
-        customerId: invoice.customerId,
-        subject,
-        preview,
+        id: `xero-customer-${customer.id}`,
+        customerId: customer.id,
+        subject:
+          overdueCount > 0
+            ? `${customer.name} · ${invoiceLabel} overdue`
+            : `${customer.name} · ${invoiceLabel} outstanding`,
+        preview: `${total} open · ${customerInvoices.map((invoice) => invoice.number).join(', ')}`,
         receivedAt: new Date().toISOString(),
-        unread: overdue,
+        unread: overdueCount > 0,
         channel: 'email' as const,
-        suggestedAction: overdue ? 'Draft follow-up' : 'Review invoice',
+        suggestedAction: overdueCount > 0 ? 'Draft follow-up' : 'Review invoices',
         agentDraftReady: false
       };
     });

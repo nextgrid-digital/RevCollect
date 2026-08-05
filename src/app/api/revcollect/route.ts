@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 function parseAgingFilters(request: NextRequest): AgingReportFilters {
-  const period = (request.nextUrl.searchParams.get('period') ?? 'this_month') as AgingReportPeriod;
+  const period = (request.nextUrl.searchParams.get('period') ?? 'all_time') as AgingReportPeriod;
   const sort = (request.nextUrl.searchParams.get('sort') ?? 'amount_desc') as AgingReportSort;
   const customerId = request.nextUrl.searchParams.get('customerId') ?? undefined;
   return { period, sort, customerId: customerId || undefined };

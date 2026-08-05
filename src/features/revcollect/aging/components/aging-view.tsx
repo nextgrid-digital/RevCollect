@@ -19,7 +19,7 @@ import { AgingSummaryStats } from './aging-summary-stats';
 import { AgingToolbar } from './aging-toolbar';
 
 const defaultFilters: AgingReportFilters = {
-  period: 'this_month',
+  period: 'all_time',
   sort: 'amount_desc'
 };
 

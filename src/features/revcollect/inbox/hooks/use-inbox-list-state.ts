@@ -26,7 +26,7 @@ function getListEmptyMessage(
     return 'No threads match your search';
   }
   if (filter === 'all') {
-    return 'No open Xero invoices yet. Refresh from Xero, or connect Gmail for email threads.';
+    return 'No open Xero customers yet. Refresh from Xero after invoices are awaiting payment.';
   }
   if (filter === 'needs_attention') return 'No threads need attention';
   if (filter === 'overdue') return 'No overdue threads';

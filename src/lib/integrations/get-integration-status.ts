@@ -1,8 +1,13 @@
-import { integrationStatus as mockIntegrationStatus } from '@/features/revcollect/mock-data';
 import type { IntegrationStatus } from '@/features/revcollect/types';
 import { getGmailConnection } from './gmail-connection-store';
 import { getIntegrationTenantId } from './tenant';
 import { getXeroConnection } from './xero-connection-store';
+
+const DISCONNECTED = {
+  gmail: { connected: false, label: 'Gmail', detail: 'Not connected' },
+  xero: { connected: false, label: 'Xero', detail: 'Not connected' },
+  stripe: { connected: false, label: 'Stripe', detail: 'Not connected' }
+} as const satisfies IntegrationStatus;
 
 export async function getIntegrationStatus(): Promise<IntegrationStatus> {
   const tenantId = getIntegrationTenantId();
@@ -12,20 +17,20 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
   ]);
 
   return {
-    ...mockIntegrationStatus,
     gmail: gmailConnection
       ? {
           connected: true,
           label: 'Gmail',
           detail: gmailConnection.email
         }
-      : mockIntegrationStatus.gmail,
+      : DISCONNECTED.gmail,
     xero: xeroConnection
       ? {
           connected: true,
           label: 'Xero',
           detail: xeroConnection.organisationName
         }
-      : mockIntegrationStatus.xero
+      : DISCONNECTED.xero,
+    stripe: DISCONNECTED.stripe
   };
 }

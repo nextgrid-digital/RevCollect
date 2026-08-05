@@ -34,7 +34,7 @@ export function InboxContextInvoiceCard({
   onAttach
 }: InboxContextInvoiceCardProps) {
   const daysOverdue = getDaysOverdueFromDueDate(invoice.dueDate);
-  const showOverdue = daysOverdue > 0 && invoice.status !== 'current';
+  const showOverdue = daysOverdue > 0;
 
   return (
     <div className='bg-card w-full min-w-0 shrink-0 rounded-2xl px-3 py-2 shadow-sm ring-1 ring-border/60'>
