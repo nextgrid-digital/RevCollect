@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
+import { withEve } from 'eve/next';
 
 // Define the base Next.js configuration
 const baseConfig: NextConfig = {
@@ -68,5 +69,8 @@ if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
   });
 }
 
-const nextConfig = configWithPlugins;
+const nextConfig =
+  Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10) >= 24
+    ? withEve(configWithPlugins)
+    : configWithPlugins;
 export default nextConfig;

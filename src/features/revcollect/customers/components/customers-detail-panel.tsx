@@ -27,8 +27,10 @@ import { InboxActivityCard } from '../../inbox/components/inbox-activity-card';
 import { InboxAiInsightCard } from '../../inbox/components/inbox-ai-insight-card';
 import { InboxContextSectionLabel } from '../../inbox/components/inbox-context-section-label';
 import type { Invoice } from '../../types';
+import { isOpenCanonicalInvoice, isPaidCanonicalInvoice } from '../../lib/invoice-open';
 import { CustomerDetailMetricsRow } from './customer-detail-metrics-row';
 import { CustomerOutstandingInvoiceCard } from './customer-outstanding-invoice-card';
+import { CustomerPaidInvoiceCard } from './customer-paid-invoice-card';
 
 interface CustomersDetailPanelProps {
   customerId: string;
@@ -37,14 +39,18 @@ interface CustomersDetailPanelProps {
 }
 
 function sortOutstandingInvoices(invoices: Invoice[]): Invoice[] {
+  return [...invoices].filter(isOpenCanonicalInvoice).sort((a, b) => {
+    const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
+    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
+}
+
+function sortPaidInvoices(invoices: Invoice[]): Invoice[] {
   return [...invoices]
-    .filter((invoice) => invoice.amountCents > 0)
-    .sort((a, b) => {
-      const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (statusDiff !== 0) return statusDiff;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
+    .filter(isPaidCanonicalInvoice)
+    .sort((a, b) => (b.paidAt ?? b.dueDate).localeCompare(a.paidAt ?? a.dueDate));
 }
 
 export function CustomerActivityAside({
@@ -104,6 +110,7 @@ export function CustomersDetailPanel({
 
   const followUpHref = inboxThread ? `/inbox/${inboxThread.id}` : '/inbox';
   const outstandingInvoices = sortOutstandingInvoices(invoices);
+  const paidInvoices = sortPaidInvoices(invoices);
   const aiInsightText = inboxContext?.deepAnalysis?.trim() || inboxContext?.aiInsight?.trim() || '';
   const paymentTerms = inboxContext?.paymentTerms ?? 'Net-30';
 
@@ -216,6 +223,19 @@ export function CustomersDetailPanel({
                     </section>
                   </MotionStaggerItem>
                 )}
+
+                {paidInvoices.length > 0 ? (
+                  <MotionStaggerItem index={4}>
+                    <section className='space-y-2'>
+                      <InboxContextSectionLabel>{`Paid invoices (${paidInvoices.length})`}</InboxContextSectionLabel>
+                      <div className='space-y-2'>
+                        {paidInvoices.map((invoice) => (
+                          <CustomerPaidInvoiceCard key={invoice.id} invoice={invoice} />
+                        ))}
+                      </div>
+                    </section>
+                  </MotionStaggerItem>
+                ) : null}
               </MotionStagger>
             </div>
           </div>

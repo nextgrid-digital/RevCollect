@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getXeroRevCollectService } from '@/features/revcollect/api/xero-service';
+import { extractSituation } from '@/features/revcollect/extract/extract-situation';
+import { applyPreferencesFromEdit } from '@/features/revcollect/extract/preferences-from-edit';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { clearXeroArCache } from '@/lib/integrations/xero-api';
 import type {
   AgingBucket,
@@ -94,6 +97,8 @@ export async function GET(request: NextRequest) {
       }
       case 'getAgentConfig':
         return NextResponse.json(await service.getAgentConfig());
+      case 'getLatestChaseRun':
+        return NextResponse.json(await service.getLatestChaseRun());
       case 'getAgentAddonStatus':
         return NextResponse.json(await service.getAgentAddonStatus());
       case 'countAgentDraftsReady':
@@ -136,6 +141,34 @@ export async function POST(request: NextRequest) {
             body.payload as Parameters<typeof service.updateWorkspaceGeneralSettings>[0]
           )
         );
+      case 'recordInboxSend': {
+        const payload = body.payload as {
+          customerId?: string;
+          originalBody?: string;
+          sentBody?: string;
+          kind?: 'reply' | 'draft_edit';
+        };
+        if (!payload?.customerId || !payload.sentBody) {
+          return NextResponse.json({ error: 'customerId and sentBody required' }, { status: 400 });
+        }
+        const tenantId = await getIntegrationTenantId();
+        const kind = payload.kind ?? 'reply';
+        if (payload.originalBody) {
+          await applyPreferencesFromEdit(
+            tenantId,
+            payload.customerId,
+            payload.originalBody,
+            payload.sentBody
+          );
+        }
+        await extractSituation({
+          tenantId,
+          customerId: payload.customerId,
+          kind: kind === 'draft_edit' ? 'draft_edit' : 'reply',
+          text: payload.sentBody
+        });
+        return NextResponse.json({ ok: true });
+      }
       default:
         return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
     }

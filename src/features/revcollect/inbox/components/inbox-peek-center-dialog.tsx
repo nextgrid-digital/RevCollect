@@ -25,7 +25,7 @@ export function InboxPeekCenterDialog({ messageId, onClose }: InboxPeekCenterDia
         onOpenAutoFocus={(event) => {
           event.preventDefault();
         }}
-        className='flex h-[min(92vh,56rem)] w-[min(96vw,88rem)] max-h-[min(92vh,56rem)] max-w-[min(96vw,88rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,88rem)]'
+        className='flex h-[min(88vh,48rem)] w-full max-h-[min(88vh,48rem)] max-w-[min(56rem,calc(100vw-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(56rem,calc(100vw-2rem))]'
       >
         <DialogHeader className='sr-only'>
           <DialogTitle>Email thread</DialogTitle>

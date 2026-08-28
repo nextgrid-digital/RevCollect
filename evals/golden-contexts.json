@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "id": "harborline-overdue",
+      "draft": "Hi Sam, following up on INV-2041 for $12,400 due 2026-03-01. Please let us know if you need anything to process payment.",
+      "facts": {
+        "invoiceNumbers": ["INV-2041"],
+        "amounts": ["12400"],
+        "dates": ["2026-03-01"]
+      },
+      "expectOk": true
+    },
+    {
+      "id": "invented-invoice",
+      "draft": "Hi Sam, invoice INV-9999 for $12,400 is overdue.",
+      "facts": {
+        "invoiceNumbers": ["INV-2041"],
+        "amounts": ["12400"],
+        "dates": ["2026-03-01"]
+      },
+      "expectOk": false
+    },
+    {
+      "id": "invented-amount",
+      "draft": "Hi Sam, INV-2041 totaling $99,999 is still open.",
+      "facts": {
+        "invoiceNumbers": ["INV-2041"],
+        "amounts": ["12400"],
+        "dates": ["2026-03-01"]
+      },
+      "expectOk": false
+    }
+  ]
+}

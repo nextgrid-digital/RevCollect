@@ -37,6 +37,8 @@ export type TimelineEventType =
   | 'note'
   | 'promise';
 
+export type RelationshipState = 'normal' | 'sensitive' | 'paused';
+
 export interface Customer {
   id: string;
   name: string;
@@ -47,6 +49,7 @@ export interface Customer {
   status: CollectionStatus;
   balanceCents: number;
   daysOverdue: number;
+  relationshipState?: RelationshipState;
 }
 
 export type ReplyIntent = 'deflection' | 'promise' | 'dispute' | 'payment_confirmation' | 'other';
@@ -68,10 +71,18 @@ export interface Invoice {
   id: string;
   customerId: string;
   number: string;
+  /** Invoice face value (Xero Total). */
   amountCents: number;
   dueDate: string;
   status: CollectionStatus;
   agingBucket: AgingBucket;
+  issueDate?: string;
+  paidCents?: number;
+  xeroStatus?: string;
+  /** Remaining open AR. Aging, inbox, and chase use this — not amountCents. */
+  amountDueCents?: number;
+  /** ISO date when Xero marked the invoice fully paid. */
+  paidAt?: string;
 }
 
 export interface InboxMessage {
@@ -138,6 +149,13 @@ export interface AgentBehaviors {
 
 export interface AgentDigestPreview {
   dateLabel: string;
+  bullets: string[];
+}
+
+export interface ChaseRunRecord {
+  id: string;
+  ranAt: string;
+  hourLabel: string;
   bullets: string[];
 }
 

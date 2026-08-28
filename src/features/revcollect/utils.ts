@@ -22,6 +22,13 @@ export function getDaysOverdueFromDueDate(dueDate: string, asOf: Date = new Date
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
 
+/** Signed whole days from `fromDate` to `toDate` (YYYY-MM-DD). */
+export function calendarDaysBetween(fromDate: string, toDate: string): number {
+  const from = new Date(`${fromDate.slice(0, 10)}T00:00:00`);
+  const to = new Date(`${toDate.slice(0, 10)}T00:00:00`);
+  return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function formatCompactCurrency(cents: number): string {
   const dollars = cents / 100;
   if (dollars >= 1_000_000) {

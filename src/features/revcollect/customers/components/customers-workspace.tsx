@@ -5,7 +5,6 @@ import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { XeroConnectPrompt } from '@/features/revcollect/components/xero-connect-prompt';
 import { workspaceListWidth } from '@/features/revcollect/lib/workspace-layout';
 import { useCustomer } from '../../api/queries';
 import { CustomersDetailPanel } from './customers-detail-panel';
@@ -67,7 +66,6 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
 
   return (
     <div className='flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-hidden'>
-      <XeroConnectPrompt />
       <WorkspaceCanvas>
         {isMobile ? (
           <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>

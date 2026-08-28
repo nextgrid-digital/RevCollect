@@ -103,11 +103,14 @@ export function scrollInboxThreadToBottomAfterLayout(
   });
 }
 
-function findInboxThreadScrollContainer(): HTMLElement | null {
+export function findInboxThreadScrollContainer(from?: HTMLElement | null): HTMLElement | null {
   const anchor =
+    from ??
     document.getElementById('agent-draft-panel') ??
     document.getElementById('inbox-thread-composer');
-  return anchor?.closest('[data-inbox-thread-scroll]') as HTMLElement | null;
+  const pane = anchor?.closest('[data-inbox-thread-pane]');
+  const scroller = pane?.querySelector('[data-inbox-thread-scroll]');
+  return scroller instanceof HTMLElement ? scroller : null;
 }
 
 export function scrollInboxReplyTargetIntoView(
@@ -116,17 +119,7 @@ export function scrollInboxReplyTargetIntoView(
   const container = options.container ?? findInboxThreadScrollContainer();
   if (container) {
     scrollInboxThreadToBottom(container, options.behavior ?? 'auto');
-    return hasAgentDraftPanel();
   }
-
-  document.getElementById('agent-draft-panel')?.scrollIntoView({
-    behavior: options.behavior ?? 'auto',
-    block: 'end'
-  });
-  document.getElementById('inbox-thread-composer')?.scrollIntoView({
-    behavior: options.behavior ?? 'auto',
-    block: 'end'
-  });
   return hasAgentDraftPanel();
 }
 

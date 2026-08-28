@@ -11,6 +11,7 @@ import {
   fetchXeroConnections,
   getXeroOAuthConfig
 } from '@/lib/integrations/xero-oauth';
+import { ingestXeroAr } from '@/lib/canonical/ingest-xero';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 
 const OAUTH_STATE_COOKIE = 'xero_oauth_state';
@@ -64,11 +65,17 @@ export async function GET(request: NextRequest) {
       return redirectWithError('no_xero_organisation');
     }
 
-    await saveXeroConnection(getIntegrationTenantId(), {
+    const tenantId = await getIntegrationTenantId();
+    await saveXeroConnection(tenantId, {
       xeroTenantId: organisation.tenantId,
       organisationName: organisation.tenantName,
       refreshToken: tokens.refresh_token
     });
+    try {
+      await ingestXeroAr(tenantId);
+    } catch (ingestError) {
+      console.error('[xero/callback] ingest failed:', ingestError);
+    }
 
     const successUrl = new URL('/onboarding/connect-xero', APP_URL);
     successUrl.searchParams.set('connected', '1');

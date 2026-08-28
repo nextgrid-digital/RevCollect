@@ -17,6 +17,7 @@ import type {
   AgingCustomerBreakdownRow,
   AgingReportFilters,
   AgingReportSummary,
+  ChaseRunRecord,
   Customer,
   CustomerInboxContext,
   InboxMessage,
@@ -29,7 +30,7 @@ import type {
 import type { CustomerStatusSummary } from './types';
 
 async function getJson<T>(op: string, params?: Record<string, string | undefined>): Promise<T> {
-  const url = new URL('/api/revcollect', window.location.origin);
+  const url = new URL('/api/revcollect', 'http://local.invalid');
   url.searchParams.set('op', op);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -37,7 +38,7 @@ async function getJson<T>(op: string, params?: Record<string, string | undefined
     }
   }
 
-  const response = await fetch(url);
+  const response = await fetch(`${url.pathname}${url.search}`);
   if (!response.ok) {
     const detail = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(detail?.error ?? `Request failed: ${op}`);
@@ -162,6 +163,10 @@ export class HttpXeroRevCollectService implements RevCollectService {
 
   updateAgentConfig(config: AgentConfig) {
     return postJson<AgentConfig>('updateAgentConfig', config);
+  }
+
+  getLatestChaseRun() {
+    return getJson<ChaseRunRecord | null>('getLatestChaseRun');
   }
 
   getAgentAddonStatus() {

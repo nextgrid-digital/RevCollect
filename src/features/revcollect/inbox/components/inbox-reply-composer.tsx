@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useAgentConfig } from '../../api/queries';
 import { appendCanSpamFooter } from '../../compliance/can-spam';
+import { recordInboxSend } from '../../extract/record-inbox-send';
 import type { AgentConfig, CollectionStatus } from '../../types';
 import {
   COLLECTION_PLAYBOOKS,
@@ -32,7 +33,10 @@ import {
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
-import { scrollInboxThreadToBottomAfterLayout } from '../lib/scroll-inbox-reply-target';
+import {
+  findInboxThreadScrollContainer,
+  scrollInboxThreadToBottomAfterLayout
+} from '../lib/scroll-inbox-reply-target';
 
 function InboxDraftButton({
   isLoading,
@@ -144,6 +148,7 @@ export interface InboxReplyComposerHandle {
 export interface InboxReplyComposerProps {
   baseDraft: string;
   customerStatus: CollectionStatus;
+  customerId?: string;
   defaultTone?: AgentConfig['tone'];
   initialBody?: string;
   defaultAutoRun?: boolean;
@@ -158,6 +163,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     {
       baseDraft,
       customerStatus,
+      customerId,
       defaultTone,
       initialBody,
       defaultAutoRun = false,
@@ -255,8 +261,8 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     useLayoutEffect(() => {
       if (!isDrafted || isAgentDraft) return;
 
-      const container = rootRef.current?.closest('[data-inbox-thread-scroll]');
-      if (!(container instanceof HTMLElement)) return;
+      const container = findInboxThreadScrollContainer(rootRef.current);
+      if (!container) return;
 
       void scrollInboxThreadToBottomAfterLayout(container, { behavior: 'auto' });
     }, [isDrafted, isAgentDraft, body]);
@@ -295,8 +301,16 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     const handleSend = useCallback(() => {
       if (!body.trim()) return;
       appendCanSpamFooter(body);
+      if (customerId) {
+        void recordInboxSend({
+          customerId,
+          originalBody: baseDraft,
+          sentBody: body,
+          kind: 'reply'
+        });
+      }
       toast.success('Reply sent (mock)');
-    }, [body]);
+    }, [baseDraft, body, customerId]);
 
     useImperativeHandle(
       ref,

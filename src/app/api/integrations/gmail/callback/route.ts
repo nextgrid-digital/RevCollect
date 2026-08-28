@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     const email = await fetchGoogleAccountEmail(tokens.access_token);
-    await saveGmailConnection(getIntegrationTenantId(), {
+    await saveGmailConnection(await getIntegrationTenantId(), {
       email,
       refreshToken: tokens.refresh_token
     });

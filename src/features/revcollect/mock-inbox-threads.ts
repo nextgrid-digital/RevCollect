@@ -506,6 +506,37 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
       }
     ]
   },
+  'cust-13': {
+    subject: 'Billing discrepancy on INV-13019',
+    preview: 'Line items on INV-13019 do not match our PO — holding payment until corrected.',
+    unread: true,
+    replyIntent: 'dispute',
+    replyIntentLabel: 'Dispute',
+    agentDraftReady: true,
+    suggestedAction: 'Send reply addressing the billing discrepancy',
+    summary:
+      'Omar flagged a billing discrepancy on INV-13019. A reply is drafted to confirm the PO mismatch and send a corrected invoice.',
+    draft:
+      'Hi Omar,\n\nThank you for flagging the discrepancy on INV-13019. We are matching the invoice to your PO and will send a corrected invoice today so payment can be released.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 48,
+        body: agentBody('Hi Omar,', [
+          'Following up on INV-13019 and INV-13002, which remain open on your account.',
+          'Please let us know if any line items need review before payment can be released.'
+        ])
+      },
+      {
+        author: 'customer',
+        hoursBeforeLatest: 6,
+        body: customerBody('Hi,', [
+          'Line items on INV-13019 do not match our PO.',
+          'We are holding payment until a corrected invoice is issued.'
+        ])
+      }
+    ]
+  },
   'cust-16': {
     subject: 'Request for installment plan on legacy balance',
     preview: 'Can we split the oldest invoices over a 6-week payment schedule?',

@@ -231,10 +231,8 @@ export function InboxThreadDetail({
             )}
           >
             <div
-              className={cn(
-                'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
-                peekLayout === 'center' && 'md:min-w-[28rem]'
-              )}
+              className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+              data-inbox-thread-pane
             >
               <div
                 className={cn(
@@ -281,16 +279,17 @@ export function InboxThreadDetail({
                       replyIntentLabel={message.replyIntentLabel}
                       autoScrollToLatestEmail={false}
                     />
-                    <div className='bg-background sticky bottom-0 z-10 shrink-0 pt-4 pb-2'>
-                      <InboxThreadComposer
-                        agentDraftMeta={selection.agentDraftMeta}
-                        aiDraftBase={selection.aiDraftBase}
-                        customerStatus={customer.status}
-                        autoFocus={variant === 'peek'}
-                      />
-                    </div>
                   </InboxThreadTransition>
                 </div>
+              </div>
+              <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 pt-3 pb-2')}>
+                <InboxThreadComposer
+                  agentDraftMeta={selection.agentDraftMeta}
+                  aiDraftBase={selection.aiDraftBase}
+                  customerStatus={customer.status}
+                  customerId={customer.id}
+                  autoFocus={variant === 'peek'}
+                />
               </div>
             </div>
 

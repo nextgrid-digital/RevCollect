@@ -1,10 +1,15 @@
-import type { XeroContact, XeroInvoice } from '@/lib/integrations/xero-api';
+import type { XeroContact, XeroCreditNote, XeroInvoice } from '@/lib/integrations/xero-api';
 import {
   buildAgingChartBuckets,
   buildAgingCustomerRows,
   buildAgingReportSummary,
   filterInvoicesForReport
 } from '../aging/lib/aging-report';
+import {
+  creditRemainingCents,
+  invoiceAmountDueCents,
+  isOpenCanonicalInvoice
+} from '../lib/invoice-open';
 import type {
   AgingBucket,
   AgingBucketSummary,
@@ -86,8 +91,6 @@ export function isOpenReceivableInvoice(invoice: XeroInvoice): boolean {
   }
   const amountDue =
     typeof invoice.AmountDue === 'number' ? invoice.AmountDue : (invoice.Total ?? 0);
-  // PAID with zero due should not appear in AR dashboard.
-  if (status === 'PAID') return amountDue > 0.0001;
   return amountDue > 0.0001;
 }
 
@@ -96,37 +99,80 @@ export function mapXeroInvoice(invoice: XeroInvoice): Invoice | null {
   if (!customerId || !invoice.InvoiceID) return null;
 
   const dueDate = parseXeroDate(invoice.DueDateString ?? invoice.DueDate);
-  const daysOverdue = getDaysOverdueFromDueDate(dueDate);
-  const amountCents = toCents(invoice.AmountDue ?? invoice.Total);
-  const status = mapInvoiceStatus(invoice.Status, daysOverdue, amountCents);
+  const issueDate = parseXeroDate(invoice.DateString ?? invoice.Date);
+  const amountDueCents = toCents(invoice.AmountDue);
+  const amountCents = toCents(invoice.Total ?? invoice.AmountDue);
+  const paidCents = toCents(invoice.AmountPaid);
+  const daysOverdue = amountDueCents > 0 ? getDaysOverdueFromDueDate(dueDate) : 0;
+  const paidAtRaw = invoice.FullyPaidDateString ?? invoice.FullyPaidDate;
+  const paidAt = invoice.Status === 'PAID' && paidAtRaw ? parseXeroDate(paidAtRaw) : undefined;
 
   return {
     id: invoice.InvoiceID,
     customerId,
     number: invoice.InvoiceNumber ?? invoice.InvoiceID.slice(0, 8),
     amountCents,
+    amountDueCents,
+    paidCents,
+    paidAt,
+    issueDate,
     dueDate,
-    status,
-    agingBucket: toAgingBucket(daysOverdue)
+    status: mapInvoiceStatus(invoice.Status, daysOverdue, amountDueCents),
+    agingBucket: toAgingBucket(daysOverdue),
+    xeroStatus: invoice.Status
   };
 }
 
 function mapInvoiceStatus(
   xeroStatus: string | undefined,
   daysOverdue: number,
-  amountCents: number
+  amountDueCents: number
 ): CollectionStatus {
-  if (amountCents <= 0) return 'current';
+  if (amountDueCents <= 0) return 'current';
   if (daysOverdue > 0) return 'overdue';
   if (xeroStatus === 'PAID') return 'due_soon';
   return 'due_soon';
 }
 
 export function mapXeroInvoices(rawInvoices: XeroInvoice[]): Invoice[] {
-  return rawInvoices
-    .filter(isOpenReceivableInvoice)
-    .map(mapXeroInvoice)
-    .filter((invoice): invoice is Invoice => invoice !== null);
+  return rawInvoices.map(mapXeroInvoice).filter((invoice): invoice is Invoice => invoice !== null);
+}
+
+export function mapXeroCreditNotes(notes: XeroCreditNote[]): Invoice[] {
+  const invoices: Invoice[] = [];
+  for (const note of notes) {
+    const customerId = note.Contact?.ContactID;
+    if (!customerId || !note.CreditNoteID) continue;
+    const issueDate = parseXeroDate(note.DateString ?? note.Date);
+    const remaining = toCents(note.RemainingCredit);
+    const total = toCents(note.Total);
+    invoices.push({
+      id: note.CreditNoteID,
+      customerId,
+      number: note.CreditNoteNumber ?? note.CreditNoteID.slice(0, 8),
+      amountCents: total,
+      amountDueCents: remaining,
+      paidCents: Math.max(0, total - remaining),
+      issueDate,
+      dueDate: issueDate,
+      status: 'current',
+      agingBucket: 'current',
+      xeroStatus: 'CREDIT'
+    });
+  }
+  return invoices;
+}
+
+function customerBalanceCents(invoices: Invoice[]): number {
+  let due = 0;
+  let credit = 0;
+  for (const invoice of invoices) {
+    credit += creditRemainingCents(invoice);
+    if (isOpenCanonicalInvoice(invoice)) {
+      due += invoiceAmountDueCents(invoice);
+    }
+  }
+  return Math.max(0, due - credit);
 }
 
 export function mapXeroCustomers(contacts: XeroContact[], invoices: Invoice[]): Customer[] {
@@ -141,18 +187,18 @@ export function mapXeroCustomers(contacts: XeroContact[], invoices: Invoice[]): 
   const seen = new Set<string>();
 
   for (const contact of contacts) {
-    if (contact.IsCustomer === false) continue;
+    const customerInvoices = invoicesByCustomer.get(contact.ContactID) ?? [];
+    const hasHistory = customerInvoices.length > 0;
+    if (contact.IsCustomer === false && !hasHistory) continue;
 
-    const openInvoices = invoicesByCustomer.get(contact.ContactID) ?? [];
-    const balanceCents = openInvoices.reduce((sum, invoice) => sum + invoice.amountCents, 0);
-    if (contact.IsCustomer !== true && balanceCents <= 0) {
+    const balanceCents = customerBalanceCents(customerInvoices);
+    if (contact.IsCustomer !== true && !hasHistory && balanceCents <= 0) {
       continue;
     }
 
-    const daysOverdue = openInvoices.reduce(
-      (max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)),
-      0
-    );
+    const daysOverdue = customerInvoices
+      .filter(isOpenCanonicalInvoice)
+      .reduce((max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)), 0);
 
     seen.add(contact.ContactID);
     customers.push({
@@ -169,12 +215,10 @@ export function mapXeroCustomers(contacts: XeroContact[], invoices: Invoice[]): 
 
   for (const [customerId, customerInvoices] of invoicesByCustomer) {
     if (seen.has(customerId)) continue;
-    const balanceCents = customerInvoices.reduce((sum, invoice) => sum + invoice.amountCents, 0);
-    if (balanceCents <= 0) continue;
-    const daysOverdue = customerInvoices.reduce(
-      (max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)),
-      0
-    );
+    const balanceCents = customerBalanceCents(customerInvoices);
+    const daysOverdue = customerInvoices
+      .filter(isOpenCanonicalInvoice)
+      .reduce((max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)), 0);
     const contactName =
       contacts.find((contact) => contact.ContactID === customerId)?.Name ?? 'Xero customer';
     customers.push({
@@ -198,14 +242,15 @@ function deriveCustomerStatus(balanceCents: number, daysOverdue: number): Collec
 }
 
 export function buildAgingBucketsFromInvoices(invoices: Invoice[]): AgingBucketSummary[] {
+  const open = invoices.filter(isOpenCanonicalInvoice);
   const buckets: AgingBucket[] = ['current', '1-30', '31-60', '61-90', '90+'];
   return buckets.map((bucket) => {
-    const bucketInvoices = invoices.filter((invoice) => invoice.agingBucket === bucket);
+    const bucketInvoices = open.filter((invoice) => invoice.agingBucket === bucket);
     return {
       bucket,
       label: AGING_BUCKET_LABELS[bucket],
       invoiceCount: bucketInvoices.length,
-      totalCents: bucketInvoices.reduce((sum, invoice) => sum + invoice.amountCents, 0)
+      totalCents: bucketInvoices.reduce((sum, invoice) => sum + invoiceAmountDueCents(invoice), 0)
     };
   });
 }
@@ -230,14 +275,15 @@ export function buildCustomerContextFromInvoices(
   customer: Customer,
   invoices: Invoice[]
 ): CustomerInboxContext {
-  const open = invoices.filter((invoice) => invoice.customerId === customer.id);
+  const open = invoices.filter(isOpenCanonicalInvoice);
+  const billed = invoices.filter((invoice) => invoice.xeroStatus !== 'CREDIT');
   const overdueCount = open.filter(
     (invoice) => getDaysOverdueFromDueDate(invoice.dueDate) > 0
   ).length;
 
   return {
     avgDsoDays: customer.daysOverdue,
-    lifetimeValueCents: open.reduce((sum, invoice) => sum + invoice.amountCents, 0),
+    lifetimeValueCents: billed.reduce((sum, invoice) => sum + invoice.amountCents, 0),
     followUpsSent: 0,
     paymentTerms: 'From Xero',
     source: 'Xero',
@@ -265,7 +311,7 @@ export function buildSyntheticInboxFromInvoices(
 ): InboxMessage[] {
   const openByCustomer = new Map<string, Invoice[]>();
   for (const invoice of invoices) {
-    if (invoice.amountCents <= 0) continue;
+    if (!isOpenCanonicalInvoice(invoice)) continue;
     const list = openByCustomer.get(invoice.customerId) ?? [];
     list.push(invoice);
     openByCustomer.set(invoice.customerId, list);

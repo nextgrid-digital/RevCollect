@@ -10,6 +10,7 @@ import type {
   Customer,
   Invoice
 } from '../../types';
+import { invoiceAmountDueCents, isOpenCanonicalInvoice } from '../../lib/invoice-open';
 
 export const AGING_REPORT_AS_OF_DATE = new Date().toISOString().slice(0, 10);
 
@@ -44,7 +45,7 @@ export function toTableBucketColumns(invoice: Invoice): {
   days31to60Cents: number;
   days60PlusCents: number;
 } {
-  const amount = invoice.amountCents;
+  const amount = invoiceAmountDueCents(invoice);
 
   switch (invoice.agingBucket) {
     case 'current':
@@ -83,6 +84,7 @@ export function filterInvoicesForReport(
   asOfDate: string = AGING_REPORT_AS_OF_DATE
 ): Invoice[] {
   return invoices.filter((invoice) => {
+    if (!isOpenCanonicalInvoice(invoice)) return false;
     if (filters.customerId && invoice.customerId !== filters.customerId) return false;
     return isInPeriod(invoice.dueDate, filters.period, asOfDate);
   });
@@ -102,7 +104,7 @@ export function buildAgingChartBuckets(
     const bucket = toReportChartBucket(daysPastDue(invoice.dueDate, asOfDate));
     const entry = totals.get(bucket)!;
     entry.invoiceCount += 1;
-    entry.totalCents += invoice.amountCents;
+    entry.totalCents += invoiceAmountDueCents(invoice);
   }
 
   return CHART_BUCKET_ORDER.map((bucket) => {
@@ -202,7 +204,7 @@ export function buildAgingCustomerRows(
     existing.days1to30Cents += columns.days1to30Cents;
     existing.days31to60Cents += columns.days31to60Cents;
     existing.days60PlusCents += columns.days60PlusCents;
-    existing.totalCents += invoice.amountCents;
+    existing.totalCents += invoiceAmountDueCents(invoice);
 
     grouped.set(invoice.customerId, existing);
   }
@@ -237,12 +239,12 @@ export function buildAgingReportSummary(
   let weightedDsoSum = 0;
 
   for (const invoice of filtered) {
-    totalArCents += invoice.amountCents;
+    totalArCents += invoiceAmountDueCents(invoice);
     const pastDue = daysPastDue(invoice.dueDate, asOfDate);
     if (pastDue <= 0) {
-      currentCents += invoice.amountCents;
+      currentCents += invoiceAmountDueCents(invoice);
     }
-    weightedDsoSum += pastDue * invoice.amountCents;
+    weightedDsoSum += pastDue * invoiceAmountDueCents(invoice);
   }
 
   const overdueCents = totalArCents - currentCents;

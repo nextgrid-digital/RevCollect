@@ -6,6 +6,7 @@ import { InboxReplyComposer } from './inbox-reply-composer';
 interface InboxFloatingComposerProps {
   draft: string;
   customerStatus: CollectionStatus;
+  customerId: string;
   defaultTone?: AgentConfig['tone'];
   autoFocus?: boolean;
 }
@@ -13,6 +14,7 @@ interface InboxFloatingComposerProps {
 export function InboxFloatingComposer({
   draft,
   customerStatus,
+  customerId,
   defaultTone,
   autoFocus = false
 }: InboxFloatingComposerProps) {
@@ -21,6 +23,7 @@ export function InboxFloatingComposer({
       <InboxReplyComposer
         baseDraft={draft}
         customerStatus={customerStatus}
+        customerId={customerId}
         defaultTone={defaultTone}
         autoFocus={autoFocus}
       />

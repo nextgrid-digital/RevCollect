@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { navGroups } from '@/config/nav-config';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
+import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -71,14 +72,11 @@ export default function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size='lg' asChild>
-              <Link href='/inbox'>
-                <div className='bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg'>
-                  <Icons.logo className='size-4' />
+              <Link href={POST_LOGIN_PATH}>
+                <div className='flex aspect-square size-8 shrink-0 items-center justify-center'>
+                  <Icons.logo className='size-8' />
                 </div>
-                <div className='grid flex-1 text-left text-sm leading-tight'>
-                  <span className='truncate font-semibold'>RevCollect</span>
-                  <span className='truncate text-xs'>Dashboard</span>
-                </div>
+                <span className='truncate font-semibold'>RevCollect</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

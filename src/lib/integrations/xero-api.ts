@@ -49,11 +49,51 @@ export interface XeroInvoice {
   DueDateString?: string;
   DueDate?: string;
   DateString?: string;
+  Date?: string;
+  FullyPaidDateString?: string;
+  FullyPaidDate?: string;
   AmountDue?: number;
+  AmountPaid?: number;
   Total?: number;
   Contact?: XeroInvoiceContact;
   HasErrors?: boolean;
   ValidationErrors?: XeroValidationError[];
+}
+
+export interface XeroPaymentInvoice {
+  InvoiceID?: string;
+  InvoiceNumber?: string;
+  Contact?: XeroInvoiceContact;
+}
+
+export interface XeroPayment {
+  PaymentID?: string;
+  Date?: string;
+  Amount?: number;
+  Status?: string;
+  PaymentType?: string;
+  Invoice?: XeroPaymentInvoice;
+}
+
+export interface XeroCreditNote {
+  CreditNoteID?: string;
+  CreditNoteNumber?: string;
+  Type?: string;
+  Status?: string;
+  DateString?: string;
+  Date?: string;
+  RemainingCredit?: number;
+  Total?: number;
+  Contact?: XeroInvoiceContact;
+}
+
+export interface XeroBankTransaction {
+  BankTransactionID?: string;
+  Type?: string;
+  Status?: string;
+  Date?: string;
+  Total?: number;
+  Contact?: XeroInvoiceContact;
 }
 
 interface XeroContactsResponse {
@@ -68,11 +108,29 @@ interface XeroInvoicesResponse {
   }>;
 }
 
+interface XeroPaymentsResponse {
+  Payments?: XeroPayment[];
+}
+
+interface XeroCreditNotesResponse {
+  CreditNotes?: XeroCreditNote[];
+}
+
+interface XeroBankTransactionsResponse {
+  BankTransactions?: XeroBankTransaction[];
+}
+
 interface ArCacheEntry {
   expiresAt: number;
   contacts: XeroContact[];
   invoices: XeroInvoice[];
+  payments: XeroPayment[];
+  creditNotes: XeroCreditNote[];
+  bankReceives: XeroBankTransaction[];
 }
+
+const XERO_PAGE_SIZE = 100;
+const XERO_MAX_PAGES = 100;
 
 const arCache = new Map<string, ArCacheEntry>();
 const refreshInFlight = new Map<string, Promise<XeroAccessContext>>();
@@ -117,16 +175,15 @@ async function refreshXeroAccessContext(appTenantId: string): Promise<XeroAccess
   }
 }
 
-export async function getXeroAccessContext(
-  appTenantId: string = getIntegrationTenantId()
-): Promise<XeroAccessContext> {
-  const inFlight = refreshInFlight.get(appTenantId);
+export async function getXeroAccessContext(appTenantId?: string): Promise<XeroAccessContext> {
+  const tenantId = appTenantId ?? (await getIntegrationTenantId());
+  const inFlight = refreshInFlight.get(tenantId);
   if (inFlight) return inFlight;
 
-  const promise = refreshXeroAccessContext(appTenantId).finally(() => {
-    refreshInFlight.delete(appTenantId);
+  const promise = refreshXeroAccessContext(tenantId).finally(() => {
+    refreshInFlight.delete(tenantId);
   });
-  refreshInFlight.set(appTenantId, promise);
+  refreshInFlight.set(tenantId, promise);
   return promise;
 }
 
@@ -193,39 +250,43 @@ async function xeroGet<T>(
   return xeroRequest<T>(context, 'GET', path, { query });
 }
 
-export async function fetchXeroContacts(context: XeroAccessContext): Promise<XeroContact[]> {
-  const contacts: XeroContact[] = [];
-  let page = 1;
+async function paginateXero<T>(fetchPage: (page: number) => Promise<T[]>): Promise<T[]> {
+  const items: T[] = [];
+  for (let page = 1; page <= XERO_MAX_PAGES; page += 1) {
+    const batch = await fetchPage(page);
+    items.push(...batch);
+    if (batch.length < XERO_PAGE_SIZE) break;
+  }
+  return items;
+}
 
-  while (page <= 50) {
+async function fetchOptionalXeroList<T>(fetchList: () => Promise<T[]>): Promise<T[]> {
+  try {
+    return await fetchList();
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchXeroContacts(context: XeroAccessContext): Promise<XeroContact[]> {
+  return paginateXero(async (page) => {
     const data = await xeroGet<XeroContactsResponse>(context, '/Contacts', {
       where: 'ContactStatus=="ACTIVE"',
       page: String(page)
     });
-    const batch = data.Contacts ?? [];
-    contacts.push(...batch);
-    if (batch.length < 100) break;
-    page += 1;
-  }
-
-  return contacts;
+    return data.Contacts ?? [];
+  });
 }
 
 export async function fetchXeroInvoices(context: XeroAccessContext): Promise<XeroInvoice[]> {
-  const invoices: XeroInvoice[] = [];
-  let page = 1;
-
-  while (page <= 50) {
+  const invoices = await paginateXero(async (page) => {
     const data = await xeroGet<XeroInvoicesResponse>(context, '/Invoices', {
       where: 'Type=="ACCREC"',
       page: String(page),
       order: 'UpdatedDateUTC DESC'
     });
-    const batch = data.Invoices ?? [];
-    invoices.push(...batch);
-    if (batch.length < 100) break;
-    page += 1;
-  }
+    return data.Invoices ?? [];
+  });
 
   return invoices.filter((invoice) => {
     const status = invoice.Status ?? '';
@@ -233,30 +294,99 @@ export async function fetchXeroInvoices(context: XeroAccessContext): Promise<Xer
   });
 }
 
+export async function fetchXeroPayments(context: XeroAccessContext): Promise<XeroPayment[]> {
+  const payments = await paginateXero(async (page) => {
+    const data = await xeroGet<XeroPaymentsResponse>(context, '/Payments', {
+      where: 'Status=="AUTHORISED"',
+      page: String(page),
+      order: 'UpdatedDateUTC DESC'
+    });
+    return data.Payments ?? [];
+  });
+
+  return payments.filter((payment) => {
+    const type = (payment.PaymentType ?? 'ACCRECPAYMENT').toUpperCase();
+    if (type !== 'ACCRECPAYMENT') return false;
+    return Boolean(payment.PaymentID && payment.Invoice?.InvoiceID);
+  });
+}
+
+export async function fetchXeroCreditNotes(context: XeroAccessContext): Promise<XeroCreditNote[]> {
+  const notes = await paginateXero(async (page) => {
+    const data = await xeroGet<XeroCreditNotesResponse>(context, '/CreditNotes', {
+      where: 'Type=="ACCRECCREDIT"',
+      page: String(page),
+      order: 'UpdatedDateUTC DESC'
+    });
+    return data.CreditNotes ?? [];
+  });
+
+  return notes.filter((note) => {
+    const status = note.Status ?? '';
+    return status === 'AUTHORISED' || status === 'PAID';
+  });
+}
+
+export async function fetchXeroBankReceives(
+  context: XeroAccessContext
+): Promise<XeroBankTransaction[]> {
+  const transactions = await paginateXero(async (page) => {
+    const data = await xeroGet<XeroBankTransactionsResponse>(context, '/BankTransactions', {
+      where: 'Type=="RECEIVE"',
+      page: String(page),
+      order: 'UpdatedDateUTC DESC'
+    });
+    return data.BankTransactions ?? [];
+  });
+
+  return transactions.filter((transaction) => {
+    return (
+      transaction.Status === 'AUTHORISED' &&
+      Boolean(transaction.BankTransactionID && transaction.Contact?.ContactID)
+    );
+  });
+}
+
 export async function fetchXeroAccountsReceivable(appTenantId?: string): Promise<{
   context: XeroAccessContext;
   contacts: XeroContact[];
   invoices: XeroInvoice[];
+  payments: XeroPayment[];
+  creditNotes: XeroCreditNote[];
+  bankReceives: XeroBankTransaction[];
 }> {
-  const context = await getXeroAccessContext(appTenantId);
+  const context = await getXeroAccessContext(appTenantId ?? (await getIntegrationTenantId()));
   const cacheKey = context.xeroTenantId;
   const cached = arCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return { context, contacts: cached.contacts, invoices: cached.invoices };
+    return {
+      context,
+      contacts: cached.contacts,
+      invoices: cached.invoices,
+      payments: cached.payments,
+      creditNotes: cached.creditNotes,
+      bankReceives: cached.bankReceives
+    };
   }
 
-  const [contacts, invoices] = await Promise.all([
+  const [contacts, invoices, payments, creditNotes, bankReceives] = await Promise.all([
     fetchXeroContacts(context),
-    fetchXeroInvoices(context)
+    fetchXeroInvoices(context),
+    fetchOptionalXeroList(() => fetchXeroPayments(context)),
+    fetchOptionalXeroList(() => fetchXeroCreditNotes(context)),
+    fetchOptionalXeroList(() => fetchXeroBankReceives(context))
   ]);
 
   arCache.set(cacheKey, {
     expiresAt: Date.now() + CACHE_TTL_MS,
     contacts,
-    invoices
+    invoices,
+    payments,
+    creditNotes,
+    bankReceives
   });
 
-  return { context, contacts, invoices };
+  return { context, contacts, invoices, payments, creditNotes, bankReceives };
 }
 
 export function clearXeroArCache(): void {

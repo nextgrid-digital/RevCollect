@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 
 export default function NotFound() {
   const router = useRouter();
@@ -18,8 +19,8 @@ export default function NotFound() {
         <Button onClick={() => router.back()} variant='default' size='lg'>
           Go back
         </Button>
-        <Button onClick={() => router.push('/inbox')} variant='ghost' size='lg'>
-          Back to Inbox
+        <Button onClick={() => router.push(POST_LOGIN_PATH)} variant='ghost' size='lg'>
+          Back to Dashboard
         </Button>
       </div>
     </div>

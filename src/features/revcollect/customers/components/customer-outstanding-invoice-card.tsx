@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate, getDaysOverdueFromDueDate } from '../../utils';
+import { invoiceAmountDueCents } from '../../lib/invoice-open';
 import type { Invoice } from '../../types';
 
 interface CustomerOutstandingInvoiceCardProps {
@@ -59,7 +60,7 @@ export function CustomerOutstandingInvoiceCard({
             showOverdue ? 'text-red-700 dark:text-red-400' : undefined
           )}
         >
-          {formatCurrency(invoice.amountCents)}
+          {formatCurrency(invoiceAmountDueCents(invoice))}
         </span>
         <Button asChild variant='outline' size='sm' className='h-8 text-xs'>
           <Link href={followUpHref}>Follow up</Link>

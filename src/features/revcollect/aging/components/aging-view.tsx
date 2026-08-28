@@ -6,7 +6,6 @@ import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { DataTableSkeleton } from '@/components/ui/table/data-table-skeleton';
 import { workspaceCenterMaxWidth } from '@/features/revcollect/lib/workspace-layout';
-import { XeroConnectPrompt } from '@/features/revcollect/components/xero-connect-prompt';
 import { MotionReveal } from '@/features/revcollect/motion/motion-primitives';
 import { cn } from '@/lib/utils';
 import { useAgingReport, useCustomers } from '../../api/queries';
@@ -96,7 +95,6 @@ export function AgingView() {
       />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className={cn(workspaceCenterMaxWidth, 'space-y-4 pb-4')}>
-          <XeroConnectPrompt />
           <p className='text-muted-foreground text-sm'>
             Accounts receivable aging as of {asOfLabel}.
           </p>

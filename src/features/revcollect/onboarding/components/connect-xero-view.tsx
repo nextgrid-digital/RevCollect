@@ -69,7 +69,8 @@ export function ConnectXeroView({ nextStep }: ConnectXeroViewProps) {
           <div className='flex flex-col gap-1'>
             <h2 className='text-lg font-semibold'>Xero</h2>
             <p className='text-muted-foreground text-sm'>
-              Import open invoices, contacts, and payment status from your Xero organisation.
+              Connect your organisation and RevCollect pulls open invoices, contacts, and payment
+              status from Xero automatically.
             </p>
           </div>
           <div className='mt-4 space-y-4'>
@@ -77,7 +78,8 @@ export function ConnectXeroView({ nextStep }: ConnectXeroViewProps) {
               <p className='text-muted-foreground text-sm'>Checking connection status…</p>
             ) : connected ? (
               <p className='text-sm text-emerald-600 dark:text-emerald-400'>
-                Xero connected{organisationName ? ` — ${organisationName}` : ''}.
+                Xero connected{organisationName ? ` — ${organisationName}` : ''}. Customers and
+                invoices will appear on the dashboard from Xero.
               </p>
             ) : (
               <p className='text-muted-foreground text-sm'>

@@ -4,6 +4,8 @@ import {
   getXeroAccessContext,
   type CreateXeroInvoiceInput
 } from '@/lib/integrations/xero-api';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { ingestXeroAr } from '@/lib/canonical/ingest-xero';
 import type { InvoiceImportCreateResult, InvoiceImportDraft } from './types';
 
 const CREATE_BATCH_SIZE = 25;
@@ -136,6 +138,12 @@ export async function createXeroInvoicesFromDrafts(
         });
       }
     }
+  }
+
+  try {
+    await ingestXeroAr(await getIntegrationTenantId());
+  } catch {
+    // Invoice create succeeded; ingest can retry on the next dashboard load.
   }
 
   return results;

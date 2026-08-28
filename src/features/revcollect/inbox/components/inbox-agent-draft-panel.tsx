@@ -8,15 +8,21 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { appendCanSpamFooter } from '../../compliance/can-spam';
+import { recordInboxSend } from '../../extract/record-inbox-send';
 import type { AgentDraftMeta } from '../../types';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 
 interface InboxAgentDraftPanelProps {
   draftMeta: AgentDraftMeta;
+  customerId: string;
   className?: string;
 }
 
-export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPanelProps) {
+export function InboxAgentDraftPanel({
+  draftMeta,
+  customerId,
+  className
+}: InboxAgentDraftPanelProps) {
   const attachment = useOptionalInboxThreadAttachment();
   const attachedInvoiceNumbers = attachment?.attachedInvoiceNumbers ?? [];
   const [body, setBody] = useState(draftMeta.body);
@@ -42,9 +48,16 @@ export function InboxAgentDraftPanel({ draftMeta, className }: InboxAgentDraftPa
   const handleSend = useCallback(() => {
     if (!body.trim() || isSent) return;
     appendCanSpamFooter(body);
+    const kind = body.trim() === draftMeta.body.trim() ? 'reply' : 'draft_edit';
+    void recordInboxSend({
+      customerId,
+      originalBody: draftMeta.body,
+      sentBody: body,
+      kind
+    });
     setIsSent(true);
     toast.success('Reply sent (mock)');
-  }, [body, isSent]);
+  }, [body, customerId, draftMeta.body, isSent]);
 
   const handleDetachInvoice = useCallback(
     (invoiceNumber: string) => {

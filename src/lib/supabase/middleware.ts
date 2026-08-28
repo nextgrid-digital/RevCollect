@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { AUTH_CLAIMS_TIMEOUT_MS, withTimeout } from '@/lib/auth-timeout';
+import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 
 // Read env with static property access so Next can inline them into the proxy bundle
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,7 +16,10 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/auth/') ||
     pathname === '/audit' ||
     pathname.startsWith('/audit/') ||
-    pathname.startsWith('/api/audit/')
+    pathname.startsWith('/api/audit/') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/icon.svg' ||
+    pathname.startsWith('/eve/')
   );
 }
 
@@ -64,8 +69,22 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     }
   });
 
-  const { data } = await supabase.auth.getClaims();
-  const isLoggedIn = Boolean(data?.claims);
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.includes('-auth-token'));
+
+  let hasClaims = false;
+  try {
+    const { data, error } = await withTimeout(supabase.auth.getClaims(), AUTH_CLAIMS_TIMEOUT_MS);
+    hasClaims = Boolean(data?.claims);
+    if (!hasClaims && error && hasAuthCookie) {
+      hasClaims = true;
+    }
+  } catch {
+    hasClaims = false;
+  }
+
+  const isLoggedIn = hasClaims || hasAuthCookie;
   const { pathname } = request.nextUrl;
 
   if (!isLoggedIn && !isPublicPath(pathname)) {
@@ -83,7 +102,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   if (isLoggedIn && (pathname === '/login' || pathname === '/signup' || pathname === '/')) {
-    const redirectResponse = NextResponse.redirect(new URL('/inbox', request.url));
+    const redirectResponse = NextResponse.redirect(new URL(POST_LOGIN_PATH, request.url));
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });

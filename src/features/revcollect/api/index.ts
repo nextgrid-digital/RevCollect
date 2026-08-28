@@ -23,15 +23,11 @@ export function getRevCollectService(): RevCollectService {
       service = getMockRevCollectService();
       return service;
     case 'xero':
-      // Keep Xero/fs/token code out of the client bundle.
-      if (typeof window === 'undefined') {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports -- server-only lazy load
-        const { getXeroRevCollectService } =
-          require('./xero-service') as typeof import('./xero-service');
-        service = getXeroRevCollectService();
-      } else {
-        service = getHttpXeroRevCollectService();
-      }
+      // Client components (and their SSR) must use the HTTP BFF. `typeof window`
+      // is undefined during Client Component SSR, so a window check would pull
+      // xero-service → next/headers into the client graph and fail the build.
+      // Route handlers import getXeroRevCollectService() directly.
+      service = getHttpXeroRevCollectService();
       return service;
     case 'supabase':
       throw new Error(

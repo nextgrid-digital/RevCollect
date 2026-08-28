@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 import type {
   AgentDraftMeta,
   Customer,
@@ -157,7 +158,7 @@ export function InboxConversationPane({
         suggestedAction={selectedMessage.suggestedAction}
       />
 
-      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden' data-inbox-thread-pane>
         <div
           ref={threadScrollRef}
           data-inbox-thread-scroll
@@ -172,14 +173,15 @@ export function InboxConversationPane({
               replyIntentLabel={selectedMessage.replyIntentLabel}
               autoScrollToLatestEmail={false}
             />
-            <div className='bg-background sticky bottom-0 z-10 shrink-0 pt-4 pb-2'>
-              <InboxThreadComposer
-                agentDraftMeta={agentDraftMeta}
-                aiDraftBase={aiDraftBase ?? ''}
-                customerStatus={customer.status}
-              />
-            </div>
           </div>
+        </div>
+        <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-3 md:px-6')}>
+          <InboxThreadComposer
+            agentDraftMeta={agentDraftMeta}
+            aiDraftBase={aiDraftBase ?? ''}
+            customerStatus={customer.status}
+            customerId={customer.id}
+          />
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, getDaysOverdueFromDueDate } from '../../utils';
+import { invoiceAmountDueCents } from '../../lib/invoice-open';
 import type { Invoice } from '../../types';
 
 interface InboxContextInvoiceCardProps {
@@ -56,7 +57,7 @@ export function InboxContextInvoiceCard({
             showOverdue ? 'text-rose-700 dark:text-rose-400' : undefined
           )}
         >
-          {formatCurrency(invoice.amountCents)}
+          {formatCurrency(invoiceAmountDueCents(invoice))}
         </span>
         {onAttach !== undefined ? (
           isAttached ? (

@@ -49,7 +49,8 @@ export const revcollectKeys = {
   agentAddon: () => [...revcollectKeys.all, 'agent', 'addon'] as const,
   integrationStatus: () => [...revcollectKeys.all, 'integrations'] as const,
   workspaceGeneralSettings: () => [...revcollectKeys.all, 'settings', 'general'] as const,
-  agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const
+  agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const,
+  chaseRun: () => [...revcollectKeys.all, 'chase', 'latest'] as const
 };
 
 const AR_STALE_TIME_MS = 60_000;
@@ -94,6 +95,14 @@ export function customerContextQueryOptions(customerId: string) {
       const context = await getRevCollectService().getCustomerContext(customerId);
       return context;
     },
+    staleTime: AR_STALE_TIME_MS
+  });
+}
+
+export function invoicesQueryOptions() {
+  return queryOptions({
+    queryKey: revcollectKeys.invoices(),
+    queryFn: () => getRevCollectService().listInvoices(),
     staleTime: AR_STALE_TIME_MS
   });
 }
@@ -232,6 +241,10 @@ export function useCustomerInboxContext(customerId: string | undefined) {
   });
 }
 
+export function useInvoices() {
+  return useQuery(invoicesQueryOptions());
+}
+
 export function useInvoicesForCustomer(customerId: string | undefined) {
   return useQuery({
     ...invoicesForCustomerQueryOptions(customerId ?? ''),
@@ -347,6 +360,14 @@ export function useAgentDraftCount() {
   return useQuery({
     queryKey: revcollectKeys.agentDraftCount(),
     queryFn: () => getRevCollectService().countAgentDraftsReady(),
+    staleTime: AR_STALE_TIME_MS
+  });
+}
+
+export function useLatestChaseRun() {
+  return useQuery({
+    queryKey: revcollectKeys.chaseRun(),
+    queryFn: () => getRevCollectService().getLatestChaseRun(),
     staleTime: AR_STALE_TIME_MS
   });
 }

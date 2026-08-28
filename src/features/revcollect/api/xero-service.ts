@@ -1,18 +1,26 @@
+import 'server-only';
 import { fetchXeroAccountsReceivable, XeroNotConnectedError } from '@/lib/integrations/xero-api';
 import { getIntegrationStatus as getLiveIntegrationStatus } from '@/lib/integrations/get-integration-status';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
-import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import {
-  agentAddonStatus as initialAgentAddonStatus,
-  agentConfig as initialAgentConfig
-} from '../mock-data';
+  DEFAULT_ADDON_STATUS,
+  DEFAULT_AGENT_CONFIG,
+  defaultWorkspaceAgentConfig,
+  emptyIntelligence
+} from '@/lib/canonical/defaults';
+import { ensureXeroIngest } from '@/lib/canonical/ingest-xero';
+import { getCanonicalStore } from '@/lib/canonical/store';
+import { getLatestChaseRun as readLatestChaseRun } from '@/lib/chase/record-chase-run';
+import { sweepExpiredSituations } from '@/features/revcollect/extract/sweeper';
+import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
 import type {
   AgentActivationResult,
-  AgentAddonStatus,
   AgentConfig,
+  AgentDraftMeta,
   AgingBucket,
   AgingReportFilters,
+  ChaseRunRecord,
   Customer,
   InboxMessage,
   Invoice,
@@ -20,7 +28,8 @@ import type {
   TimelineEvent,
   WorkspaceGeneralSettings
 } from '../types';
-import { getDaysOverdueFromDueDate } from '../utils';
+import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
+import { isOpenCanonicalInvoice } from '../lib/invoice-open';
 import type { RevCollectService } from './service';
 import type {
   DataAccessEvent,
@@ -38,33 +47,69 @@ import {
   buildCustomerContextFromInvoices,
   buildCustomerStatusSummary,
   buildSyntheticInboxFromInvoices,
+  mapXeroCreditNotes,
   mapXeroCustomers,
   mapXeroInvoices
 } from './xero-map';
 
-let mutableAgentConfig: AgentConfig = structuredClone(initialAgentConfig);
-let mutableAgentAddonStatus: AgentAddonStatus = { ...initialAgentAddonStatus };
-let mutableWorkspaceGeneralSettings: WorkspaceGeneralSettings = structuredClone(
-  DEFAULT_WORKSPACE_GENERAL_SETTINGS
-);
+function formatPreparedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function overlayDrafts(messages: InboxMessage[], drafts: { customerId: string }[]): InboxMessage[] {
+  const ready = new Set(drafts.map((draft) => draft.customerId));
+  return messages.map((message) =>
+    ready.has(message.customerId) ? { ...message, agentDraftReady: true } : message
+  );
+}
 
 interface LoadedArData {
+  tenantId: string;
   customers: Customer[];
   invoices: Invoice[];
   inboxMessages: InboxMessage[];
 }
 
 async function loadArData(): Promise<LoadedArData> {
+  const tenantId = await getIntegrationTenantId();
+  await sweepExpiredSituations(tenantId);
+  const snapshot = await ensureXeroIngest(tenantId);
+  if (snapshot.customers.length > 0 || snapshot.invoices.length > 0) {
+    const customers = snapshot.customers.map((customer) => ({
+      ...customer,
+      relationshipState:
+        customer.relationshipState ??
+        snapshot.intelligenceByCustomerId[customer.id]?.relationshipState ??
+        emptyIntelligence().relationshipState
+    }));
+    return {
+      tenantId,
+      customers,
+      invoices: snapshot.invoices,
+      inboxMessages: overlayDrafts(snapshot.inboxMessages, snapshot.drafts)
+    };
+  }
+
   try {
-    const { contacts, invoices: rawInvoices } =
-      await fetchXeroAccountsReceivable(getIntegrationTenantId());
-    const invoices = mapXeroInvoices(rawInvoices);
+    const {
+      contacts,
+      invoices: rawInvoices,
+      creditNotes
+    } = await fetchXeroAccountsReceivable(tenantId);
+    const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
     const customers = mapXeroCustomers(contacts, invoices);
     const inboxMessages = buildSyntheticInboxFromInvoices(invoices, customers);
-    return { customers, invoices, inboxMessages };
+    return { tenantId, customers, invoices, inboxMessages };
   } catch (error) {
     if (error instanceof XeroNotConnectedError) {
-      return { customers: [], invoices: [], inboxMessages: [] };
+      return { tenantId, customers: [], invoices: [], inboxMessages: [] };
     }
     throw error;
   }
@@ -99,13 +144,14 @@ export class XeroRevCollectService implements RevCollectService {
     if (!customer) return null;
 
     const customerInvoices = invoices.filter((invoice) => invoice.customerId === customer.id);
+    const openInvoices = customerInvoices.filter(isOpenCanonicalInvoice);
     const inboxContext = buildCustomerContextFromInvoices(customer, customerInvoices);
     const invoiceId = messageId.startsWith('xero-inv-')
       ? messageId.slice('xero-inv-'.length)
       : undefined;
     const focusInvoice = invoiceId
-      ? customerInvoices.find((invoice) => invoice.id === invoiceId)
-      : customerInvoices.toSorted(
+      ? openInvoices.find((invoice) => invoice.id === invoiceId)
+      : openInvoices.toSorted(
           (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
         )[0];
     const days = focusInvoice
@@ -113,9 +159,9 @@ export class XeroRevCollectService implements RevCollectService {
       : customer.daysOverdue;
 
     const invoiceSummary =
-      customerInvoices.length === 1
-        ? `Invoice ${customerInvoices[0].number}`
-        : `${customerInvoices.length} open invoices (${customerInvoices.map((invoice) => invoice.number).join(', ')})`;
+      openInvoices.length === 1
+        ? `Invoice ${openInvoices[0].number}`
+        : `${openInvoices.length} open invoices (${openInvoices.map((invoice) => invoice.number).join(', ')})`;
 
     const placeholderBody = focusInvoice
       ? `${invoiceSummary} totaling ${new Intl.NumberFormat('en-US', {
@@ -141,6 +187,8 @@ export class XeroRevCollectService implements RevCollectService {
       }
     ];
 
+    const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
+
     return {
       message,
       customer,
@@ -151,10 +199,10 @@ export class XeroRevCollectService implements RevCollectService {
       aiInsightText: inboxContext.aiInsight,
       deepAnalysisText: undefined,
       latestEmail: threadEmails[0],
-      agentDraftMeta: undefined,
+      agentDraftMeta,
       aiDraftBase: `Hi ${customer.name},\n\nFollowing up on overdue invoice${focusInvoice ? ` ${focusInvoice.number}` : 's'}. Please let us know if you need anything to process payment.\n\nThank you`,
       lastAction: undefined,
-      openInvoiceNumbers: customerInvoices.map((invoice) => invoice.number)
+      openInvoiceNumbers: openInvoices.map((invoice) => invoice.number)
     };
   }
 
@@ -192,7 +240,9 @@ export class XeroRevCollectService implements RevCollectService {
 
   async getInvoicesByBucket(bucket: AgingBucket) {
     const { invoices } = await loadArData();
-    return invoices.filter((invoice) => invoice.agingBucket === bucket);
+    return invoices.filter(
+      (invoice) => isOpenCanonicalInvoice(invoice) && invoice.agingBucket === bucket
+    );
   }
 
   async getAgingBuckets() {
@@ -220,41 +270,101 @@ export class XeroRevCollectService implements RevCollectService {
     return selection?.threadEmails ?? [];
   }
 
-  async getTimelineForCustomer(_customerId: string): Promise<TimelineEvent[]> {
-    return [];
+  async getTimelineForCustomer(customerId: string): Promise<TimelineEvent[]> {
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    const invoiceById = new Map(snapshot.invoices.map((invoice) => [invoice.id, invoice]));
+    return snapshot.payments
+      .filter((payment) => payment.customerId === customerId)
+      .toSorted((left, right) => right.paidAt.localeCompare(left.paidAt))
+      .map((payment) => {
+        const invoice = payment.invoiceId ? invoiceById.get(payment.invoiceId) : undefined;
+        return {
+          id: payment.id,
+          customerId,
+          type: 'payment' as const,
+          title: 'Payment received',
+          description: invoice
+            ? `${formatCurrencyWhole(payment.amountCents)} · ${invoice.number}`
+            : formatCurrencyWhole(payment.amountCents),
+          occurredAt: payment.paidAt
+        };
+      });
   }
 
-  async getAgentDraftMetaForMessage(_messageId: string) {
-    return undefined;
+  async getAgentDraftMetaForMessage(messageId: string): Promise<AgentDraftMeta | undefined> {
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    const draft = snapshot.drafts.find(
+      (item) => item.threadId === messageId || `xero-customer-${item.customerId}` === messageId
+    );
+    if (!draft) return undefined;
+    return {
+      title: draft.title,
+      preparedAtLabel: formatPreparedAt(draft.preparedAt),
+      body: draft.body,
+      tone: (draft.tone as AgentDraftMeta['tone']) || 'professional'
+    };
   }
 
   async countAgentDraftsReady() {
-    return 0;
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    return snapshot.drafts.length;
   }
 
   async getAgentConfig() {
-    return { ...mutableAgentConfig };
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    if (snapshot.agentConfig) return { ...snapshot.agentConfig };
+    return defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
   }
 
   async updateAgentConfig(config: AgentConfig) {
-    mutableAgentConfig = syncAgentConfigTone({ ...config });
-    return { ...mutableAgentConfig };
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const next = syncAgentConfigTone({ ...config, autoSendEnabled: false });
+    snapshot.agentConfig = next;
+    await store.write(tenantId, snapshot);
+    return { ...next };
+  }
+
+  async getLatestChaseRun(): Promise<ChaseRunRecord | null> {
+    const tenantId = await getIntegrationTenantId();
+    return readLatestChaseRun(tenantId);
   }
 
   async getAgentAddonStatus() {
-    return { ...mutableAgentAddonStatus };
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    return { ...(snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS) };
   }
 
   async subscribeAgentAddon() {
-    mutableAgentAddonStatus = { ...mutableAgentAddonStatus, subscribed: true };
-    return { ...mutableAgentAddonStatus };
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    snapshot.agentAddonStatus = {
+      ...(snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS),
+      subscribed: true
+    };
+    await store.write(tenantId, snapshot);
+    return { ...snapshot.agentAddonStatus };
   }
 
   async activateAgent(): Promise<AgentActivationResult> {
-    if (!mutableAgentAddonStatus.subscribed) {
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const addon = snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS;
+    if (!addon.subscribed) {
       return { active: false, needsBilling: true };
     }
-    mutableAgentConfig = { ...mutableAgentConfig, isActive: true };
+    const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
+    snapshot.agentConfig = { ...config, isActive: true };
+    snapshot.agentAddonStatus = addon;
+    await store.write(tenantId, snapshot);
     return { active: true };
   }
 
@@ -263,12 +373,18 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async getWorkspaceGeneralSettings() {
-    return { ...mutableWorkspaceGeneralSettings };
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    return structuredClone(snapshot.workspaceSettings ?? DEFAULT_WORKSPACE_GENERAL_SETTINGS);
   }
 
   async updateWorkspaceGeneralSettings(settings: WorkspaceGeneralSettings) {
-    mutableWorkspaceGeneralSettings = structuredClone(settings);
-    return { ...mutableWorkspaceGeneralSettings };
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    snapshot.workspaceSettings = structuredClone(settings);
+    await store.write(tenantId, snapshot);
+    return structuredClone(settings);
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {
@@ -285,7 +401,7 @@ export class XeroRevCollectService implements RevCollectService {
       inboxMessages,
       threadEmails: threadEmailLists.flat(),
       timelineEvents: [],
-      agentConfig: { ...mutableAgentConfig },
+      agentConfig: await this.getAgentConfig(),
       integrationStatus: await getLiveIntegrationStatus()
     };
   }

@@ -1,5 +1,5 @@
 import { createAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
 export type IntegrationProvider = 'xero' | 'gmail';
@@ -129,4 +129,32 @@ export async function deleteIntegrationSecret(
     await deleteFromSupabase(provider, tenantKey);
   }
   await deleteFromFile(provider, tenantKey);
+}
+
+export async function copyIntegrationSecret(
+  provider: IntegrationProvider,
+  fromTenantKey: string,
+  toTenantKey: string
+): Promise<void> {
+  if (fromTenantKey === toTenantKey) return;
+  const existing = await readIntegrationSecret<unknown>(provider, toTenantKey);
+  if (existing) return;
+  const source = await readIntegrationSecret<unknown>(provider, fromTenantKey);
+  if (!source) return;
+  await writeIntegrationSecret(provider, toTenantKey, source);
+}
+
+export async function listProviderTenantKeys(provider: IntegrationProvider): Promise<string[]> {
+  const prefix = `${provider}-`;
+  try {
+    const names = await readdir(STORE_DIR);
+    return names
+      .filter((name) => name.startsWith(prefix) && name.endsWith('.json'))
+      .map((name) => name.slice(prefix.length, -'.json'.length));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
 }

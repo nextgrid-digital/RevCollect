@@ -11,6 +11,7 @@ import {
   AccordionTrigger
 } from '@/components/ui/accordion';
 import type { Customer, CustomerInboxContext, Invoice } from '../../types';
+import { isOpenCanonicalInvoice } from '../../lib/invoice-open';
 import { useInvoicesForCustomer } from '../../api/queries';
 import {
   readInboxInsightsDetailsExpanded,
@@ -34,14 +35,12 @@ interface InboxContextRailBodyProps {
 const INVOICE_PREVIEW_LIMIT = 50;
 
 function sortInvoicesForRail(invoices: Invoice[]): Invoice[] {
-  return [...invoices]
-    .filter((invoice) => invoice.amountCents > 0)
-    .sort((a, b) => {
-      const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (statusDiff !== 0) return statusDiff;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
+  return [...invoices].filter(isOpenCanonicalInvoice).sort((a, b) => {
+    const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
+    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
 }
 
 function InboxContextRailBodyComponent({

@@ -10,7 +10,7 @@ const DISCONNECTED = {
 } as const satisfies IntegrationStatus;
 
 export async function getIntegrationStatus(): Promise<IntegrationStatus> {
-  const tenantId = getIntegrationTenantId();
+  const tenantId = await getIntegrationTenantId();
   const [gmailConnection, xeroConnection] = await Promise.all([
     getGmailConnection(tenantId),
     getXeroConnection(tenantId)

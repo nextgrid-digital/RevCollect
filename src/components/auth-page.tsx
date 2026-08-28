@@ -1,14 +1,16 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { AuthDivider } from '@/components/auth-divider';
 import { FloatingPaths } from '@/components/floating-paths';
 import { GoogleIcon } from '@/components/icons/google-icon';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { AUTH_REQUEST_TIMEOUT_MS, TimeoutError, withTimeout } from '@/lib/auth-timeout';
 import { cn } from '@/lib/utils';
+import { POST_LOGIN_PATH, safeNextPath } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/client';
 import { hasSupabaseEnv } from '@/lib/supabase/env';
 import { toast } from 'sonner';
@@ -24,34 +26,62 @@ const ERROR_MESSAGES: Record<string, string> = {
 function RevCollectMark({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <div className='bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg'>
-        <Icons.logo className='size-4' />
-      </div>
+      <Icons.logo className='size-8 shrink-0' />
       <span className='text-sm font-semibold tracking-tight'>RevCollect</span>
     </div>
   );
 }
 
-function safeNextPath(next: string | null): string {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/inbox';
+function authErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof TimeoutError) {
+    return 'Sign-in timed out. Check your connection and try again.';
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return fallback;
 }
 
 export function AuthPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [isGooglePending, startGoogleTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
+  const nextPath = safeNextPath(searchParams.get('next'));
   const queryError = searchParams.get('error');
   const displayError =
     error ?? (queryError ? (ERROR_MESSAGES[queryError] ?? 'Could not sign in') : null);
 
-  function handleGoogleSignIn() {
+  function goToApp(path: string) {
+    setIsRedirecting(true);
+    window.location.replace(path);
+  }
+
+  useEffect(() => {
+    if (!hasSupabaseEnv()) return;
+    let cancelled = false;
+    const supabase = createClient();
+
+    void withTimeout(supabase.auth.getSession(), AUTH_REQUEST_TIMEOUT_MS)
+      .then(({ data }) => {
+        if (cancelled || !data.session) return;
+        setIsRedirecting(true);
+        window.location.replace(nextPath);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nextPath]);
+
+  async function handleGoogleSignIn() {
     setError(null);
     setInfo(null);
 
@@ -61,33 +91,48 @@ export function AuthPage() {
       return;
     }
 
-    startGoogleTransition(async () => {
-      try {
-        const supabase = createClient();
-        const next = safeNextPath(searchParams.get('next'));
-        const redirectTo = new URL('/auth/callback', window.location.origin);
-        redirectTo.searchParams.set('next', next);
+    setIsGooglePending(true);
+    try {
+      const supabase = createClient();
+      const redirectTo = new URL('/auth/callback', window.location.origin);
+      redirectTo.searchParams.set('next', nextPath);
 
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: oauthError } = await withTimeout(
+        supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: redirectTo.toString()
+            redirectTo: redirectTo.toString(),
+            skipBrowserRedirect: true
           }
-        });
+        }),
+        AUTH_REQUEST_TIMEOUT_MS
+      );
 
-        if (oauthError) {
-          setError(oauthError.message);
-          toast.error(oauthError.message);
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not start Google sign-in.';
-        setError(message);
-        toast.error(message);
+      if (oauthError) {
+        setError(oauthError.message);
+        toast.error(oauthError.message);
+        setIsGooglePending(false);
+        return;
       }
-    });
+
+      if (!data.url) {
+        setError('Could not start Google sign-in.');
+        toast.error('Could not start Google sign-in.');
+        setIsGooglePending(false);
+        return;
+      }
+
+      setIsRedirecting(true);
+      window.location.replace(data.url);
+    } catch (err) {
+      const message = authErrorMessage(err, 'Could not start Google sign-in.');
+      setError(message);
+      toast.error(message);
+      setIsGooglePending(false);
+    }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setInfo(null);
@@ -103,59 +148,72 @@ export function AuthPage() {
       return;
     }
 
-    startTransition(async () => {
-      try {
-        const supabase = createClient();
+    setIsPending(true);
+    try {
+      const supabase = createClient();
 
-        if (mode === 'signIn') {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
+      if (mode === 'signIn') {
+        const { error: signInError } = await withTimeout(
+          supabase.auth.signInWithPassword({
             email: email.trim(),
             password
-          });
+          }),
+          AUTH_REQUEST_TIMEOUT_MS
+        );
 
-          if (signInError) {
-            setError(signInError.message);
-            toast.error(signInError.message);
-            return;
-          }
-
-          toast.success('Signed in');
-          router.replace(safeNextPath(searchParams.get('next')));
-          router.refresh();
+        if (signInError) {
+          setError(signInError.message);
+          toast.error(signInError.message);
+          setIsPending(false);
           return;
         }
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        goToApp(nextPath);
+        return;
+      }
+
+      const { data, error: signUpError } = await withTimeout(
+        supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`
           }
-        });
+        }),
+        AUTH_REQUEST_TIMEOUT_MS
+      );
 
-        if (signUpError) {
-          setError(signUpError.message);
-          toast.error(signUpError.message);
-          return;
-        }
-
-        if (data.session) {
-          toast.success('Account created');
-          router.replace('/inbox');
-          router.refresh();
-          return;
-        }
-
-        setInfo('Check your email to confirm your account, then sign in.');
-        toast.success('Check your email to confirm your account');
-        setMode('signIn');
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Could not authenticate. Check Supabase env vars.';
-        setError(message);
-        toast.error(message);
+      if (signUpError) {
+        setError(signUpError.message);
+        toast.error(signUpError.message);
+        setIsPending(false);
+        return;
       }
-    });
+
+      if (data.session) {
+        goToApp(POST_LOGIN_PATH);
+        return;
+      }
+
+      setInfo('Check your email to confirm your account, then sign in.');
+      toast.success('Check your email to confirm your account');
+      setMode('signIn');
+      setIsPending(false);
+    } catch (err) {
+      const message = authErrorMessage(err, 'Could not authenticate. Check Supabase env vars.');
+      setError(message);
+      toast.error(message);
+      setIsPending(false);
+    }
+  }
+
+  if (isRedirecting) {
+    return (
+      <main className='flex min-h-svh flex-col items-center justify-center gap-3'>
+        <Icons.spinner className='text-muted-foreground size-6 animate-spin' />
+        <p className='text-muted-foreground text-sm'>Signing you in…</p>
+      </main>
+    );
   }
 
   return (

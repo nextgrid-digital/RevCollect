@@ -28,7 +28,6 @@ import {
   IconClipboardText,
   IconClock,
   IconCode,
-  IconCommand,
   IconCreditCard,
   IconDeviceLaptop,
   IconDots,
@@ -97,6 +96,7 @@ import {
   IconCrown,
   IconX
 } from '@tabler/icons-react';
+import { LogoIcon } from '@/components/logo';
 
 export type Icon = React.ComponentType<IconProps>;
 
@@ -151,7 +151,7 @@ export const Icons = {
   github: IconBrandGithub,
   google: IconBrandGoogle,
   twitter: IconBrandTwitter,
-  logo: IconCommand,
+  logo: LogoIcon,
   at: IconAt,
 
   // Communication

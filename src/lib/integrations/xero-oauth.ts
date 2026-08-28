@@ -11,6 +11,7 @@ export const XERO_OAUTH_SCOPES = [
   'accounting.contacts',
   'accounting.invoices',
   'accounting.payments',
+  'accounting.transactions',
   'accounting.reports.aged.read'
 ] as const;
 

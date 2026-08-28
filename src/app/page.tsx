@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { AuthPage } from '@/components/auth-page';
+import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/server';
 import { hasSupabaseEnv } from '@/lib/supabase/env';
 
@@ -15,7 +16,7 @@ export default async function HomePage() {
     const supabase = await createClient();
     const { data } = await supabase.auth.getClaims();
     if (data?.claims) {
-      redirect('/inbox');
+      redirect(POST_LOGIN_PATH);
     }
   }
 

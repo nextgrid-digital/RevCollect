@@ -9,6 +9,7 @@ import type {
   AgingCustomerBreakdownRow,
   AgingReportFilters,
   AgingReportSummary,
+  ChaseRunRecord,
   Customer,
   CustomerInboxContext,
   InboxMessage,
@@ -55,6 +56,7 @@ export interface RevCollectService {
 
   getAgentConfig(): Promise<AgentConfig>;
   updateAgentConfig(config: AgentConfig): Promise<AgentConfig>;
+  getLatestChaseRun(): Promise<ChaseRunRecord | null>;
   getAgentAddonStatus(): Promise<AgentAddonStatus>;
   subscribeAgentAddon(): Promise<AgentAddonStatus>;
   activateAgent(): Promise<AgentActivationResult>;

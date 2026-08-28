@@ -7,14 +7,15 @@
     "url": "https://github.com/Kiranism"
   },
   "scripts": {
-    "dev": "node scripts/postinstall.js && next dev",
+    "dev": "node scripts/postinstall.js && NODE_OPTIONS=--dns-result-order=ipv4first next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_OPTIONS=--dns-result-order=ipv4first next start",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix && bun format",
     "lint:strict": "oxlint --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
+    "evals:fidelity": "bun evals/entity-fidelity.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -55,10 +56,12 @@
     "@tanstack/react-query": "^5.95.2",
     "@tanstack/react-query-devtools": "^5.95.2",
     "@tanstack/react-table": "^8.21.3",
+    "ai": "^7.0.83",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "eve": "^0.47.2",
     "input-otp": "^1.4.2",
     "kbar": "^0.1.0-beta.48",
     "marked": "^18.0.4",
@@ -80,6 +83,7 @@
     "recharts": "^2.15.4",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
     "sharp": "^0.33.5",
     "shiki": "^4.1.0",
     "sonner": "^1.7.4",
@@ -93,6 +97,9 @@
     "xlsx": "^0.18.5",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.9.0",

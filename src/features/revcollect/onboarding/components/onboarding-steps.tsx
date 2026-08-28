@@ -6,6 +6,7 @@ import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { Button } from '@/components/ui/button';
+import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { useIntegrationStatus } from '../../api/queries';
 
 export function OnboardingSteps() {
@@ -29,20 +30,14 @@ export function OnboardingSteps() {
     },
     {
       title: 'Connect Xero',
-      description: 'Import customers, invoices, and payment status.',
+      description: 'Customers, invoices, and payment status sync from your organisation.',
       href: '/onboarding/connect-xero',
       done: integrationStatus.xero.connected
     },
     {
-      title: 'Import PDF invoices',
-      description: 'Upload invoice PDFs and create them as open invoices in Xero.',
-      href: '/onboarding/import-invoices',
-      done: false
-    },
-    {
-      title: 'Review your inbox',
-      description: 'Start approving AI-drafted follow-ups.',
-      href: '/inbox',
+      title: 'Open your dashboard',
+      description: 'See who needs attention and what Chase ran overnight.',
+      href: POST_LOGIN_PATH,
       done: false
     }
   ];
