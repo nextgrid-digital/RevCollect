@@ -109,3 +109,18 @@ export function formatRelativeDate(iso: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return formatDate(iso);
 }
+
+export function formatLastSyncLabel(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'unknown';
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 45_000) return 'just now';
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}

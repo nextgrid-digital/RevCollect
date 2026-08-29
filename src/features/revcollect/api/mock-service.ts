@@ -31,7 +31,7 @@ import type {
   AgentActivationResult,
   AgentAddonStatus,
   AgentConfig,
-  ChaseRunRecord,
+  AriRunRecord,
   WorkspaceGeneralSettings
 } from '../types';
 import type { RevCollectService } from './service';
@@ -173,7 +173,7 @@ export class MockRevCollectService implements RevCollectService {
     return resolveMock({ ...mutableAgentConfig });
   }
 
-  async getLatestChaseRun(): Promise<ChaseRunRecord | null> {
+  async getLatestAriRun(): Promise<AriRunRecord | null> {
     return null;
   }
 

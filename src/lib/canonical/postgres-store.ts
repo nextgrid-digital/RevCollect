@@ -6,7 +6,7 @@ import type {
   AgentDraftRecord,
   CanonicalSnapshot,
   CanonicalStore,
-  ChaseRunRecord,
+  AriRunRecord,
   CustomerIntelligence
 } from './types';
 
@@ -60,7 +60,7 @@ interface DraftRow {
   prepared_at: string;
 }
 
-interface ChaseRow {
+interface AriRow {
   id: string;
   ran_at: string;
   hour_label: string;
@@ -150,29 +150,39 @@ async function ensureTenant(tenantId: string): Promise<void> {
 
 async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   const supabase = createAdminClient();
-  const [customersRes, invoicesRes, paymentsRes, draftsRes, chaseRes, threadsRes, configRes] =
-    await Promise.all([
-      supabase.from('customers').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-      supabase.from('invoices').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-      supabase.from('payments').select('*').eq('tenant_id', tenantId),
-      supabase.from('agent_drafts').select('*').eq('tenant_id', tenantId),
-      supabase
-        .from('chase_runs')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('ran_at', { ascending: false }),
-      supabase.from('inbox_threads').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-      supabase.from('agent_config').select('*').eq('tenant_id', tenantId).maybeSingle()
-    ]);
+  const [
+    customersRes,
+    invoicesRes,
+    paymentsRes,
+    draftsRes,
+    ariRes,
+    threadsRes,
+    configRes,
+    tenantRes
+  ] = await Promise.all([
+    supabase.from('customers').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
+    supabase.from('invoices').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
+    supabase.from('payments').select('*').eq('tenant_id', tenantId),
+    supabase.from('agent_drafts').select('*').eq('tenant_id', tenantId),
+    supabase
+      .from('ari_runs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('ran_at', { ascending: false }),
+    supabase.from('inbox_threads').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
+    supabase.from('agent_config').select('*').eq('tenant_id', tenantId).maybeSingle(),
+    supabase.from('tenants').select('last_synced_at').eq('id', tenantId).maybeSingle()
+  ]);
 
   const firstError =
     customersRes.error ??
     invoicesRes.error ??
     paymentsRes.error ??
     draftsRes.error ??
-    chaseRes.error ??
+    ariRes.error ??
     threadsRes.error ??
-    configRes.error;
+    configRes.error ??
+    tenantRes.error;
   if (firstError) {
     throw new Error(`Canonical postgres read failed: ${firstError.message}`);
   }
@@ -221,13 +231,14 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
       suggestedAction: row.suggested_action ?? undefined
     })),
     agentConfig: configRow?.config ?? null,
-    chaseRuns: ((chaseRes.data ?? []) as ChaseRow[]).map((row) => ({
+    ariRuns: ((ariRes.data ?? []) as AriRow[]).map((row) => ({
       id: row.id,
       ranAt: row.ran_at,
       hourLabel: row.hour_label,
       bullets: Array.isArray(row.bullets) ? row.bullets : []
     })),
-    ingestedAt: new Date().toISOString()
+    ingestedAt:
+      (tenantRes.data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null
   };
 }
 
@@ -342,9 +353,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     if (error) throw new Error(`Failed to upsert drafts: ${error.message}`);
   }
 
-  if (snapshot.chaseRuns.length > 0) {
-    const { error } = await supabase.from('chase_runs').upsert(
-      snapshot.chaseRuns.map((run) => ({
+  if (snapshot.ariRuns.length > 0) {
+    const { error } = await supabase.from('ari_runs').upsert(
+      snapshot.ariRuns.map((run) => ({
         id: run.id,
         tenant_id: tenantId,
         ran_at: run.ranAt,
@@ -353,7 +364,15 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
       })),
       { onConflict: 'id' }
     );
-    if (error) throw new Error(`Failed to upsert chase runs: ${error.message}`);
+    if (error) throw new Error(`Failed to upsert ARI runs: ${error.message}`);
+  }
+
+  if (snapshot.ingestedAt) {
+    const { error } = await supabase
+      .from('tenants')
+      .update({ last_synced_at: snapshot.ingestedAt, updated_at: now })
+      .eq('id', tenantId);
+    if (error) throw new Error(`Failed to update last_synced_at: ${error.message}`);
   }
 
   if (snapshot.agentConfig) {
@@ -406,4 +425,4 @@ export const postgresCanonicalStore: CanonicalStore = {
   }
 };
 
-export type { AgentDraftRecord, ChaseRunRecord };
+export type { AgentDraftRecord, AriRunRecord };

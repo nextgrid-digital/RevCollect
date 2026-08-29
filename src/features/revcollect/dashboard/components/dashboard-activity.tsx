@@ -5,30 +5,30 @@ import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '../../utils';
 import type { DashboardActivityItem, DashboardPromiseRow } from '../lib/build-dashboard-snapshot';
-import { DashboardChaseRun } from './dashboard-chase-run';
+import { DashboardAriRun } from './dashboard-ari-run';
 
 interface DashboardActivityProps {
-  chaseHourLabel: string;
-  chaseBullets: string[];
+  ariHourLabel: string;
+  ariBullets: string[];
   activity: DashboardActivityItem[];
   promises: DashboardPromiseRow[];
   onOpenThread: (messageId: string) => void;
 }
 
 export function DashboardActivity({
-  chaseHourLabel,
-  chaseBullets,
+  ariHourLabel,
+  ariBullets,
   activity,
   promises,
   onOpenThread
 }: DashboardActivityProps) {
-  if (chaseBullets.length === 0 && activity.length === 0 && promises.length === 0) {
+  if (ariBullets.length === 0 && activity.length === 0 && promises.length === 0) {
     return null;
   }
 
   return (
     <WorkspaceCard className='space-y-5 p-4 md:p-5'>
-      <DashboardChaseRun hourLabel={chaseHourLabel} bullets={chaseBullets} />
+      <DashboardAriRun hourLabel={ariHourLabel} bullets={ariBullets} />
 
       {activity.length > 0 ? (
         <ul className='space-y-3'>
@@ -65,7 +65,7 @@ export function DashboardActivity({
 
       {promises.length > 0 ? (
         <div>
-          <p className='mb-2 text-sm font-semibold'>Promises Chase is tracking</p>
+          <p className='mb-2 text-sm font-semibold'>Promises ARI is tracking</p>
           <div className='overflow-x-auto'>
             <table className='w-full text-left text-sm'>
               <tbody>

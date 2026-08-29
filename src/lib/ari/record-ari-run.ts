@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getCanonicalStore } from '@/lib/canonical/store';
-import type { ChaseRunRecord } from '@/lib/canonical/types';
+import type { AriRunRecord } from '@/lib/canonical/types';
 
 function hourLabelFromConfig(digestHour: number): string {
   const hour = ((digestHour + 11) % 12) + 1;
@@ -8,14 +8,14 @@ function hourLabelFromConfig(digestHour: number): string {
   return `${hour}:00 ${meridiem}`;
 }
 
-export async function recordChaseRun(input: {
+export async function recordAriRun(input: {
   tenantId: string;
   bullets: string[];
   digestHour?: number;
-}): Promise<ChaseRunRecord> {
+}): Promise<AriRunRecord> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(input.tenantId);
-  const run: ChaseRunRecord = {
+  const run: AriRunRecord = {
     id: randomUUID(),
     ranAt: new Date().toISOString(),
     hourLabel: hourLabelFromConfig(
@@ -23,7 +23,7 @@ export async function recordChaseRun(input: {
     ),
     bullets: input.bullets
   };
-  snapshot.chaseRuns = [run, ...snapshot.chaseRuns].slice(0, 30);
+  snapshot.ariRuns = [run, ...snapshot.ariRuns].slice(0, 30);
   if (snapshot.agentConfig) {
     snapshot.agentConfig = {
       ...snapshot.agentConfig,
@@ -37,8 +37,8 @@ export async function recordChaseRun(input: {
   return run;
 }
 
-export async function getLatestChaseRun(tenantId: string): Promise<ChaseRunRecord | null> {
+export async function getLatestAriRun(tenantId: string): Promise<AriRunRecord | null> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
-  return snapshot.chaseRuns[0] ?? null;
+  return snapshot.ariRuns[0] ?? null;
 }

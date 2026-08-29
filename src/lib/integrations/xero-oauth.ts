@@ -160,3 +160,38 @@ export async function refreshXeroAccessToken(
     expiresIn: payload.expires_in
   };
 }
+
+const XERO_REVOCATION_URL = 'https://identity.xero.com/connect/revocation';
+
+export async function deleteXeroApiConnection(
+  accessToken: string,
+  connectionId: string
+): Promise<void> {
+  const response = await fetch(`${XERO_CONNECTIONS_URL}/${connectionId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Xero connection delete failed: ${response.status}`);
+  }
+}
+
+export async function revokeXeroRefreshToken(
+  config: XeroOAuthConfig,
+  refreshToken: string
+): Promise<void> {
+  const response = await fetch(XERO_REVOCATION_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: getBasicAuthHeader(config),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      token: refreshToken,
+      token_type_hint: 'refresh_token'
+    })
+  });
+  if (!response.ok && response.status !== 400) {
+    throw new Error(`Xero token revocation failed: ${response.status}`);
+  }
+}

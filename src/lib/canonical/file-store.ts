@@ -12,7 +12,14 @@ function snapshotPath(tenantId: string): string {
 async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   try {
     const raw = await readFile(snapshotPath(tenantId), 'utf8');
-    return { ...emptySnapshot(), ...(JSON.parse(raw) as CanonicalSnapshot) };
+    const parsed = JSON.parse(raw) as CanonicalSnapshot & {
+      chaseRuns?: CanonicalSnapshot['ariRuns'];
+    };
+    return {
+      ...emptySnapshot(),
+      ...parsed,
+      ariRuns: parsed.ariRuns ?? parsed.chaseRuns ?? []
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return emptySnapshot();

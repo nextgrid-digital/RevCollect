@@ -6,7 +6,7 @@ import {
   listProviderTenantKeys
 } from '@/lib/integrations/integration-secret-store';
 
-export { getChaseWorkspaceTenantId, listChaseTenantIds } from './tenant-ids';
+export { getAriWorkspaceTenantId, listAriTenantIds } from './tenant-ids';
 
 /**
  * Workspace tenant for integration tokens and the canonical AR store.

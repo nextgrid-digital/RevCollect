@@ -5,6 +5,7 @@ import {
   getIntegrationStorageErrorCode,
   mapIntegrationSaveError
 } from '@/lib/integrations/integration-storage';
+import { sanitizeOAuthReturnPath, XERO_OAUTH_RETURN_COOKIE } from '@/lib/integrations/oauth-return';
 import { saveXeroConnection } from '@/lib/integrations/xero-connection-store';
 import {
   exchangeXeroAuthCode,
@@ -16,14 +17,20 @@ import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 
 const OAUTH_STATE_COOKIE = 'xero_oauth_state';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
-function redirectWithError(error: string) {
-  const url = new URL('/onboarding/connect-xero', APP_URL);
-  url.searchParams.set('error', error);
-  return NextResponse.redirect(url);
-}
+const DEFAULT_RETURN = '/onboarding/connect-xero';
 
 export async function GET(request: NextRequest) {
+  const cookieStore = await cookies();
+  const returnTo =
+    sanitizeOAuthReturnPath(cookieStore.get(XERO_OAUTH_RETURN_COOKIE)?.value) ?? DEFAULT_RETURN;
+  cookieStore.delete(XERO_OAUTH_RETURN_COOKIE);
+
+  function redirectWithError(error: string) {
+    const url = new URL(returnTo, APP_URL);
+    url.searchParams.set('error', error);
+    return NextResponse.redirect(url);
+  }
+
   const config = getXeroOAuthConfig();
   if (!config) {
     return redirectWithError('missing_xero_credentials');
@@ -45,7 +52,6 @@ export async function GET(request: NextRequest) {
     return redirectWithError('missing_oauth_params');
   }
 
-  const cookieStore = await cookies();
   const expectedState = cookieStore.get(OAUTH_STATE_COOKIE)?.value;
   cookieStore.delete(OAUTH_STATE_COOKIE);
 
@@ -77,7 +83,7 @@ export async function GET(request: NextRequest) {
       console.error('[xero/callback] ingest failed:', ingestError);
     }
 
-    const successUrl = new URL('/onboarding/connect-xero', APP_URL);
+    const successUrl = new URL(returnTo, APP_URL);
     successUrl.searchParams.set('connected', '1');
     return NextResponse.redirect(successUrl);
   } catch (error) {

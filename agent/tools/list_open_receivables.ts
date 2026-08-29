@@ -6,7 +6,7 @@ import {
   isOpenCanonicalInvoice
 } from '../../src/features/revcollect/lib/invoice-open';
 import { getCanonicalStore } from '../../src/lib/canonical/store';
-import { getChaseWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
+import { getAriWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
 
 export default defineTool({
   description: 'List open receivables from the canonical store (not live Xero).',
@@ -14,7 +14,7 @@ export default defineTool({
     overdueOnly: z.boolean().optional()
   }),
   async execute({ overdueOnly }) {
-    const tenantId = await getChaseWorkspaceTenantId();
+    const tenantId = await getAriWorkspaceTenantId();
     const snapshot = await (await getCanonicalStore()).read(tenantId);
     const rows = snapshot.customers
       .filter((customer) => customer.balanceCents > 0)

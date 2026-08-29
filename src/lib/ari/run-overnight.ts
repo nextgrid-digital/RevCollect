@@ -3,21 +3,21 @@ import { isOpenCanonicalInvoice } from '@/features/revcollect/lib/invoice-open';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { queueFollowUpDraft } from './queue-follow-up-draft';
-import { recordChaseRun } from './record-chase-run';
+import { recordAriRun } from './record-ari-run';
 
-export interface OvernightChaseResult {
+export interface OvernightAriResult {
   tenantId: string;
   drafted: number;
   skipped: number;
   bullets: string[];
 }
 
-export async function runOvernightChase(
+export async function runOvernightAri(
   tenantId: string,
   options?: { forceHour?: boolean }
-): Promise<OvernightChaseResult> {
+): Promise<OvernightAriResult> {
   const store = await getCanonicalStore();
-  let snapshot = await store.read(tenantId);
+  const snapshot = await store.read(tenantId);
   const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
   const digestHour = config.behaviors.digestHour;
   const currentHour = new Date().getUTCHours();
@@ -26,9 +26,9 @@ export async function runOvernightChase(
   }
   if (!config.behaviors.autoDraftFollowUps || !config.isActive) {
     const bullets = [
-      'Chase is paused — activate the agent and enable auto-draft follow-ups in Agent settings.'
+      'ARI is paused — activate the agent and enable auto-draft follow-ups in Agent settings.'
     ];
-    await recordChaseRun({ tenantId, bullets, digestHour });
+    await recordAriRun({ tenantId, bullets, digestHour });
     return { tenantId, drafted: 0, skipped: 0, bullets };
   }
 
@@ -69,6 +69,6 @@ export async function runOvernightChase(
     bullets.push('No overdue accounts needed a follow-up draft.');
   }
 
-  await recordChaseRun({ tenantId, bullets, digestHour });
+  await recordAriRun({ tenantId, bullets, digestHour });
   return { tenantId, drafted, skipped, bullets };
 }

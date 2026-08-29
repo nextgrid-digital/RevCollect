@@ -17,7 +17,7 @@ import type {
   AgingCustomerBreakdownRow,
   AgingReportFilters,
   AgingReportSummary,
-  ChaseRunRecord,
+  AriRunRecord,
   Customer,
   CustomerInboxContext,
   InboxMessage,
@@ -165,8 +165,8 @@ export class HttpXeroRevCollectService implements RevCollectService {
     return postJson<AgentConfig>('updateAgentConfig', config);
   }
 
-  getLatestChaseRun() {
-    return getJson<ChaseRunRecord | null>('getLatestChaseRun');
+  getLatestAriRun() {
+    return getJson<AriRunRecord | null>('getLatestAriRun');
   }
 
   getAgentAddonStatus() {

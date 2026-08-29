@@ -6,18 +6,28 @@ import {
   getGoogleOAuthConfig
 } from '@/lib/integrations/google-oauth';
 import { saveGmailConnection } from '@/lib/integrations/gmail-connection-store';
+import {
+  GMAIL_OAUTH_RETURN_COOKIE,
+  sanitizeOAuthReturnPath
+} from '@/lib/integrations/oauth-return';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 
 const OAUTH_STATE_COOKIE = 'gmail_oauth_state';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
-function redirectWithError(error: string) {
-  const url = new URL('/onboarding/connect-gmail', APP_URL);
-  url.searchParams.set('error', error);
-  return NextResponse.redirect(url);
-}
+const DEFAULT_RETURN = '/onboarding/connect-gmail';
 
 export async function GET(request: NextRequest) {
+  const cookieStore = await cookies();
+  const returnTo =
+    sanitizeOAuthReturnPath(cookieStore.get(GMAIL_OAUTH_RETURN_COOKIE)?.value) ?? DEFAULT_RETURN;
+  cookieStore.delete(GMAIL_OAUTH_RETURN_COOKIE);
+
+  function redirectWithError(error: string) {
+    const url = new URL(returnTo, APP_URL);
+    url.searchParams.set('error', error);
+    return NextResponse.redirect(url);
+  }
+
   const config = getGoogleOAuthConfig();
   if (!config) {
     return redirectWithError('missing_google_credentials');
@@ -35,7 +45,6 @@ export async function GET(request: NextRequest) {
     return redirectWithError('missing_oauth_params');
   }
 
-  const cookieStore = await cookies();
   const expectedState = cookieStore.get(OAUTH_STATE_COOKIE)?.value;
   cookieStore.delete(OAUTH_STATE_COOKIE);
 
@@ -55,7 +64,7 @@ export async function GET(request: NextRequest) {
       refreshToken: tokens.refresh_token
     });
 
-    const successUrl = new URL('/onboarding/connect-gmail', APP_URL);
+    const successUrl = new URL(returnTo, APP_URL);
     successUrl.searchParams.set('connected', '1');
     return NextResponse.redirect(successUrl);
   } catch {

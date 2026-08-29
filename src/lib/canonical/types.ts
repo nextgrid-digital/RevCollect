@@ -70,7 +70,7 @@ export interface AgentDraftRecord {
   preparedAt: string;
 }
 
-export interface ChaseRunRecord {
+export interface AriRunRecord {
   id: string;
   ranAt: string;
   hourLabel: string;
@@ -85,7 +85,7 @@ export interface CanonicalSnapshot {
   drafts: AgentDraftRecord[];
   inboxMessages: InboxMessage[];
   agentConfig: AgentConfig | null;
-  chaseRuns: ChaseRunRecord[];
+  ariRuns: AriRunRecord[];
   workspaceSettings: WorkspaceGeneralSettings | null;
   agentAddonStatus: AgentAddonStatus | null;
   ingestedAt: string | null;

@@ -12,7 +12,7 @@ import {
   useCustomers,
   useInboxMessages,
   useInvoices,
-  useLatestChaseRun
+  useLatestAriRun
 } from '../../api/queries';
 import { buildDashboardSnapshot } from '../lib/build-dashboard-snapshot';
 import { DashboardActivity } from './dashboard-activity';
@@ -41,7 +41,7 @@ export function DashboardView({ userName }: DashboardViewProps) {
   const agingReportQuery = useAgingReport(agingFilters);
   const agentQuery = useAgentConfig();
   const draftCountQuery = useAgentDraftCount();
-  const chaseRunQuery = useLatestChaseRun();
+  const ariRunQuery = useLatestAriRun();
 
   const isPending =
     customersQuery.isPending ||
@@ -51,7 +51,7 @@ export function DashboardView({ userName }: DashboardViewProps) {
     agingReportQuery.isPending ||
     agentQuery.isPending ||
     draftCountQuery.isPending ||
-    chaseRunQuery.isPending;
+    ariRunQuery.isPending;
 
   const snapshot = useMemo(
     () =>
@@ -63,7 +63,7 @@ export function DashboardView({ userName }: DashboardViewProps) {
         agingSummary: agingReportQuery.data?.summary ?? null,
         agentConfig: agentQuery.data ?? null,
         draftCount: draftCountQuery.data ?? 0,
-        chaseRun: chaseRunQuery.data ?? null
+        ariRun: ariRunQuery.data ?? null
       }),
     [
       customersQuery.data,
@@ -73,7 +73,7 @@ export function DashboardView({ userName }: DashboardViewProps) {
       agingReportQuery.data?.summary,
       agentQuery.data,
       draftCountQuery.data,
-      chaseRunQuery.data
+      ariRunQuery.data
     ]
   );
 
@@ -124,8 +124,8 @@ export function DashboardView({ userName }: DashboardViewProps) {
         </MotionReveal>
         <MotionReveal>
           <DashboardActivity
-            chaseHourLabel={snapshot.chaseHourLabel}
-            chaseBullets={snapshot.chaseBullets}
+            ariHourLabel={snapshot.ariHourLabel}
+            ariBullets={snapshot.ariBullets}
             activity={snapshot.activity}
             promises={snapshot.promises}
             onOpenThread={openThread}

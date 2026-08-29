@@ -50,7 +50,7 @@ export const revcollectKeys = {
   integrationStatus: () => [...revcollectKeys.all, 'integrations'] as const,
   workspaceGeneralSettings: () => [...revcollectKeys.all, 'settings', 'general'] as const,
   agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const,
-  chaseRun: () => [...revcollectKeys.all, 'chase', 'latest'] as const
+  ariRun: () => [...revcollectKeys.all, 'ari', 'latest'] as const
 };
 
 const AR_STALE_TIME_MS = 60_000;
@@ -337,6 +337,68 @@ export function useIntegrationStatus() {
   return useQuery(integrationStatusQueryOptions());
 }
 
+export type IntegrationProviderKey = 'xero' | 'gmail';
+
+export interface XeroResyncResult {
+  lastSyncAt: string | null;
+  customerCount: number;
+  invoiceCount: number;
+}
+
+function disconnectPath(provider: IntegrationProviderKey): string {
+  switch (provider) {
+    case 'xero':
+      return '/api/integrations/xero/disconnect';
+    case 'gmail':
+      return '/api/integrations/gmail/disconnect';
+    default: {
+      const _exhaustive: never = provider;
+      return _exhaustive;
+    }
+  }
+}
+
+export function useDisconnectIntegration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (provider: IntegrationProviderKey) => {
+      const response = await fetch(disconnectPath(provider), { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Failed to disconnect');
+      }
+    },
+    onSuccess: (_data, provider) => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      toast.success(provider === 'xero' ? 'Xero disconnected' : 'Gmail disconnected');
+    },
+    onError: () => {
+      toast.error('Could not disconnect');
+    }
+  });
+}
+
+export function useResyncXero() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<XeroResyncResult> => {
+      const response = await fetch('/api/integrations/xero/resync', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Xero resync failed');
+      }
+      return response.json() as Promise<XeroResyncResult>;
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      toast.success(`Synced ${result.customerCount} customers, ${result.invoiceCount} invoices`);
+    },
+    onError: () => {
+      toast.error('Could not resync Xero');
+    }
+  });
+}
+
 export function useWorkspaceGeneralSettings() {
   return useQuery(workspaceGeneralSettingsQueryOptions());
 }
@@ -364,10 +426,10 @@ export function useAgentDraftCount() {
   });
 }
 
-export function useLatestChaseRun() {
+export function useLatestAriRun() {
   return useQuery({
-    queryKey: revcollectKeys.chaseRun(),
-    queryFn: () => getRevCollectService().getLatestChaseRun(),
+    queryKey: revcollectKeys.ariRun(),
+    queryFn: () => getRevCollectService().getLatestAriRun(),
     staleTime: AR_STALE_TIME_MS
   });
 }

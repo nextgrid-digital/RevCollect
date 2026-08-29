@@ -72,7 +72,7 @@ export function emptySnapshot(): CanonicalSnapshot {
     drafts: [],
     inboxMessages: [],
     agentConfig: null,
-    chaseRuns: [],
+    ariRuns: [],
     workspaceSettings: null,
     agentAddonStatus: null,
     ingestedAt: null

@@ -10,7 +10,7 @@ import {
 } from '@/lib/canonical/defaults';
 import { ensureXeroIngest } from '@/lib/canonical/ingest-xero';
 import { getCanonicalStore } from '@/lib/canonical/store';
-import { getLatestChaseRun as readLatestChaseRun } from '@/lib/chase/record-chase-run';
+import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { sweepExpiredSituations } from '@/features/revcollect/extract/sweeper';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -20,7 +20,7 @@ import type {
   AgentDraftMeta,
   AgingBucket,
   AgingReportFilters,
-  ChaseRunRecord,
+  AriRunRecord,
   Customer,
   InboxMessage,
   Invoice,
@@ -330,9 +330,9 @@ export class XeroRevCollectService implements RevCollectService {
     return { ...next };
   }
 
-  async getLatestChaseRun(): Promise<ChaseRunRecord | null> {
+  async getLatestAriRun(): Promise<AriRunRecord | null> {
     const tenantId = await getIntegrationTenantId();
-    return readLatestChaseRun(tenantId);
+    return readLatestAriRun(tenantId);
   }
 
   async getAgentAddonStatus() {

@@ -79,7 +79,7 @@ export interface Invoice {
   issueDate?: string;
   paidCents?: number;
   xeroStatus?: string;
-  /** Remaining open AR. Aging, inbox, and chase use this — not amountCents. */
+  /** Remaining open AR. Aging, inbox, and ARI use this — not amountCents. */
   amountDueCents?: number;
   /** ISO date when Xero marked the invoice fully paid. */
   paidAt?: string;
@@ -152,7 +152,7 @@ export interface AgentDigestPreview {
   bullets: string[];
 }
 
-export interface ChaseRunRecord {
+export interface AriRunRecord {
   id: string;
   ranAt: string;
   hourLabel: string;
@@ -209,6 +209,7 @@ export interface IntegrationConnection {
   connected: boolean;
   label: string;
   detail?: string;
+  lastSyncAt?: string | null;
 }
 
 export interface IntegrationStatus {

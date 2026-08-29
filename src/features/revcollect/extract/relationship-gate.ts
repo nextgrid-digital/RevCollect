@@ -4,14 +4,14 @@ export function canQueuePaymentDemand(relationshipState: RelationshipState | und
   return (relationshipState ?? 'normal') === 'normal';
 }
 
-export function chaseSkipReason(relationshipState: RelationshipState | undefined): string | null {
+export function ariSkipReason(relationshipState: RelationshipState | undefined): string | null {
   switch (relationshipState ?? 'normal') {
     case 'normal':
       return null;
     case 'sensitive':
       return 'relationship_state is sensitive — no payment-demand drafts';
     case 'paused':
-      return 'relationship_state is paused — chase skipped';
+      return 'relationship_state is paused — ARI skipped';
     default: {
       const _exhaustive: never = relationshipState as never;
       return `unknown relationship_state: ${String(_exhaustive)}`;

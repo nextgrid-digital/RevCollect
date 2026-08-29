@@ -92,3 +92,16 @@ export async function fetchGoogleAccountEmail(accessToken: string): Promise<stri
 
   return data.email;
 }
+
+const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
+
+export async function revokeGoogleToken(token: string): Promise<void> {
+  const response = await fetch(GOOGLE_REVOKE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ token })
+  });
+  if (!response.ok && response.status !== 400) {
+    throw new Error(`Google token revocation failed: ${response.status}`);
+  }
+}

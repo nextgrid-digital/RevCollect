@@ -80,8 +80,8 @@ export interface DashboardSnapshot {
   attentionBanner: string | null;
   agingBars: DashboardAgingBar[];
   kpis: DashboardKpis;
-  chaseBullets: string[];
-  chaseHourLabel: string;
+  ariBullets: string[];
+  ariHourLabel: string;
   activity: DashboardActivityItem[];
   promises: DashboardPromiseRow[];
   hasArData: boolean;
@@ -95,7 +95,7 @@ export interface BuildDashboardSnapshotInput {
   agingSummary: AgingReportSummary | null;
   agentConfig: AgentConfig | null;
   draftCount: number;
-  chaseRun?: { hourLabel: string; bullets: string[] } | null;
+  ariRun?: { hourLabel: string; bullets: string[] } | null;
 }
 
 function parseCentsFromText(text: string): number[] {
@@ -288,7 +288,7 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
     agingSummary,
     agentConfig,
     draftCount,
-    chaseRun
+    ariRun
   } = input;
 
   const attentionCards = pickAttentionCustomers(customers).map((customer) =>
@@ -305,18 +305,18 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
     invoices.filter(isOpenCanonicalInvoice).length ||
     agingBuckets.reduce((sum, bucket) => sum + bucket.invoiceCount, 0);
 
-  const digestBullets = chaseRun?.bullets ?? agentConfig?.digestPreview.bullets ?? [];
+  const digestBullets = ariRun?.bullets ?? agentConfig?.digestPreview.bullets ?? [];
   const overnightPayments = buildOvernightPayments(inboxMessages, digestBullets);
 
-  const chaseBullets = [...digestBullets];
-  if (draftCount > 0 && !chaseBullets.some((bullet) => /draft/i.test(bullet))) {
-    chaseBullets.push(`${draftCount} follow-up${draftCount === 1 ? '' : 's'} drafted overnight`);
+  const ariBullets = [...digestBullets];
+  if (draftCount > 0 && !ariBullets.some((bullet) => /draft/i.test(bullet))) {
+    ariBullets.push(`${draftCount} follow-up${draftCount === 1 ? '' : 's'} drafted overnight`);
   }
 
   const digestHour = agentConfig?.behaviors.digestHour ?? 6;
   const hour = ((digestHour + 11) % 12) + 1;
   const meridiem = digestHour >= 12 ? 'PM' : 'AM';
-  const chaseHourLabel = chaseRun?.hourLabel ?? `${hour}:00 ${meridiem}`;
+  const ariHourLabel = ariRun?.hourLabel ?? `${hour}:00 ${meridiem}`;
 
   const preferredActivity = pickByCompany(customers, PREFERRED_ACTIVITY_COMPANIES);
   const activitySource =
@@ -376,8 +376,8 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
         overnightPayments
       )
     },
-    chaseBullets,
-    chaseHourLabel,
+    ariBullets,
+    ariHourLabel,
     activity,
     promises,
     hasArData: totalArCents > 0 || customers.length > 0

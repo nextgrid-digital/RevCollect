@@ -1,4 +1,5 @@
 import type { IntegrationStatus } from '@/features/revcollect/types';
+import { getCanonicalStore } from '@/lib/canonical/store';
 import { getGmailConnection } from './gmail-connection-store';
 import { getIntegrationTenantId } from './tenant';
 import { getXeroConnection } from './xero-connection-store';
@@ -16,6 +17,13 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
     getXeroConnection(tenantId)
   ]);
 
+  let lastSyncAt: string | null = null;
+  if (xeroConnection) {
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    lastSyncAt = snapshot.ingestedAt;
+  }
+
   return {
     gmail: gmailConnection
       ? {
@@ -28,7 +36,8 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
       ? {
           connected: true,
           label: 'Xero',
-          detail: xeroConnection.organisationName
+          detail: xeroConnection.organisationName,
+          lastSyncAt
         }
       : DISCONNECTED.xero,
     stripe: DISCONNECTED.stripe

@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
       }
       case 'getAgentConfig':
         return NextResponse.json(await service.getAgentConfig());
-      case 'getLatestChaseRun':
-        return NextResponse.json(await service.getLatestChaseRun());
+      case 'getLatestAriRun':
+        return NextResponse.json(await service.getLatestAriRun());
       case 'getAgentAddonStatus':
         return NextResponse.json(await service.getAgentAddonStatus());
       case 'countAgentDraftsReady':

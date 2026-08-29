@@ -1,11 +1,11 @@
 import { Icons } from '@/components/icons';
 
-interface DashboardChaseRunProps {
+interface DashboardAriRunProps {
   hourLabel: string;
   bullets: string[];
 }
 
-export function DashboardChaseRun({ hourLabel, bullets }: DashboardChaseRunProps) {
+export function DashboardAriRun({ hourLabel, bullets }: DashboardAriRunProps) {
   if (bullets.length === 0) return null;
 
   return (
@@ -16,7 +16,7 @@ export function DashboardChaseRun({ hourLabel, bullets }: DashboardChaseRunProps
         </span>
         <div>
           <p className='text-sm font-semibold'>Overnight run — {hourLabel}</p>
-          <p className='text-muted-foreground text-xs'>Chase</p>
+          <p className='text-muted-foreground text-xs'>ARI</p>
         </div>
       </div>
       <ul className='space-y-1.5 text-sm leading-relaxed'>

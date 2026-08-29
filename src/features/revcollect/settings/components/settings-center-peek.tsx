@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,11 @@ function SettingsPeekContent({ tab }: { tab: SettingsTab }) {
     case 'appearance':
       return <SettingsAppearanceView />;
     case 'integrations':
-      return <SettingsIntegrationsView />;
+      return (
+        <Suspense fallback={<p className='text-muted-foreground text-sm'>Loading integrations…</p>}>
+          <SettingsIntegrationsView />
+        </Suspense>
+      );
     case 'billing':
       return <SettingsBillingView />;
     default: {

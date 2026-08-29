@@ -81,6 +81,11 @@ export function ConnectGmailView({ nextStep }: ConnectGmailViewProps) {
             )}
             <div className='flex flex-wrap gap-2'>
               {!connected ? <Button onClick={handleConnect}>Connect Gmail</Button> : null}
+              {connected ? (
+                <Button variant='outline' onClick={handleConnect}>
+                  Reconnect
+                </Button>
+              ) : null}
               <Button asChild variant='outline'>
                 <Link href='/onboarding'>Back to onboarding</Link>
               </Button>

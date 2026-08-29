@@ -36,7 +36,7 @@ export function OnboardingSteps() {
     },
     {
       title: 'Open your dashboard',
-      description: 'See who needs attention and what Chase ran overnight.',
+      description: 'See who needs attention and what ARI ran overnight.',
       href: POST_LOGIN_PATH,
       done: false
     }

@@ -3,7 +3,7 @@ import { complete } from '@/lib/ai/complete';
 import { templateFollowUpDraft } from '@/lib/ai/template-draft';
 import { validateDraftAgainstFacts } from '@/lib/ai/validators';
 import { assembleCustomerContext } from '@/features/revcollect/context/assemble-context';
-import { chaseSkipReason } from '@/features/revcollect/extract/relationship-gate';
+import { ariSkipReason } from '@/features/revcollect/extract/relationship-gate';
 import { emptyIntelligence } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import type { AgentDraftRecord } from '@/lib/canonical/types';
@@ -22,7 +22,7 @@ export async function queueFollowUpDraft(input: {
   if (!customer) return { draft: null, skipped: 'customer_not_found' };
 
   const intelligence = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
-  const skip = chaseSkipReason(intelligence.relationshipState);
+  const skip = ariSkipReason(intelligence.relationshipState);
   if (skip) return { draft: null, skipped: skip };
 
   const invoices = snapshot.invoices

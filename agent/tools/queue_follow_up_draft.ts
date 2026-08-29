@@ -1,7 +1,7 @@
 import { defineTool } from 'eve/tools';
 import { z } from 'zod';
-import { queueFollowUpDraft } from '../../src/lib/chase/queue-follow-up-draft';
-import { getChaseWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
+import { queueFollowUpDraft } from '../../src/lib/ari/queue-follow-up-draft';
+import { getAriWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
 
 export default defineTool({
   description:
@@ -11,7 +11,7 @@ export default defineTool({
     tone: z.enum(['professional', 'friendly', 'firm']).optional()
   }),
   async execute({ customerId, tone }) {
-    const tenantId = await getChaseWorkspaceTenantId();
+    const tenantId = await getAriWorkspaceTenantId();
     return queueFollowUpDraft({ tenantId, customerId, tone });
   }
 });

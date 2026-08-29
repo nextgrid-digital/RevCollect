@@ -1,6 +1,6 @@
 import { defineTool } from 'eve/tools';
 import { z } from 'zod';
-import { extractPromiseDate } from '../../src/lib/chase/classify';
+import { extractPromiseDate } from '../../src/lib/ari/classify';
 
 export default defineTool({
   description: 'Extract a promised payment date (YYYY-MM-DD) from customer text. Null if none.',

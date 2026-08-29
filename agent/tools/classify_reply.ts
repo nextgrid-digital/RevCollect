@@ -1,6 +1,6 @@
 import { defineTool } from 'eve/tools';
 import { z } from 'zod';
-import { classifyReply } from '../../src/lib/chase/classify';
+import { classifyReply } from '../../src/lib/ari/classify';
 
 export default defineTool({
   description: 'Classify a customer reply into a structured collections intent.',
