@@ -150,15 +150,24 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
 
   for (const payment of payments) {
     if (previousPaymentIds.has(payment.id)) continue;
-    await extractSituation({
-      tenantId,
-      customerId: payment.customerId,
-      kind: 'payment',
-      text: `Payment of ${payment.amountCents} cents received on ${payment.paidAt} for invoice ${payment.invoiceId ?? 'unknown'}.`
-    });
+    try {
+      await extractSituation({
+        tenantId,
+        customerId: payment.customerId,
+        kind: 'payment',
+        text: `Payment of ${payment.amountCents} cents received on ${payment.paidAt} for invoice ${payment.invoiceId ?? 'unknown'}.`
+      });
+    } catch (error) {
+      console.error('[ingest-xero] extractSituation failed:', error);
+    }
   }
 
-  return (await getCanonicalStore()).read(tenantId);
+  try {
+    return await (await getCanonicalStore()).read(tenantId);
+  } catch (error) {
+    console.error('[ingest-xero] snapshot re-read failed:', error);
+    return snapshot;
+  }
 }
 
 export async function ensureXeroIngest(

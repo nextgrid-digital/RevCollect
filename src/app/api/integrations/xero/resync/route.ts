@@ -8,6 +8,20 @@ import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+function disconnectedResponse() {
+  return NextResponse.json(
+    { error: 'Xero is not connected', code: 'xero_disconnected' as const },
+    { status: 409 }
+  );
+}
+
+function expiredResponse() {
+  return NextResponse.json(
+    { error: 'Xero session expired. Reconnect Xero.', code: 'xero_expired' as const },
+    { status: 409 }
+  );
+}
+
 export async function POST() {
   const userId = await getAuthUserId();
   if (!userId) {
@@ -17,7 +31,7 @@ export async function POST() {
   const tenantId = await getIntegrationTenantId();
   const connection = await getXeroConnection(tenantId);
   if (!connection) {
-    return NextResponse.json({ error: 'Xero is not connected' }, { status: 409 });
+    return disconnectedResponse();
   }
 
   try {
@@ -29,9 +43,15 @@ export async function POST() {
     });
   } catch (error) {
     if (error instanceof XeroNotConnectedError) {
-      return NextResponse.json({ error: 'Xero is not connected' }, { status: 409 });
+      if (error.code === 'xero_expired') {
+        return expiredResponse();
+      }
+      return disconnectedResponse();
     }
     console.error('[xero/resync] failed:', error);
-    return NextResponse.json({ error: 'Xero resync failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Xero resync failed' },
+      { status: 500 }
+    );
   }
 }

@@ -13,6 +13,9 @@ function snapshotPath(tenantId: string): string {
 async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   try {
     const raw = await readFile(snapshotPath(tenantId), 'utf8');
+    if (!raw.trim()) {
+      return emptySnapshot();
+    }
     const parsed = parseJsonBody<
       CanonicalSnapshot & {
         chaseRuns?: CanonicalSnapshot['ariRuns'];

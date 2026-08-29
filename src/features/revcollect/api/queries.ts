@@ -345,6 +345,11 @@ export interface XeroResyncResult {
   invoiceCount: number;
 }
 
+interface XeroResyncError extends Error {
+  status?: number;
+  code?: 'xero_expired' | 'xero_disconnected';
+}
+
 function disconnectPath(provider: IntegrationProviderKey): string {
   switch (provider) {
     case 'xero':
@@ -384,7 +389,16 @@ export function useResyncXero() {
     mutationFn: async (): Promise<XeroResyncResult> => {
       const response = await fetch('/api/integrations/xero/resync', { method: 'POST' });
       if (!response.ok) {
-        throw new Error('Xero resync failed');
+        let body: { error?: string; code?: XeroResyncError['code'] } = {};
+        try {
+          body = (await response.json()) as { error?: string; code?: XeroResyncError['code'] };
+        } catch {
+          // Keep a generic message when the body is not JSON.
+        }
+        const error: XeroResyncError = new Error(body.error ?? 'Xero resync failed');
+        error.status = response.status;
+        error.code = body.code;
+        throw error;
       }
       return response.json() as Promise<XeroResyncResult>;
     },
@@ -393,8 +407,14 @@ export function useResyncXero() {
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
       toast.success(`Synced ${result.customerCount} customers, ${result.invoiceCount} invoices`);
     },
-    onError: () => {
-      toast.error('Could not resync Xero');
+    onError: (error) => {
+      const resyncError = error as XeroResyncError;
+      if (resyncError.status === 409) {
+        void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+        toast.error('Xero session expired. Reconnect Xero.');
+        return;
+      }
+      toast.error(resyncError.message || 'Could not resync Xero');
     }
   });
 }

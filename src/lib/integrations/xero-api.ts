@@ -136,10 +136,18 @@ const XERO_MAX_PAGES = 100;
 const arCache = new Map<string, ArCacheEntry>();
 const refreshInFlight = new Map<string, Promise<XeroAccessContext>>();
 
+export type XeroConnectionErrorCode = 'xero_expired' | 'xero_disconnected';
+
 export class XeroNotConnectedError extends Error {
-  constructor(message = 'Xero is not connected') {
+  readonly code: XeroConnectionErrorCode;
+
+  constructor(
+    message = 'Xero is not connected',
+    code: XeroConnectionErrorCode = 'xero_disconnected'
+  ) {
     super(message);
     this.name = 'XeroNotConnectedError';
+    this.code = code;
   }
 }
 
@@ -150,9 +158,19 @@ async function refreshXeroAccessContext(appTenantId: string): Promise<XeroAccess
   }
 
   const connection = await getXeroConnection(appTenantId);
-  const refreshToken = await getXeroRefreshToken(appTenantId);
-  if (!connection || !refreshToken) {
+  if (!connection) {
     throw new XeroNotConnectedError();
+  }
+
+  let refreshToken: string | null = null;
+  try {
+    refreshToken = await getXeroRefreshToken(appTenantId);
+  } catch (error) {
+    console.error('[xero] could not decrypt refresh token:', error);
+    throw new XeroNotConnectedError('Xero session expired. Reconnect Xero.', 'xero_expired');
+  }
+  if (!refreshToken) {
+    throw new XeroNotConnectedError('Xero session expired. Reconnect Xero.', 'xero_expired');
   }
 
   try {
@@ -170,7 +188,7 @@ async function refreshXeroAccessContext(appTenantId: string): Promise<XeroAccess
     if (isXeroInvalidGrantError(error)) {
       await deleteXeroConnection(appTenantId);
       clearXeroArCache();
-      throw new XeroNotConnectedError('Xero session expired — reconnect Xero');
+      throw new XeroNotConnectedError('Xero session expired. Reconnect Xero.', 'xero_expired');
     }
     throw error;
   }
