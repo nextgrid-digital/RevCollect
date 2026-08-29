@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
+import { parseJsonBody } from '@/lib/json/parse-json-body';
 import { emptySnapshot } from './defaults';
 import type { CanonicalSnapshot, CanonicalStore } from './types';
 
@@ -12,9 +13,11 @@ function snapshotPath(tenantId: string): string {
 async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   try {
     const raw = await readFile(snapshotPath(tenantId), 'utf8');
-    const parsed = JSON.parse(raw) as CanonicalSnapshot & {
-      chaseRuns?: CanonicalSnapshot['ariRuns'];
-    };
+    const parsed = parseJsonBody<
+      CanonicalSnapshot & {
+        chaseRuns?: CanonicalSnapshot['ariRuns'];
+      }
+    >(raw);
     return {
       ...emptySnapshot(),
       ...parsed,
@@ -24,7 +27,8 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return emptySnapshot();
     }
-    throw error;
+    console.error('[canonical/file-store] could not read snapshot', tenantId, error);
+    return emptySnapshot();
   }
 }
 

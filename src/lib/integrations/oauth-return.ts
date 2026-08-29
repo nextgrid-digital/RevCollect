@@ -1,5 +1,6 @@
 const ALLOWED_RETURN_PATHS = new Set([
   '/settings/integrations',
+  '/onboarding',
   '/onboarding/connect-xero',
   '/onboarding/connect-gmail'
 ]);

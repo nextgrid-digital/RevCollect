@@ -2,31 +2,19 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  revcollectKeys,
-  useDisconnectIntegration,
-  useIntegrationStatus,
-  useResyncXero,
-  type IntegrationProviderKey
-} from '../../api/queries';
+import { revcollectKeys, useIntegrationStatus } from '../../api/queries';
 import { formatLastSyncLabel } from '../../utils';
+import {
+  IntegrationDisconnectButton,
+  IntegrationReconnectLinks,
+  XeroResyncButton
+} from './integration-manage-buttons';
 import { SettingsSection } from './settings-section';
 
 const CONNECT_ERROR_MESSAGES: Record<string, string> = {
@@ -80,72 +68,15 @@ function IntegrationConnectToast() {
     }
 
     if (searchParams.get('connected') === '1') {
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+      void queryClient.invalidateQueries({
+        queryKey: revcollectKeys.integrationStatus()
+      });
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
       toast.success('Connected');
     }
   }, [queryClient, searchParams]);
 
   return null;
-}
-
-function DisconnectButton({
-  provider,
-  label
-}: {
-  provider: IntegrationProviderKey;
-  label: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const disconnect = useDisconnectIntegration();
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button size='sm' variant='outline'>
-          Disconnect
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Disconnect {label}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {provider === 'xero'
-              ? 'You can reconnect later. Existing invoices stay in RevCollect until you resync from Xero.'
-              : 'You can reconnect later. RevCollect will stop sending and reading mail from this account.'}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={disconnect.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              disconnect.mutate(provider, {
-                onSuccess: () => setOpen(false)
-              });
-            }}
-          >
-            Disconnect
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function XeroResyncButton() {
-  const resync = useResyncXero();
-  return (
-    <Button
-      size='sm'
-      variant='outline'
-      isLoading={resync.isPending}
-      onClick={() => resync.mutate()}
-    >
-      Resync
-    </Button>
-  );
 }
 
 export function SettingsIntegrationsView() {
@@ -162,9 +93,12 @@ export function SettingsIntegrationsView() {
           <p className='text-muted-foreground text-sm'>
             {error instanceof Error ? error.message : 'Try again, or reconnect Xero.'}
           </p>
-          <Button size='sm' variant='outline' onClick={() => void refetch()}>
-            Try again
-          </Button>
+          <div className='flex flex-wrap gap-2'>
+            <Button size='sm' variant='outline' onClick={() => void refetch()}>
+              Try again
+            </Button>
+            <IntegrationReconnectLinks returnTo='/settings/integrations' />
+          </div>
         </div>
       ) : isPending || !integrationStatus ? (
         <p className='text-muted-foreground text-sm'>Loading integrations…</p>
@@ -200,7 +134,7 @@ export function SettingsIntegrationsView() {
                       <Link href={href}>Connect</Link>
                     </Button>
                   ) : null}
-                  {item.connected && (key === 'xero' || key === 'gmail') && connectPath ? (
+                  {(key === 'xero' || key === 'gmail') && connectPath ? (
                     <Button asChild size='sm' variant='outline'>
                       <Link href={connectPath}>Reconnect</Link>
                     </Button>
@@ -212,7 +146,7 @@ export function SettingsIntegrationsView() {
                     </Button>
                   ) : null}
                   {item.connected && (key === 'xero' || key === 'gmail') ? (
-                    <DisconnectButton provider={key} label={item.label} />
+                    <IntegrationDisconnectButton provider={key} label={item.label} />
                   ) : null}
                 </div>
               </div>

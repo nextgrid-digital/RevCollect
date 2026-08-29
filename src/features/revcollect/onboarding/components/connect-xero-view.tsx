@@ -49,7 +49,9 @@ export function ConnectXeroView({ nextStep }: ConnectXeroViewProps) {
     }
 
     if (searchParams.get('connected') === '1') {
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+      void queryClient.invalidateQueries({
+        queryKey: revcollectKeys.integrationStatus()
+      });
       toast.success('Xero connected');
     }
   }, [queryClient, searchParams]);
@@ -89,11 +91,9 @@ export function ConnectXeroView({ nextStep }: ConnectXeroViewProps) {
             )}
             <div className='flex flex-wrap gap-2'>
               {!connected ? <Button onClick={handleConnect}>Connect Xero</Button> : null}
-              {connected ? (
-                <Button variant='outline' onClick={handleConnect}>
-                  Reconnect
-                </Button>
-              ) : null}
+              <Button variant='outline' onClick={handleConnect}>
+                Reconnect
+              </Button>
               <Button asChild variant='outline'>
                 <Link href='/onboarding'>Back to onboarding</Link>
               </Button>
