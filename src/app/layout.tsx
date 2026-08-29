@@ -16,7 +16,14 @@ export const metadata: Metadata = {
     default: 'RevCollect',
     template: '%s | RevCollect'
   },
-  description: 'AI-powered accounts receivable and collections dashboard'
+  description: 'AI-powered accounts receivable and collections dashboard',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    apple: '/apple-icon.png'
+  }
 };
 
 export const viewport: Viewport = {

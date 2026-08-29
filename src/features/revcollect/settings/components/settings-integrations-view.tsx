@@ -149,14 +149,24 @@ function XeroResyncButton() {
 }
 
 export function SettingsIntegrationsView() {
-  const { data: integrationStatus, isPending } = useIntegrationStatus();
+  const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
 
   return (
     <div className='divide-border divide-y'>
       <Suspense fallback={null}>
         <IntegrationConnectToast />
       </Suspense>
-      {isPending || !integrationStatus ? (
+      {isError ? (
+        <div className='space-y-3 py-2'>
+          <p className='text-destructive text-sm'>Could not load integrations.</p>
+          <p className='text-muted-foreground text-sm'>
+            {error instanceof Error ? error.message : 'Try again, or reconnect Xero.'}
+          </p>
+          <Button size='sm' variant='outline' onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : isPending || !integrationStatus ? (
         <p className='text-muted-foreground text-sm'>Loading integrations…</p>
       ) : (
         integrations.map(({ key, href, connectPath, icon: Icon }, index) => {

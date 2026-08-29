@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/json/parse-json-body';
 import { getIntegrationTenantId } from './tenant';
 import {
   deleteXeroConnection,
@@ -218,11 +219,11 @@ async function xeroRequest<T>(
     const detail = await response.text();
     let message = `Xero API ${path} failed: ${response.status}`;
     try {
-      const parsed = JSON.parse(detail) as {
+      const parsed = parseJsonBody<{
         Message?: string;
         Detail?: string;
         Elements?: Array<{ ValidationErrors?: Array<{ Message?: string }> }>;
-      };
+      }>(detail);
       const validation = parsed.Elements?.flatMap((element) =>
         (element.ValidationErrors ?? []).map((error) => error.Message).filter(Boolean)
       );
@@ -239,7 +240,8 @@ async function xeroRequest<T>(
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  const body = await response.text();
+  return parseJsonBody<T>(body);
 }
 
 async function xeroGet<T>(

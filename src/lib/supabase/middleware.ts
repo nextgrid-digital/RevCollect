@@ -19,6 +19,9 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/api/audit/') ||
     pathname === '/favicon.ico' ||
     pathname === '/icon.svg' ||
+    pathname === '/icon.png' ||
+    pathname === '/apple-icon.png' ||
+    pathname === '/apple-icon' ||
     pathname.startsWith('/eve/')
   );
 }

@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/json/parse-json-body';
 import type { RevCollectService } from './service';
 import type {
   DataAccessEvent,
@@ -39,11 +40,18 @@ async function getJson<T>(op: string, params?: Record<string, string | undefined
   }
 
   const response = await fetch(`${url.pathname}${url.search}`);
+  const text = await response.text();
   if (!response.ok) {
-    const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+    const detail = (() => {
+      try {
+        return parseJsonBody<{ error?: string }>(text);
+      } catch {
+        return null;
+      }
+    })();
     throw new Error(detail?.error ?? `Request failed: ${op}`);
   }
-  return response.json() as Promise<T>;
+  return parseJsonBody<T>(text);
 }
 
 async function postJson<T>(op: string, payload?: unknown): Promise<T> {
@@ -52,11 +60,18 @@ async function postJson<T>(op: string, payload?: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ op, payload })
   });
+  const text = await response.text();
   if (!response.ok) {
-    const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+    const detail = (() => {
+      try {
+        return parseJsonBody<{ error?: string }>(text);
+      } catch {
+        return null;
+      }
+    })();
     throw new Error(detail?.error ?? `Request failed: ${op}`);
   }
-  return response.json() as Promise<T>;
+  return parseJsonBody<T>(text);
 }
 
 /** Browser-safe proxy to the Xero-backed service via /api/revcollect. */

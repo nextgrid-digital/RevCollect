@@ -10,7 +10,24 @@ import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { useIntegrationStatus } from '../../api/queries';
 
 export function OnboardingSteps() {
-  const { data: integrationStatus, isPending } = useIntegrationStatus();
+  const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
+
+  if (isError) {
+    return (
+      <WorkspaceCanvas className='flex-col'>
+        <WorkspacePageTitle title='Onboarding' className='h-8 shrink-0' />
+        <div className='space-y-3'>
+          <p className='text-destructive text-sm'>Could not load integrations.</p>
+          <p className='text-muted-foreground text-sm'>
+            {error instanceof Error ? error.message : 'Try again, or reconnect Xero in Settings.'}
+          </p>
+          <Button size='sm' onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      </WorkspaceCanvas>
+    );
+  }
 
   if (isPending || !integrationStatus) {
     return (
