@@ -1,7 +1,7 @@
 import { defineTool } from 'eve/tools';
 import { z } from 'zod';
 import { recordChaseRun } from '../../src/lib/chase/record-chase-run';
-import { getIntegrationTenantId } from '../../src/lib/integrations/tenant';
+import { getChaseWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
 
 export default defineTool({
   description: 'Persist overnight Chase bullets for the Dashboard. Does not send anything.',
@@ -10,7 +10,7 @@ export default defineTool({
     digestHour: z.number().int().min(0).max(23).optional()
   }),
   async execute({ bullets, digestHour }) {
-    const tenantId = await getIntegrationTenantId();
+    const tenantId = await getChaseWorkspaceTenantId();
     const run = await recordChaseRun({ tenantId, bullets, digestHour });
     return run;
   }

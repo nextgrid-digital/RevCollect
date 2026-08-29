@@ -6,6 +6,8 @@ import {
   listProviderTenantKeys
 } from '@/lib/integrations/integration-secret-store';
 
+export { getChaseWorkspaceTenantId, listChaseTenantIds } from './tenant-ids';
+
 /**
  * Workspace tenant for integration tokens and the canonical AR store.
  * When a user is signed in, their auth.uid() is the tenant id (until org mapping exists).
@@ -30,16 +32,4 @@ async function migrateLegacyWorkspace(userId: string): Promise<void> {
     copyIntegrationSecret('gmail', MOCK_TENANT_ID, userId),
     copyCanonicalFile(MOCK_TENANT_ID, userId)
   ]);
-}
-
-export async function listChaseTenantIds(): Promise<string[]> {
-  const keys = await listProviderTenantKeys('xero');
-  if (keys.length === 0) {
-    return [MOCK_TENANT_ID];
-  }
-  const unique = new Set(keys);
-  if (unique.has(MOCK_TENANT_ID) && unique.size > 1) {
-    unique.delete(MOCK_TENANT_ID);
-  }
-  return [...unique];
 }
