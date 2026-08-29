@@ -69,8 +69,7 @@ if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
   });
 }
 
-const nextConfig =
-  Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10) >= 24
-    ? withEve(configWithPlugins)
-    : configWithPlugins;
+const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10);
+const useEve = nodeMajor >= 24 && process.env.VERCEL !== '1';
+const nextConfig = useEve ? withEve(configWithPlugins) : configWithPlugins;
 export default nextConfig;
