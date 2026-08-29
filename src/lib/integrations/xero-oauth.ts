@@ -2,7 +2,7 @@ const XERO_AUTH_URL = 'https://login.xero.com/identity/connect/authorize';
 const XERO_TOKEN_URL = 'https://identity.xero.com/connect/token';
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 
-/** Granular scopes for collections (apps created after March 2026). */
+/** Granular accounting scopes. Do not request accounting.transactions — new Xero apps reject it. */
 export const XERO_OAUTH_SCOPES = [
   'openid',
   'profile',
@@ -11,7 +11,6 @@ export const XERO_OAUTH_SCOPES = [
   'accounting.contacts',
   'accounting.invoices',
   'accounting.payments',
-  'accounting.transactions',
   'accounting.reports.aged.read'
 ] as const;
 
@@ -28,9 +27,10 @@ export function getXeroOAuthConfig(): XeroOAuthConfig | null {
     return null;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  const redirectUri =
-    process.env.XERO_OAUTH_REDIRECT_URI ?? `${appUrl}/api/integrations/xero/callback`;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+  const redirectUri = (
+    process.env.XERO_OAUTH_REDIRECT_URI ?? `${appUrl}/api/integrations/xero/callback`
+  ).trim();
 
   return { clientId, clientSecret, redirectUri };
 }
