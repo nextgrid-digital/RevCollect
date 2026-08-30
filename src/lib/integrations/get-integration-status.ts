@@ -1,4 +1,5 @@
 import type { IntegrationStatus } from '@/features/revcollect/types';
+import { getCanonicalStore } from '@/lib/canonical/store';
 import { createAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
 import { getGmailConnection } from './gmail-connection-store';
 import { getIntegrationTenantId } from './tenant';
@@ -34,7 +35,16 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
     getXeroConnection(tenantId)
   ]);
 
-  const lastSyncAt = xeroConnection ? await getXeroLastSyncAt(tenantId) : null;
+  const lastSyncedAt = xeroConnection ? await getXeroLastSyncAt(tenantId) : null;
+  let lastSyncAt = lastSyncedAt;
+  if (xeroConnection && !lastSyncAt) {
+    try {
+      const snapshot = await (await getCanonicalStore()).read(tenantId);
+      lastSyncAt = snapshot.ingestedAt;
+    } catch {
+      lastSyncAt = null;
+    }
+  }
 
   return {
     gmail: gmailConnection

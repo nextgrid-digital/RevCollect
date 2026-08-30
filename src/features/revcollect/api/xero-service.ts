@@ -1,5 +1,6 @@
 import 'server-only';
-import { fetchXeroAccountsReceivable, XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { after } from 'next/server';
+import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
 import { getIntegrationStatus as getLiveIntegrationStatus } from '@/lib/integrations/get-integration-status';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import {
@@ -8,10 +9,9 @@ import {
   defaultWorkspaceAgentConfig,
   emptyIntelligence
 } from '@/lib/canonical/defaults';
-import { ensureXeroIngest } from '@/lib/canonical/ingest-xero';
+import { scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
-import { sweepExpiredSituations } from '@/features/revcollect/extract/sweeper';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
 import type {
@@ -45,11 +45,7 @@ import {
   agingReportSummaryFromInvoices,
   buildAgingBucketsFromInvoices,
   buildCustomerContextFromInvoices,
-  buildCustomerStatusSummary,
-  buildSyntheticInboxFromInvoices,
-  mapXeroCreditNotes,
-  mapXeroCustomers,
-  mapXeroInvoices
+  buildCustomerStatusSummary
 } from './xero-map';
 
 function formatPreparedAt(iso: string): string {
@@ -77,42 +73,50 @@ interface LoadedArData {
   inboxMessages: InboxMessage[];
 }
 
+const AR_DATA_MEMO_TTL_MS = 8_000;
+const arDataMemo = new Map<string, { expiresAt: number; promise: Promise<LoadedArData> }>();
+
+function clearArDataMemo(tenantId: string): void {
+  arDataMemo.delete(tenantId);
+}
+
+async function readArData(tenantId: string): Promise<LoadedArData> {
+  const snapshot = await (await getCanonicalStore()).read(tenantId);
+  const customers = snapshot.customers.map((customer) => ({
+    ...customer,
+    relationshipState:
+      customer.relationshipState ??
+      snapshot.intelligenceByCustomerId[customer.id]?.relationshipState ??
+      emptyIntelligence().relationshipState
+  }));
+
+  after(() => {
+    void scheduleBackgroundXeroIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
+      if (didIngest) clearArDataMemo(tenantId);
+    });
+  });
+
+  return {
+    tenantId,
+    customers,
+    invoices: snapshot.invoices,
+    inboxMessages: overlayDrafts(snapshot.inboxMessages, snapshot.drafts)
+  };
+}
+
 async function loadArData(): Promise<LoadedArData> {
   const tenantId = await getIntegrationTenantId();
-  await sweepExpiredSituations(tenantId);
-  const snapshot = await ensureXeroIngest(tenantId);
-  if (snapshot.customers.length > 0 || snapshot.invoices.length > 0) {
-    const customers = snapshot.customers.map((customer) => ({
-      ...customer,
-      relationshipState:
-        customer.relationshipState ??
-        snapshot.intelligenceByCustomerId[customer.id]?.relationshipState ??
-        emptyIntelligence().relationshipState
-    }));
-    return {
-      tenantId,
-      customers,
-      invoices: snapshot.invoices,
-      inboxMessages: overlayDrafts(snapshot.inboxMessages, snapshot.drafts)
-    };
+  const cached = arDataMemo.get(tenantId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.promise;
   }
 
-  try {
-    const {
-      contacts,
-      invoices: rawInvoices,
-      creditNotes
-    } = await fetchXeroAccountsReceivable(tenantId);
-    const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
-    const customers = mapXeroCustomers(contacts, invoices);
-    const inboxMessages = buildSyntheticInboxFromInvoices(invoices, customers);
-    return { tenantId, customers, invoices, inboxMessages };
-  } catch (error) {
-    if (error instanceof XeroNotConnectedError) {
-      return { tenantId, customers: [], invoices: [], inboxMessages: [] };
-    }
+  const promise = readArData(tenantId).catch((error) => {
+    arDataMemo.delete(tenantId);
     throw error;
-  }
+  });
+  arDataMemo.set(tenantId, { expiresAt: Date.now() + AR_DATA_MEMO_TTL_MS, promise });
+  return promise;
 }
 
 export class XeroRevCollectService implements RevCollectService {
@@ -263,6 +267,15 @@ export class XeroRevCollectService implements RevCollectService {
   async getAgingCustomerBreakdown(filters: AgingReportFilters) {
     const { customers, invoices } = await loadArData();
     return agingCustomerBreakdownFromInvoices(invoices, customers, filters);
+  }
+
+  async getAgingReport(filters: AgingReportFilters) {
+    const { customers, invoices } = await loadArData();
+    return {
+      summary: agingReportSummaryFromInvoices(invoices, filters),
+      chartBuckets: agingChartBucketsFromInvoices(invoices, filters),
+      customerBreakdown: agingCustomerBreakdownFromInvoices(invoices, customers, filters)
+    };
   }
 
   async getThreadEmails(threadId: string): Promise<ThreadEmail[]> {

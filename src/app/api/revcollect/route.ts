@@ -82,12 +82,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(await service.getAgingBuckets());
       case 'getAgingReport': {
         const filters = parseAgingFilters(request);
-        const [summary, chartBuckets, customerBreakdown] = await Promise.all([
-          service.getAgingReportSummary(filters),
-          service.getAgingChartBuckets(filters),
-          service.getAgingCustomerBreakdown(filters)
-        ]);
-        return NextResponse.json({ summary, chartBuckets, customerBreakdown });
+        return NextResponse.json(await service.getAgingReport(filters));
       }
       case 'getTimelineForCustomer': {
         const customerId = request.nextUrl.searchParams.get('customerId');

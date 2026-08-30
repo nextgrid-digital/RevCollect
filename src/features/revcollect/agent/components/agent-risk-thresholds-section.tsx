@@ -16,30 +16,35 @@ import {
 const THRESHOLD_ROWS: {
   key: 'healthy' | 'watch' | 'urgent' | 'critical';
   label: string;
+  hint: string;
   dotClass: string;
   format: (thresholds: AgentRiskThresholds) => string;
 }[] = [
   {
     key: 'healthy',
-    label: 'Healthy',
+    label: 'Just overdue',
+    hint: 'Polite first reminder',
     dotClass: 'bg-emerald-500',
     format: (t) => `${t.healthyDays[0]} – ${t.healthyDays[1]} days overdue`
   },
   {
     key: 'watch',
-    label: 'Watch',
+    label: 'Follow up',
+    hint: 'Second reminder',
     dotClass: 'bg-amber-500',
     format: (t) => `${t.watchDays[0]} – ${t.watchDays[1]} days overdue`
   },
   {
     key: 'urgent',
-    label: 'Urgent',
+    label: 'Chase again',
+    hint: 'Firms up the request',
     dotClass: 'bg-orange-500',
     format: (t) => `${t.urgentDays[0]} – ${t.urgentDays[1]} days overdue`
   },
   {
     key: 'critical',
-    label: 'Critical',
+    label: 'Flag for you',
+    hint: 'Stop drafting and ask you',
     dotClass: 'bg-red-500',
     format: (t) => `${t.criticalDaysMin}+ days overdue`
   }
@@ -58,8 +63,8 @@ export function AgentRiskThresholdsSection({
 
   return (
     <SettingsSection
-      title='When invoices need attention'
-      description='Days overdue before the agent changes urgency. These bands drive draft timing and your daily digest.'
+      title='When to start chasing (days overdue)'
+      description='These are days past due, same idea as Xero aging.'
     >
       <ul className='space-y-6'>
         {THRESHOLD_ROWS.map((row) => {
@@ -69,9 +74,12 @@ export function AgentRiskThresholdsSection({
               <div className='flex items-center justify-between gap-3'>
                 <div className='flex min-w-0 items-center gap-2'>
                   <span className={cn('size-2 shrink-0 rounded-full', row.dotClass)} aria-hidden />
-                  <Label htmlFor={sliderId} className='text-sm font-medium'>
-                    {row.label}
-                  </Label>
+                  <div className='min-w-0'>
+                    <Label htmlFor={sliderId} className='text-sm font-medium'>
+                      {row.label}
+                    </Label>
+                    <p className='text-muted-foreground text-xs'>{row.hint}</p>
+                  </div>
                 </div>
                 <span className='text-muted-foreground shrink-0 text-sm tabular-nums'>
                   {row.format(thresholds)}
@@ -126,8 +134,7 @@ export function AgentRiskThresholdsSection({
         })}
       </ul>
       <p className='text-muted-foreground text-xs'>
-        Drag to set when the agent escalates urgency. Critical invoices may trigger escalation
-        alerts when enabled below.
+        Drag to set when a reminder gets firmer. Flag for you stops drafting and asks you instead.
       </p>
     </SettingsSection>
   );

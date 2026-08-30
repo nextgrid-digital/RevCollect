@@ -10,7 +10,10 @@ interface AgentSignatureSectionProps {
 
 export function AgentSignatureSection({ value, onChange }: AgentSignatureSectionProps) {
   return (
-    <SettingsSection title='Email signature' description='Appended to every AI draft in Inbox.'>
+    <SettingsSection
+      title='Sign-off on reminder emails'
+      description='Added at the bottom of every draft in Inbox.'
+    >
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -45,8 +45,8 @@ export function AgentCustomerOverridesSection({
 
   return (
     <SettingsSection
-      title='Per-customer tone'
-      description='Choose a custom tone for any account. These override the default above.'
+      title='Different tone for specific customers'
+      description='Most customers get the default tone. Add anyone who should always get a softer or firmer reminder (for example a key account vs a chronic late payer).'
     >
       <ul className='divide-border divide-y rounded-lg border'>
         {overrides.map((override) => {

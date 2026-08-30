@@ -37,13 +37,13 @@ const BEHAVIOR_GROUPS: {
     rows: [
       {
         key: 'autoDraftFollowUps',
-        label: 'Auto-draft follow-ups',
-        description: 'Prepare drafts when invoices hit the urgency bands above.'
+        label: 'Write reminder emails for overdue invoices',
+        description: 'Prepare drafts when invoices hit the days-overdue bands above.'
       },
       {
         key: 'autoClassifyEmails',
-        label: 'Auto-classify incoming emails',
-        description: 'Tag replies as promise, dispute, or deflection.'
+        label: 'Sort replies: promised to pay, dispute, or ignoring us',
+        description: 'Tag incoming customer emails so you can see who needs a call.'
       }
     ]
   },
@@ -52,13 +52,13 @@ const BEHAVIOR_GROUPS: {
     rows: [
       {
         key: 'promiseTracking',
-        label: 'Promise tracking',
-        description: 'Auto-set follow-up when a promised payment date passes.'
+        label: "Follow up if they said they'd pay and didn't",
+        description: 'Draft another reminder when a promised payment date passes.'
       },
       {
         key: 'earlyPaymentDiscount',
-        label: 'Early payment discount',
-        description: 'Offer 2% discount for payment within 10 days.'
+        label: 'Offer 2% off if they pay within 10 days',
+        description: 'Mention the discount in reminder drafts when it applies.'
       }
     ]
   },
@@ -67,14 +67,14 @@ const BEHAVIOR_GROUPS: {
     rows: [
       {
         key: 'dailyDigest',
-        label: 'Daily digest email',
+        label: 'Morning summary of what needs you',
         description: (behaviors) =>
-          `Summary of actions needed, sent at ${formatDigestHour(behaviors.digestHour)}.`
+          `A short email of actions needed, sent at ${formatDigestHour(behaviors.digestHour)}.`
       },
       {
         key: 'escalationAlerts',
-        label: 'Escalation alerts',
-        description: 'Notify you when follow-ups are ignored or deflected.'
+        label: 'Notify you when reminders are ignored',
+        description: 'Ping you when a customer keeps ignoring reminders or pushing back.'
       }
     ]
   }
@@ -88,8 +88,8 @@ interface AgentBehaviorsSectionProps {
 export function AgentBehaviorsSection({ behaviors, onChange }: AgentBehaviorsSectionProps) {
   return (
     <SettingsSection
-      title='What the agent does'
-      description='Turn capabilities on or off. Drafts still require your approval before sending.'
+      title='What to prepare for you'
+      description='Turn these on or off. Drafts still wait in Inbox until you send them.'
     >
       <div className='space-y-6'>
         {BEHAVIOR_GROUPS.map((group) => (
@@ -143,6 +143,7 @@ export function AgentBehaviorsSection({ behaviors, onChange }: AgentBehaviorsSec
                             })
                           }
                           className='border-input bg-background h-8 rounded-md border px-2 text-sm'
+                          aria-label='Morning summary send time'
                         />
                       </div>
                     ) : null}

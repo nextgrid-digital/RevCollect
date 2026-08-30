@@ -6,17 +6,23 @@ import { cn } from '@/lib/utils';
 import type { AgentFollowUpStyle } from '../../types';
 import { FOLLOW_UP_STYLE_OPTIONS } from '../lib/follow-up-style';
 import { SettingsSection } from '../../settings/components/settings-section';
+import { AgentFollowUpPreview } from './agent-follow-up-preview';
 
 interface AgentFollowUpStyleSectionProps {
   value: AgentFollowUpStyle;
   onChange: (style: AgentFollowUpStyle) => void;
+  signature?: string;
 }
 
-export function AgentFollowUpStyleSection({ value, onChange }: AgentFollowUpStyleSectionProps) {
+export function AgentFollowUpStyleSection({
+  value,
+  onChange,
+  signature
+}: AgentFollowUpStyleSectionProps) {
   return (
     <SettingsSection
-      title='Default email tone'
-      description='Used for new AI drafts unless a customer has a custom tone below.'
+      title='How reminder emails should sound'
+      description='Used for new drafts unless a customer has a custom tone below.'
     >
       <RadioGroup
         value={value}
@@ -47,6 +53,7 @@ export function AgentFollowUpStyleSection({ value, onChange }: AgentFollowUpStyl
           );
         })}
       </RadioGroup>
+      <AgentFollowUpPreview style={value} signature={signature} />
     </SettingsSection>
   );
 }

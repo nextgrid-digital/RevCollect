@@ -12,19 +12,22 @@ import {
 } from '../../api/queries';
 import type { AgentConfig, AgentFollowUpStyle } from '../../types';
 import { followUpStyleToTone } from '../lib/follow-up-style';
+import { readAgentSetupDone, writeAgentSetupDone } from '../lib/agent-setup-storage';
+import { AgentAddonPaywall } from './agent-addon-paywall';
 import { AgentBehaviorsSection } from './agent-behaviors-section';
 import { AgentCustomerOverridesSection } from './agent-customer-overrides-section';
 import { AgentDigestPreviewSection } from './agent-digest-preview-section';
 import { AgentEscalationRulesSection } from './agent-escalation-rules-section';
 import { AgentFollowUpStyleSection } from './agent-follow-up-style-section';
-import { AgentHowItWorks } from './agent-how-it-works';
-import { AgentPageFooter } from './agent-page-footer';
-import { AgentPageIntro } from './agent-page-intro';
+import { AgentOverviewTab } from './agent-overview-tab';
 import { AgentRiskThresholdsSection } from './agent-risk-thresholds-section';
+import { AgentSetupWizard, type WizardStepId } from './agent-setup-wizard';
 import { AgentSignatureSection } from './agent-signature-section';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MotionStagger, MotionStaggerItem } from '@/features/revcollect/motion/motion-primitives';
 
 function normalizeAgentConfig(config: AgentConfig): AgentConfig {
@@ -50,12 +53,19 @@ export function AgentPage() {
   const activateAgent = useActivateAgent();
 
   const [draft, setDraft] = useState<AgentConfig | null>(null);
+  const [setupDone, setSetupDone] = useState<boolean | null>(null);
+  const [wizardStep, setWizardStep] = useState<WizardStepId>(1);
+  const [tab, setTab] = useState('overview');
 
   useEffect(() => {
     if (savedConfig) {
       setDraft(normalizeAgentConfig(savedConfig));
     }
   }, [savedConfig]);
+
+  useEffect(() => {
+    setSetupDone(readAgentSetupDone());
+  }, []);
 
   const customersById = useMemo(
     () => new Map(customers.map((customer) => [customer.id, customer])),
@@ -155,44 +165,16 @@ export function AgentPage() {
     );
   }, []);
 
-  const handlePreview = useCallback(() => {
-    router.push('/inbox?filter=drafts');
-  }, [router]);
-
   const handleSave = useCallback(async () => {
     if (!draft) return;
 
     try {
       await persistDraft(draft);
-      toast.success('Agent settings saved');
+      toast.success('Reminder settings saved');
     } catch {
-      toast.error('Could not save agent settings');
+      toast.error('Could not save reminder settings');
     }
   }, [draft, persistDraft]);
-
-  const handleActivate = useCallback(async () => {
-    if (!draft || !addonStatus) return;
-
-    if (!addonStatus.subscribed) {
-      toast.message('Subscribe to the Collections Agent add-on to activate');
-      router.push('/settings/billing?addon=agent');
-      return;
-    }
-
-    try {
-      await persistDraft(draft);
-      const result = await activateAgent.mutateAsync();
-      if (result.needsBilling) {
-        toast.message('Subscribe to the Collections Agent add-on to activate');
-        router.push('/settings/billing?addon=agent');
-        return;
-      }
-      setDraft((prev) => (prev ? { ...prev, isActive: true } : prev));
-      toast.success('Agent activated');
-    } catch {
-      toast.error('Could not activate agent');
-    }
-  }, [activateAgent, addonStatus, draft, persistDraft, router]);
 
   const handleActiveChange = useCallback(
     async (nextActive: boolean) => {
@@ -215,9 +197,9 @@ export function AgentPage() {
           } else {
             await persistDraft(nextDraft);
           }
-          toast.success(nextActive ? 'Agent enabled' : 'Agent paused');
+          toast.success(nextActive ? 'Payment reminders are on' : 'Payment reminders paused');
         } catch {
-          toast.error('Could not update agent status');
+          toast.error('Could not update reminder status');
           setDraft(draft);
         }
       }
@@ -225,7 +207,54 @@ export function AgentPage() {
     [activateAgent, addonStatus, draft, persistDraft, router]
   );
 
-  if (configLoading || addonLoading || !draft || !addonStatus) {
+  const handleWizardComplete = useCallback(async () => {
+    if (!draft || !addonStatus) return;
+
+    try {
+      const nextDraft = { ...draft, isActive: true };
+      setDraft(nextDraft);
+      await persistDraft(nextDraft);
+      await activateAgent.mutateAsync();
+      toast.success('Payment reminders are on');
+      writeAgentSetupDone(true);
+      setSetupDone(true);
+      setTab('overview');
+    } catch {
+      toast.error('Could not save reminder settings');
+    }
+  }, [activateAgent, addonStatus, draft, persistDraft]);
+
+  const handleSetupAgain = useCallback(() => {
+    writeAgentSetupDone(false);
+    setWizardStep(1);
+    setSetupDone(false);
+  }, []);
+
+  const handleJumpToStep = useCallback((step: WizardStepId) => {
+    writeAgentSetupDone(false);
+    setWizardStep(step);
+    setSetupDone(false);
+  }, []);
+
+  if (addonLoading || !addonStatus) {
+    return <p className='text-muted-foreground text-sm'>Loading agent configuration…</p>;
+  }
+
+  if (!addonStatus.subscribed) {
+    return (
+      <WorkspaceCanvas className='flex-col'>
+        <WorkspacePageTitle title='Agent' className='h-8 shrink-0' />
+        <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
+          <AgentAddonPaywall
+            priceMonthlyCents={addonStatus.priceMonthlyCents}
+            estimatedAiCostMonthlyCents={addonStatus.estimatedAiCostMonthlyCents}
+          />
+        </div>
+      </WorkspaceCanvas>
+    );
+  }
+
+  if (configLoading || !draft || setupDone === null) {
     return <p className='text-muted-foreground text-sm'>Loading agent configuration…</p>;
   }
 
@@ -233,106 +262,136 @@ export function AgentPage() {
 
   return (
     <WorkspaceCanvas className='flex-col'>
-      <WorkspacePageTitle title='Agent' className='h-8 shrink-0' />
+      <WorkspacePageTitle
+        title='Agent'
+        className='h-8 shrink-0'
+        actions={
+          setupDone ? (
+            <Button
+              type='button'
+              size='sm'
+              onClick={() => void handleSave()}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              Save changes
+            </Button>
+          ) : null
+        }
+      />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
-        <div className='mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6'>
-          <WorkspaceCard className='p-4 md:p-5'>
-            <AgentPageIntro
-              isActive={draft.isActive}
-              priceMonthlyCents={addonStatus.priceMonthlyCents}
-              onActiveChange={handleActiveChange}
-            />
-          </WorkspaceCard>
-
-          <WorkspaceCard className='p-4 md:p-5'>
-            <AgentHowItWorks />
-          </WorkspaceCard>
-
-          <MotionStagger className='space-y-4'>
-            <MotionStaggerItem index={0}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentFollowUpStyleSection
-                  value={draft.followUpStyle}
-                  onChange={handleFollowUpStyleChange}
+        {setupDone ? (
+          <div className='mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6'>
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList>
+                <TabsTrigger value='overview'>Overview</TabsTrigger>
+                <TabsTrigger value='settings'>Settings</TabsTrigger>
+              </TabsList>
+              <TabsContent value='overview' className='mt-4'>
+                <AgentOverviewTab
+                  draft={draft}
+                  priceMonthlyCents={addonStatus.priceMonthlyCents}
+                  onActiveChange={(nextActive) => void handleActiveChange(nextActive)}
+                  onChangeSettings={() => setTab('settings')}
+                  onSetupAgain={handleSetupAgain}
+                  onJumpToStep={handleJumpToStep}
                 />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={1}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentRiskThresholdsSection
-                  thresholds={draft.riskThresholds}
-                  onChange={(riskThresholds) =>
-                    setDraft((prev) => (prev ? { ...prev, riskThresholds } : prev))
-                  }
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={2}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentCustomerOverridesSection
-                  overrides={draft.customerOverrides}
-                  customersById={customersById}
-                  availableCustomers={availableCustomers}
-                  onOverrideChange={handleOverrideChange}
-                  onNoteChange={handleNoteChange}
-                  onAddOverride={handleAddOverride}
-                  onRemoveOverride={handleRemoveOverride}
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={3}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentBehaviorsSection
-                  behaviors={draft.behaviors}
-                  onChange={(behaviors) =>
-                    setDraft((prev) => (prev ? { ...prev, behaviors } : prev))
-                  }
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={4}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentEscalationRulesSection
-                  value={draft.escalationRules}
-                  onChange={(escalationRules) =>
-                    setDraft((prev) => (prev ? { ...prev, escalationRules } : prev))
-                  }
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={5}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentSignatureSection
-                  value={draft.signature}
-                  onChange={(signature) =>
-                    setDraft((prev) => (prev ? { ...prev, signature } : prev))
-                  }
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-            <MotionStaggerItem index={6}>
-              <WorkspaceCard className='p-4 md:p-5'>
-                <AgentDigestPreviewSection
-                  digest={draft.digestPreview}
-                  digestHour={draft.behaviors.digestHour}
-                  riskThresholds={draft.riskThresholds}
-                />
-              </WorkspaceCard>
-            </MotionStaggerItem>
-          </MotionStagger>
-
-          <AgentPageFooter
-            priceMonthlyCents={addonStatus.priceMonthlyCents}
-            estimatedAiCostMonthlyCents={addonStatus.estimatedAiCostMonthlyCents}
-            subscribed={addonStatus.subscribed}
-            isActive={draft.isActive}
-            hasUnsavedChanges={hasUnsavedChanges}
+              </TabsContent>
+              <TabsContent value='settings' className='mt-4'>
+                <MotionStagger className='space-y-4'>
+                  <MotionStaggerItem index={0}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentFollowUpStyleSection
+                        value={draft.followUpStyle}
+                        onChange={handleFollowUpStyleChange}
+                        signature={draft.signature}
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={1}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentRiskThresholdsSection
+                        thresholds={draft.riskThresholds}
+                        onChange={(riskThresholds) =>
+                          setDraft((prev) => (prev ? { ...prev, riskThresholds } : prev))
+                        }
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={2}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentCustomerOverridesSection
+                        overrides={draft.customerOverrides}
+                        customersById={customersById}
+                        availableCustomers={availableCustomers}
+                        onOverrideChange={handleOverrideChange}
+                        onNoteChange={handleNoteChange}
+                        onAddOverride={handleAddOverride}
+                        onRemoveOverride={handleRemoveOverride}
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={3}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentBehaviorsSection
+                        behaviors={draft.behaviors}
+                        onChange={(behaviors) =>
+                          setDraft((prev) => (prev ? { ...prev, behaviors } : prev))
+                        }
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={4}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentEscalationRulesSection
+                        value={draft.escalationRules}
+                        onChange={(escalationRules) =>
+                          setDraft((prev) => (prev ? { ...prev, escalationRules } : prev))
+                        }
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={5}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentSignatureSection
+                        value={draft.signature}
+                        onChange={(signature) =>
+                          setDraft((prev) => (prev ? { ...prev, signature } : prev))
+                        }
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={6}>
+                    <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentDigestPreviewSection
+                        digest={draft.digestPreview}
+                        digestHour={draft.behaviors.digestHour}
+                        riskThresholds={draft.riskThresholds}
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                </MotionStagger>
+              </TabsContent>
+            </Tabs>
+          </div>
+        ) : (
+          <AgentSetupWizard
+            step={wizardStep}
+            draft={draft}
             isSaving={isSaving}
-            onPreview={handlePreview}
-            onSave={handleSave}
-            onActivate={handleActivate}
+            customersById={customersById}
+            availableCustomers={availableCustomers}
+            onStepChange={setWizardStep}
+            onFollowUpStyleChange={handleFollowUpStyleChange}
+            onRiskThresholdsChange={(riskThresholds) =>
+              setDraft((prev) => (prev ? { ...prev, riskThresholds } : prev))
+            }
+            onOverrideChange={handleOverrideChange}
+            onNoteChange={handleNoteChange}
+            onAddOverride={handleAddOverride}
+            onRemoveOverride={handleRemoveOverride}
+            onComplete={() => void handleWizardComplete()}
           />
-        </div>
+        )}
       </div>
     </WorkspaceCanvas>
   );

@@ -25,12 +25,12 @@ export function AgentDigestPreviewSection({
 
   return (
     <SettingsSection
-      title='Daily summary email'
-      description='Example of the digest when daily digest is on.'
+      title="Example of tomorrow morning's email"
+      description='Preview of the morning summary when that email is on.'
     >
       <div className='bg-muted/40 rounded-lg px-4 py-3'>
         <p className='text-sm font-medium'>
-          Daily digest at {formatDigestHour(digestHour)} for {digest.dateLabel}
+          Morning summary at {formatDigestHour(digestHour)} for {digest.dateLabel}
         </p>
         <ul className='text-muted-foreground mt-2 list-disc space-y-1.5 pl-4 text-sm leading-relaxed'>
           {dynamicBullets.map((bullet) => (

@@ -194,3 +194,37 @@ export async function ensureXeroIngest(
     throw error;
   }
 }
+
+const backgroundIngestInFlight = new Map<string, Promise<boolean>>();
+
+export function isXeroSnapshotStale(ingestedAt: string | null): boolean {
+  return !ingestedAt || Date.now() - new Date(ingestedAt).getTime() > INGEST_STALE_MS;
+}
+
+export function scheduleBackgroundXeroIngest(
+  tenantId: string,
+  ingestedAt: string | null
+): Promise<boolean> {
+  if (!isXeroSnapshotStale(ingestedAt)) return Promise.resolve(false);
+
+  const existing = backgroundIngestInFlight.get(tenantId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const connection = await getXeroConnection(tenantId);
+    if (!connection) return false;
+    await ingestXeroAr(tenantId);
+    return true;
+  })()
+    .catch((error) => {
+      if (error instanceof XeroNotConnectedError) return false;
+      console.error('[ingest-xero] background ingest failed:', error);
+      return false;
+    })
+    .finally(() => {
+      backgroundIngestInFlight.delete(tenantId);
+    });
+
+  backgroundIngestInFlight.set(tenantId, promise);
+  return promise;
+}

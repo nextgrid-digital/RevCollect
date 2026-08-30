@@ -11,8 +11,8 @@ interface AgentEscalationRulesSectionProps {
 export function AgentEscalationRulesSection({ value, onChange }: AgentEscalationRulesSectionProps) {
   return (
     <SettingsSection
-      title='When to escalate to you'
-      description='Tell the agent when to flag invoices for your attention instead of drafting another follow-up.'
+      title='When to stop chasing and ask you'
+      description='Tell RevCollect when to flag invoices for you instead of drafting another reminder.'
     >
       <Textarea
         value={value}
