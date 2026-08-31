@@ -49,7 +49,6 @@ export function CustomersWorkspaceActivityColumn({
         workspaceContextWidth
       )}
     >
-      <div className='h-8 shrink-0' aria-hidden />
       <WorkspaceCard variant='context' className='min-h-0 w-full min-w-0 flex-1'>
         <CustomerActivityAside
           timeline={timeline}

@@ -164,7 +164,7 @@ export function InboxConversationPane({
           data-inbox-thread-scroll
           className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-3 md:px-6 md:py-4'
         >
-          <div className={inboxCenterMaxWidth}>
+          <div className={cn(inboxCenterMaxWidth, 'flex min-h-full flex-col')}>
             <ConversationThread
               emails={threadEmails}
               customerName={customer.name}

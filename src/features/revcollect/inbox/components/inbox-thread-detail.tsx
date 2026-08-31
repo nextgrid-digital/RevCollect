@@ -269,8 +269,8 @@ export function InboxThreadDetail({
                 data-inbox-thread-scroll
                 className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'
               >
-                <div className={cn(inboxCenterMaxWidth, 'pb-2')}>
-                  <InboxThreadTransition messageId={messageId}>
+                <div className={cn(inboxCenterMaxWidth, 'flex min-h-full flex-col px-4 pb-2')}>
+                  <InboxThreadTransition messageId={messageId} className='min-h-full flex-1'>
                     <ConversationThread
                       emails={threadEmails}
                       customerName={customer.name}
@@ -282,7 +282,7 @@ export function InboxThreadDetail({
                   </InboxThreadTransition>
                 </div>
               </div>
-              <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 pt-3 pb-2')}>
+              <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-2')}>
                 <InboxThreadComposer
                   agentDraftMeta={selection.agentDraftMeta}
                   aiDraftBase={selection.aiDraftBase}

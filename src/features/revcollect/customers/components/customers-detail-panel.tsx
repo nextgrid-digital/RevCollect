@@ -132,7 +132,7 @@ export function CustomersDetailPanel({
       <div className='flex min-h-0 min-w-0 flex-1 gap-4'>
         <div className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'>
           <div className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'>
-            <div className={cn(workspaceCenterMaxWidth, 'space-y-6 px-4 py-3 md:px-0 md:py-4')}>
+            <div className={cn(workspaceCenterMaxWidth, 'space-y-6 px-4 py-3 md:py-4')}>
               <MotionStagger staggerKey={customerId} className='space-y-6'>
                 <MotionStaggerItem index={0}>
                   <div className='flex flex-wrap items-start justify-between gap-4'>
@@ -142,14 +142,17 @@ export function CustomersDetailPanel({
                         {hideActivityAside ? null : (
                           <h2 className='text-xl font-semibold sm:text-2xl'>{customer.company}</h2>
                         )}
-                        <p
+                        <div
                           className={cn(
                             'text-muted-foreground text-sm',
                             hideActivityAside ? undefined : 'mt-1'
                           )}
                         >
-                          {customer.name} · {customer.email} · {paymentTerms}
-                        </p>
+                          <p>{customer.name}</p>
+                          <p>
+                            {customer.email} · {paymentTerms}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div className='flex shrink-0 flex-wrap items-center gap-2'>
@@ -248,7 +251,6 @@ export function CustomersDetailPanel({
               workspaceContextWidth
             )}
           >
-            <div className='h-8 shrink-0' aria-hidden />
             <WorkspaceCard variant='context' className='min-h-0 w-full min-w-0 flex-1'>
               {activityAside}
             </WorkspaceCard>

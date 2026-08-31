@@ -39,13 +39,21 @@ export function ConversationThread({
     return () => cancelAnimationFrame(frame);
   }, [autoScrollToLatestEmail, emails, latestCustomerEmailId]);
 
+  if (emails.length === 0) {
+    return (
+      <div className='flex min-h-full flex-1 flex-col items-center justify-center px-4 py-16'>
+        <InboxContextSectionLabel className='sr-only'>Conversation</InboxContextSectionLabel>
+        <p className='text-muted-foreground text-center text-sm'>
+          No emails yet. Send a follow-up below.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className='flex flex-col gap-6'>
+    <div className='flex flex-col gap-6 pt-6'>
       <InboxContextSectionLabel className='sr-only'>Conversation</InboxContextSectionLabel>
       <div className='flex flex-col gap-4'>
-        {emails.length === 0 ? (
-          <p className='text-muted-foreground text-sm'>No emails yet. Send a follow-up below.</p>
-        ) : null}
         {emails.map((email, index) => {
           const isCustomer = email.author === 'customer';
           const senderName = isCustomer ? customerName : 'You';

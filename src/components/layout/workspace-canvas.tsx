@@ -14,7 +14,7 @@ export function WorkspaceCanvas({ children, className, padded = true }: Workspac
       className={cn(
         'bg-background flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden',
         padded && workspaceCanvasPadding,
-        padded && 'gap-4',
+        padded && 'gap-x-4',
         className
       )}
     >

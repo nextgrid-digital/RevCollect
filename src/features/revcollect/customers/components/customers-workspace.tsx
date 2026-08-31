@@ -35,8 +35,7 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
   );
 
   const listColumnDesktop = (
-    <div className={cn('hidden min-h-0 min-w-0 flex-col gap-2 md:flex', workspaceListWidth)}>
-      <CustomersListTitle className='h-8' />
+    <div className={cn('hidden min-h-0 min-w-0 flex-col md:flex', workspaceListWidth)}>
       <WorkspaceCard variant='list' className='min-h-0 w-full min-w-0 flex-1'>
         {listContent(false)}
       </WorkspaceCard>
@@ -66,7 +65,7 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
 
   return (
     <div className='flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-hidden'>
-      <WorkspaceCanvas>
+      <WorkspaceCanvas className='flex-col'>
         {isMobile ? (
           <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-2 md:hidden'>
             {activeCustomerId ? (
@@ -89,8 +88,11 @@ export function CustomersWorkspace({ customerId = null }: CustomersWorkspaceProp
           </div>
         ) : (
           <>
-            {listColumnDesktop}
-            {desktopWorkspace}
+            <CustomersListTitle className='h-8 shrink-0' />
+            <div className='flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden'>
+              {listColumnDesktop}
+              {desktopWorkspace}
+            </div>
           </>
         )}
       </WorkspaceCanvas>

@@ -10,6 +10,8 @@ interface AuthClaims {
   user_metadata?: {
     full_name?: string;
     name?: string;
+    avatar_url?: string;
+    picture?: string;
   };
 }
 
@@ -29,13 +31,16 @@ export const getAuthUserId = cache(async (): Promise<string | null> => {
   return claims?.sub ?? null;
 });
 
-export const getAuthUser = cache(async (): Promise<{ name: string; email: string }> => {
-  const claims = await getAuthClaims();
-  const email = claims?.email ?? '';
-  const name =
-    claims?.user_metadata?.full_name ||
-    claims?.user_metadata?.name ||
-    claims?.name ||
-    (email ? email.split('@')[0] : 'User');
-  return { name, email };
-});
+export const getAuthUser = cache(
+  async (): Promise<{ name: string; email: string; avatar?: string }> => {
+    const claims = await getAuthClaims();
+    const email = claims?.email ?? '';
+    const name =
+      claims?.user_metadata?.full_name ||
+      claims?.user_metadata?.name ||
+      claims?.name ||
+      (email ? email.split('@')[0] : 'User');
+    const avatar = claims?.user_metadata?.avatar_url || claims?.user_metadata?.picture;
+    return { name, email, avatar };
+  }
+);

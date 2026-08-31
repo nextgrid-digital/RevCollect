@@ -5,6 +5,7 @@ import { createContext, use, type ReactNode } from 'react';
 export interface AppUser {
   name: string;
   email: string;
+  avatar?: string;
 }
 
 const AppUserContext = createContext<AppUser>({ name: 'User', email: '' });

@@ -1,4 +1,5 @@
 'use client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,13 +35,22 @@ interface AppSidebarProps {
   user: {
     name: string;
     email: string;
+    avatar?: string;
   };
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 export default function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const initials = initialsFromName(user.name);
   const filteredGroups = useFilteredNavGroups(navGroups);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
@@ -127,24 +137,35 @@ export default function AppSidebar({ user }: AppSidebarProps) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size='lg'
-                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                  tooltip={user.name}
+                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full'
                 >
-                  <span className='truncate'>{user.name}</span>
-                  <Icons.chevronsDown className='ml-auto size-4' />
+                  <Avatar className='size-8'>
+                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
+                    <AvatarFallback className='text-xs font-medium'>{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className='truncate group-data-[collapsible=icon]:hidden'>{user.name}</span>
+                  <Icons.chevronsDown className='ml-auto size-4 group-data-[collapsible=icon]:hidden' />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className='w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
-                side='bottom'
+                side={state === 'collapsed' ? 'right' : isMobile ? 'bottom' : 'top'}
                 align='end'
                 sideOffset={4}
               >
                 <DropdownMenuLabel className='p-0 font-normal'>
-                  <div className='px-1 py-1.5 text-left text-sm'>
-                    <p className='font-medium'>{user.name}</p>
-                    {user.email ? (
-                      <p className='text-muted-foreground truncate text-xs'>{user.email}</p>
-                    ) : null}
+                  <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
+                    <Avatar className='size-8'>
+                      {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
+                      <AvatarFallback className='text-xs font-medium'>{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className='grid min-w-0 flex-1 leading-tight'>
+                      <p className='truncate font-medium'>{user.name}</p>
+                      {user.email ? (
+                        <p className='text-muted-foreground truncate text-xs'>{user.email}</p>
+                      ) : null}
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
