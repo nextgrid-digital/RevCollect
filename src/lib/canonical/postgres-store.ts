@@ -1,10 +1,5 @@
-import type {
-  AgentConfig,
-  Customer,
-  InboxMessage,
-  Invoice,
-  ThreadEmail
-} from '@/features/revcollect/types';
+import type { AgentConfig, Customer, Invoice, ThreadEmail } from '@/features/revcollect/types';
+import { buildSyntheticInboxFromInvoices } from '@/features/revcollect/api/xero-map';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { emptyIntelligence, emptySnapshot } from './defaults';
 import { toPaymentRows } from './postgres-payments';
@@ -71,20 +66,6 @@ interface AriRow {
   ran_at: string;
   hour_label: string;
   bullets: string[];
-}
-
-interface ThreadRow {
-  id: string;
-  customer_id: string;
-  subject: string;
-  preview: string;
-  received_at: string;
-  unread: boolean;
-  channel: InboxMessage['channel'];
-  reply_intent: InboxMessage['replyIntent'] | null;
-  reply_intent_label: string | null;
-  agent_draft_ready: boolean;
-  suggested_action: string | null;
 }
 
 function intelligenceFromRow(row: CustomerRow): CustomerIntelligence {
@@ -156,36 +137,26 @@ async function ensureTenant(tenantId: string): Promise<void> {
 
 async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   const supabase = createAdminClient();
-  const [
-    customersRes,
-    invoicesRes,
-    paymentsRes,
-    draftsRes,
-    ariRes,
-    threadsRes,
-    configRes,
-    tenantRes
-  ] = await Promise.all([
-    supabase.from('customers').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-    supabase.from('invoices').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-    supabase.from('payments').select('*').eq('tenant_id', tenantId),
-    supabase.from('agent_drafts').select('*').eq('tenant_id', tenantId),
-    supabase
-      .from('ari_runs')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('ran_at', { ascending: false }),
-    supabase.from('inbox_threads').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
-    supabase.from('agent_config').select('*').eq('tenant_id', tenantId).maybeSingle(),
-    supabase.from('tenants').select('*').eq('id', tenantId).maybeSingle()
-  ]);
+  const [customersRes, invoicesRes, paymentsRes, draftsRes, ariRes, configRes, tenantRes] =
+    await Promise.all([
+      supabase.from('customers').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
+      supabase.from('invoices').select('*').eq('tenant_id', tenantId).is('deleted_at', null),
+      supabase.from('payments').select('*').eq('tenant_id', tenantId),
+      supabase.from('agent_drafts').select('*').eq('tenant_id', tenantId),
+      supabase
+        .from('ari_runs')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('ran_at', { ascending: false }),
+      supabase.from('agent_config').select('*').eq('tenant_id', tenantId).maybeSingle(),
+      supabase.from('tenants').select('*').eq('id', tenantId).maybeSingle()
+    ]);
 
   const firstError =
     customersRes.error ??
     invoicesRes.error ??
     paymentsRes.error ??
     draftsRes.error ??
-    threadsRes.error ??
     configRes.error;
   if (firstError) {
     throw new Error(`Canonical postgres read failed: ${firstError.message}`);
@@ -198,11 +169,13 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
   }
 
   const configRow = configRes.data as { config?: AgentConfig; is_active?: boolean } | null;
+  const customers = customerRows.map(mapCustomer);
+  const invoices = ((invoicesRes.data ?? []) as InvoiceRow[]).map(mapInvoice);
 
   return {
     ...emptySnapshot(),
-    customers: customerRows.map(mapCustomer),
-    invoices: ((invoicesRes.data ?? []) as InvoiceRow[]).map(mapInvoice),
+    customers,
+    invoices,
     payments: ((paymentsRes.data ?? []) as PaymentRow[]).map((row) => ({
       id: row.id,
       customerId: row.customer_id,
@@ -221,19 +194,7 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
       tone: row.tone,
       preparedAt: row.prepared_at
     })),
-    inboxMessages: ((threadsRes.data ?? []) as ThreadRow[]).map((row) => ({
-      id: row.id,
-      customerId: row.customer_id,
-      subject: row.subject,
-      preview: row.preview,
-      receivedAt: row.received_at,
-      unread: row.unread,
-      channel: row.channel,
-      replyIntent: row.reply_intent ?? undefined,
-      replyIntentLabel: row.reply_intent_label ?? undefined,
-      agentDraftReady: row.agent_draft_ready,
-      suggestedAction: row.suggested_action ?? undefined
-    })),
+    inboxMessages: buildSyntheticInboxFromInvoices(invoices, customers),
     agentConfig: configRow?.config ?? null,
     ariRuns: ariRes.error
       ? []

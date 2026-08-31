@@ -9,7 +9,7 @@ import {
   defaultWorkspaceAgentConfig,
   emptyIntelligence
 } from '@/lib/canonical/defaults';
-import { scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
+import { ensureXeroIngest, scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
 import { scheduleBackgroundGmailSync } from '@/lib/canonical/sync-gmail';
 import {
   overlayInboxWithSentEmails,
@@ -54,7 +54,8 @@ import {
   agingReportSummaryFromInvoices,
   buildAgingBucketsFromInvoices,
   buildCustomerContextFromInvoices,
-  buildCustomerStatusSummary
+  buildCustomerStatusSummary,
+  buildSyntheticInboxFromInvoices
 } from './xero-map';
 
 function formatPreparedAt(iso: string): string {
@@ -91,7 +92,16 @@ function clearArDataMemo(tenantId: string): void {
 }
 
 async function readArData(tenantId: string): Promise<LoadedArData> {
-  const snapshot = await (await getCanonicalStore()).read(tenantId);
+  let snapshot = await (await getCanonicalStore()).read(tenantId);
+  const empty = snapshot.customers.length === 0 && snapshot.invoices.length === 0;
+  if (empty) {
+    try {
+      snapshot = await ensureXeroIngest(tenantId);
+    } catch (error) {
+      console.error('[xero-service] first Xero ingest failed:', error);
+    }
+  }
+
   const customers = snapshot.customers.map((customer) => ({
     ...customer,
     relationshipState:
@@ -114,7 +124,10 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
     customers,
     invoices: snapshot.invoices,
     inboxMessages: overlayDrafts(
-      overlayInboxWithSentEmails(snapshot.inboxMessages, snapshot.sentEmails ?? []),
+      overlayInboxWithSentEmails(
+        buildSyntheticInboxFromInvoices(snapshot.invoices, customers),
+        snapshot.sentEmails ?? []
+      ),
       snapshot.drafts
     ),
     sentEmails: snapshot.sentEmails ?? []
