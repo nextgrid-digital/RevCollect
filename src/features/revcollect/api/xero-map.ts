@@ -71,6 +71,16 @@ function toCents(amount: number | undefined): number {
   return Math.round(amount * 100);
 }
 
+function emailFromContact(contact: XeroContact): string {
+  const primary = contact.EmailAddress?.trim();
+  if (primary) return primary;
+
+  const person = contact.ContactPersons?.find((contactPerson) =>
+    contactPerson.EmailAddress?.trim()
+  );
+  return person?.EmailAddress?.trim() || 'no-email@xero.local';
+}
+
 function phoneFromContact(contact: XeroContact): string | undefined {
   const phones = contact.Phones ?? [];
   const preferred =
@@ -204,7 +214,7 @@ export function mapXeroCustomers(contacts: XeroContact[], invoices: Invoice[]): 
     customers.push({
       id: contact.ContactID,
       name: contact.Name ?? 'Unnamed contact',
-      email: contact.EmailAddress?.trim() || 'no-email@xero.local',
+      email: emailFromContact(contact),
       phone: phoneFromContact(contact),
       company: contact.Name ?? 'Unnamed contact',
       status: deriveCustomerStatus(balanceCents, daysOverdue),

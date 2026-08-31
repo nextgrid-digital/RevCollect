@@ -3,7 +3,7 @@ import type { CollectionStatus } from '../types';
 
 export type CollectionTone = 'professional' | 'friendly' | 'firm';
 
-export type CollectionPlaybook = 'standard' | 'dispute' | 'final_notice';
+export type CollectionPlaybook = 'standard' | 'final_notice';
 
 export const COLLECTION_TONES = [
   {
@@ -33,11 +33,6 @@ export const COLLECTION_PLAYBOOKS = [
     version: 'Reminder & follow-up'
   },
   {
-    id: 'dispute' as const,
-    name: 'Dispute',
-    version: 'Resolution'
-  },
-  {
     id: 'final_notice' as const,
     name: 'Final notice',
     version: 'Escalation'
@@ -45,7 +40,6 @@ export const COLLECTION_PLAYBOOKS = [
 ];
 
 export function defaultPlaybookForStatus(status: CollectionStatus): CollectionPlaybook {
-  if (status === 'in_dispute') return 'dispute';
   if (status === 'overdue') return 'final_notice';
   return 'standard';
 }

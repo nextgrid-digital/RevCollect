@@ -14,8 +14,9 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
-import type { RevCollectService } from './service';
+import type { RevCollectService, SendInboxFollowUpInput } from './service';
 import type { DataAccessEvent, TenantId } from './types';
+import type { InboxSendError } from '../extract/record-inbox-send';
 
 export const revcollectKeys = {
   all: ['revcollect'] as const,
@@ -493,6 +494,38 @@ export function useRequestTenantDeletion() {
     },
     onError: () => {
       toast.error('Deletion request failed');
+    }
+  });
+}
+
+export function useSendInboxFollowUp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SendInboxFollowUpInput) => getRevCollectService().sendInboxFollowUp(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.customers() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      toast.success('Follow-up sent');
+    },
+    onError: (error) => {
+      const sendError = error as InboxSendError;
+      if (
+        sendError.status === 409 ||
+        sendError.code === 'gmail_expired' ||
+        sendError.code === 'gmail_disconnected'
+      ) {
+        toast.error(sendError.message || 'Gmail session expired. Reconnect Gmail.', {
+          action: {
+            label: 'Reconnect',
+            onClick: () => {
+              window.location.assign('/settings/integrations');
+            }
+          }
+        });
+        return;
+      }
+      toast.error(sendError.message || 'Could not send follow-up');
     }
   });
 }

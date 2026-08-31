@@ -70,6 +70,7 @@ export function emptySnapshot(): CanonicalSnapshot {
     payments: [],
     intelligenceByCustomerId: {},
     drafts: [],
+    sentEmails: [],
     inboxMessages: [],
     agentConfig: null,
     ariRuns: [],

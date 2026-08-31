@@ -4,6 +4,7 @@ import type {
   Customer,
   InboxMessage,
   Invoice,
+  ThreadEmail,
   WorkspaceGeneralSettings
 } from '@/features/revcollect/types';
 
@@ -83,6 +84,7 @@ export interface CanonicalSnapshot {
   payments: CanonicalPayment[];
   intelligenceByCustomerId: Record<string, CustomerIntelligence>;
   drafts: AgentDraftRecord[];
+  sentEmails: ThreadEmail[];
   inboxMessages: InboxMessage[];
   agentConfig: AgentConfig | null;
   ariRuns: AriRunRecord[];

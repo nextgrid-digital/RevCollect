@@ -3,6 +3,8 @@ import { getXeroRevCollectService } from '@/features/revcollect/api/xero-service
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
 import { applyPreferencesFromEdit } from '@/features/revcollect/extract/preferences-from-edit';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { GmailNotConnectedError } from '@/lib/integrations/gmail-api';
+import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { clearXeroArCache } from '@/lib/integrations/xero-api';
 import type {
   AgingBucket,
@@ -137,37 +139,56 @@ export async function POST(request: NextRequest) {
           )
         );
       case 'recordInboxSend': {
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         const payload = body.payload as {
           customerId?: string;
           originalBody?: string;
           sentBody?: string;
           kind?: 'reply' | 'draft_edit';
+          messageId?: string;
         };
         if (!payload?.customerId || !payload.sentBody) {
           return NextResponse.json({ error: 'customerId and sentBody required' }, { status: 400 });
         }
         const tenantId = await getIntegrationTenantId();
         const kind = payload.kind ?? 'reply';
-        if (payload.originalBody) {
-          await applyPreferencesFromEdit(
-            tenantId,
-            payload.customerId,
-            payload.originalBody,
-            payload.sentBody
-          );
-        }
-        await extractSituation({
-          tenantId,
+        const result = await service.sendInboxFollowUp({
           customerId: payload.customerId,
-          kind: kind === 'draft_edit' ? 'draft_edit' : 'reply',
-          text: payload.sentBody
+          sentBody: payload.sentBody,
+          originalBody: payload.originalBody,
+          kind,
+          messageId: payload.messageId
         });
-        return NextResponse.json({ ok: true });
+        try {
+          if (payload.originalBody) {
+            await applyPreferencesFromEdit(
+              tenantId,
+              payload.customerId,
+              payload.originalBody,
+              payload.sentBody
+            );
+          }
+          await extractSituation({
+            tenantId,
+            customerId: payload.customerId,
+            kind: kind === 'draft_edit' ? 'draft_edit' : 'reply',
+            text: payload.sentBody
+          });
+        } catch (error) {
+          console.error('[recordInboxSend] post-send extract failed:', error);
+        }
+        return NextResponse.json(result);
       }
       default:
         return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
     }
   } catch (error) {
+    if (error instanceof GmailNotConnectedError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
+    }
     const message = error instanceof Error ? error.message : 'Xero mutation failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

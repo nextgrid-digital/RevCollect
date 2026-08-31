@@ -30,7 +30,13 @@ function SettingsPageContent({ tab }: { tab: SettingsTab }) {
       return <SettingsAppearanceView />;
     case 'integrations':
       return (
-        <Suspense fallback={<p className='text-muted-foreground text-sm'>Loading integrations…</p>}>
+        <Suspense
+          fallback={
+            <div className='divide-border divide-y'>
+              <p className='text-muted-foreground text-sm'>Loading integrations…</p>
+            </div>
+          }
+        >
           <SettingsIntegrationsView />
         </Suspense>
       );

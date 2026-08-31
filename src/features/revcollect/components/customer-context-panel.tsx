@@ -6,6 +6,27 @@ import { InboxContextRailBody } from '../inbox/components/inbox-context-rail-bod
 import { InboxDeepAnalysisCard } from '../inbox/components/inbox-deep-analysis-card';
 import type { Customer, CustomerInboxContext, ThreadEmail, TimelineEvent } from '../types';
 
+const XERO_PLACEHOLDER_EMAIL = 'no-email@xero.local';
+
+function CustomerXeroEmail({ email }: { email: string }) {
+  const trimmed = email.trim();
+  const isMissing = !trimmed || trimmed.toLowerCase() === XERO_PLACEHOLDER_EMAIL;
+
+  if (isMissing) {
+    return <p className='text-muted-foreground truncate text-sm'>No email in Xero</p>;
+  }
+
+  return (
+    <a
+      href={`mailto:${trimmed}`}
+      title={trimmed}
+      className='text-muted-foreground hover:text-foreground/80 block truncate text-sm underline-offset-2 hover:underline'
+    >
+      {trimmed}
+    </a>
+  );
+}
+
 interface CustomerContextPanelProps {
   customer: Customer;
   threadSubject?: string;
@@ -39,7 +60,7 @@ export function CustomerContextPanelFloatingHeader({
           >
             {customer.company}
           </Link>
-          <p className='text-muted-foreground truncate text-sm'>{customer.name}</p>
+          <CustomerXeroEmail email={customer.email} />
         </div>
         {actions ? <div className='shrink-0 self-start'>{actions}</div> : null}
       </div>
@@ -93,7 +114,7 @@ export function CustomerContextPanel({
           >
             {customer.company}
           </Link>
-          <p className='text-muted-foreground truncate text-sm'>{customer.name}</p>
+          <CustomerXeroEmail email={customer.email} />
         </div>
       </div>
 

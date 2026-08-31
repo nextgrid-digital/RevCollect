@@ -1,4 +1,10 @@
-import type { AgentConfig, Customer, InboxMessage, Invoice } from '@/features/revcollect/types';
+import type {
+  AgentConfig,
+  Customer,
+  InboxMessage,
+  Invoice,
+  ThreadEmail
+} from '@/features/revcollect/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { emptyIntelligence, emptySnapshot } from './defaults';
 import { toPaymentRows } from './postgres-payments';
@@ -239,7 +245,12 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
         })),
     ingestedAt: tenantRes.error
       ? null
-      : ((tenantRes.data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null)
+      : ((tenantRes.data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null),
+    sentEmails: tenantRes.error
+      ? []
+      : Array.isArray((tenantRes.data as { sent_emails?: ThreadEmail[] } | null)?.sent_emails)
+        ? (tenantRes.data as { sent_emails: ThreadEmail[] }).sent_emails
+        : []
   };
 }
 
@@ -265,6 +276,12 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           balance_cents: customer.balanceCents,
           days_overdue: customer.daysOverdue,
           relationship_state: customer.relationshipState ?? intelligence.relationshipState,
+          follow_up_state: (snapshot.sentEmails ?? []).some(
+            (email) =>
+              email.customerId === customer.id || email.threadId === `xero-customer-${customer.id}`
+          )
+            ? 'sent'
+            : 'idle',
           intelligence
         };
       }),
@@ -377,6 +394,16 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
       .eq('id', tenantId);
     if (error) {
       console.error('[canonical] skipped last_synced_at update:', error.message);
+    }
+  }
+
+  if (snapshot.sentEmails) {
+    const { error } = await supabase
+      .from('tenants')
+      .update({ sent_emails: snapshot.sentEmails, updated_at: now })
+      .eq('id', tenantId);
+    if (error) {
+      console.error('[canonical] skipped sent_emails update:', error.message);
     }
   }
 

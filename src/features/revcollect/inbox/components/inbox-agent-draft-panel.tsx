@@ -7,8 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { appendCanSpamFooter } from '../../compliance/can-spam';
-import { recordInboxSend } from '../../extract/record-inbox-send';
+import { useSendInboxFollowUp } from '../../api/queries';
 import type { AgentDraftMeta } from '../../types';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 
@@ -30,6 +29,8 @@ export function InboxAgentDraftPanel({
   const [aiEditOpen, setAiEditOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const sendFollowUp = useSendInboxFollowUp();
+  const isSending = sendFollowUp.isPending;
 
   useEffect(() => {
     setBody(draftMeta.body);
@@ -46,18 +47,20 @@ export function InboxAgentDraftPanel({
   }, [body, isSent]);
 
   const handleSend = useCallback(() => {
-    if (!body.trim() || isSent) return;
-    appendCanSpamFooter(body);
+    if (!body.trim() || isSent || isSending) return;
     const kind = body.trim() === draftMeta.body.trim() ? 'reply' : 'draft_edit';
-    void recordInboxSend({
-      customerId,
-      originalBody: draftMeta.body,
-      sentBody: body,
-      kind
-    });
-    setIsSent(true);
-    toast.success('Reply sent (mock)');
-  }, [body, customerId, draftMeta.body, isSent]);
+    sendFollowUp.mutate(
+      {
+        customerId,
+        originalBody: draftMeta.body,
+        sentBody: body,
+        kind
+      },
+      {
+        onSuccess: () => setIsSent(true)
+      }
+    );
+  }, [body, customerId, draftMeta.body, isSending, isSent, sendFollowUp]);
 
   const handleDetachInvoice = useCallback(
     (invoiceNumber: string) => {
@@ -196,11 +199,12 @@ export function InboxAgentDraftPanel({
             type='button'
             size='sm'
             className='rounded-full'
-            disabled={isSent || !body.trim()}
+            disabled={isSent || isSending || !body.trim()}
+            isLoading={isSending}
             onClick={handleSend}
           >
             {isSent ? 'Sent' : 'Send'}
-            {!isSent ? <Icons.send className='size-3.5' /> : null}
+            {!isSent && !isSending ? <Icons.send className='size-3.5' /> : null}
           </Button>
         </div>
       </div>

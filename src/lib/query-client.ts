@@ -61,6 +61,7 @@ function persistBrowserQueryClient(queryClient: QueryClient): void {
 }
 
 let browserQueryClient: QueryClient | undefined = undefined;
+let persistInitialized = false;
 
 export function getQueryClient() {
   if (isServer) {
@@ -69,7 +70,15 @@ export function getQueryClient() {
 
   if (!browserQueryClient) {
     browserQueryClient = makeQueryClient();
-    persistBrowserQueryClient(browserQueryClient);
   }
   return browserQueryClient;
+}
+
+// Restore after mount so persisted cache cannot diverge from SSR HTML.
+export function initBrowserQueryPersistence(queryClient: QueryClient): void {
+  if (typeof window === 'undefined' || persistInitialized) {
+    return;
+  }
+  persistInitialized = true;
+  persistBrowserQueryClient(queryClient);
 }

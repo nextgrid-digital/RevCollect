@@ -43,6 +43,9 @@ export function ConversationThread({
     <div className='flex flex-col gap-6'>
       <InboxContextSectionLabel className='sr-only'>Conversation</InboxContextSectionLabel>
       <div className='flex flex-col gap-4'>
+        {emails.length === 0 ? (
+          <p className='text-muted-foreground text-sm'>No emails yet. Send a follow-up below.</p>
+        ) : null}
         {emails.map((email, index) => {
           const isCustomer = email.author === 'customer';
           const senderName = isCustomer ? customerName : 'You';

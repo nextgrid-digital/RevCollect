@@ -10,7 +10,16 @@ import {
   emptyIntelligence
 } from '@/lib/canonical/defaults';
 import { scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
+import { scheduleBackgroundGmailSync } from '@/lib/canonical/sync-gmail';
+import {
+  overlayInboxWithSentEmails,
+  persistSentFollowUp,
+  sentEmailsForThread,
+  timelineEventsFromSentEmails
+} from '@/lib/canonical/sent-emails';
 import { getCanonicalStore } from '@/lib/canonical/store';
+import { appendCanSpamFooter } from '../compliance/can-spam';
+import { sendGmailMessage, sentEmailFromResult } from '@/lib/integrations/gmail-api';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -30,7 +39,7 @@ import type {
 } from '../types';
 import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
 import { isOpenCanonicalInvoice } from '../lib/invoice-open';
-import type { RevCollectService } from './service';
+import type { RevCollectService, SendInboxFollowUpInput, SendInboxFollowUpResult } from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -71,6 +80,7 @@ interface LoadedArData {
   customers: Customer[];
   invoices: Invoice[];
   inboxMessages: InboxMessage[];
+  sentEmails: ThreadEmail[];
 }
 
 const AR_DATA_MEMO_TTL_MS = 8_000;
@@ -94,13 +104,20 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
     void scheduleBackgroundXeroIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
       if (didIngest) clearArDataMemo(tenantId);
     });
+    void scheduleBackgroundGmailSync(tenantId).then((didSync) => {
+      if (didSync) clearArDataMemo(tenantId);
+    });
   });
 
   return {
     tenantId,
     customers,
     invoices: snapshot.invoices,
-    inboxMessages: overlayDrafts(snapshot.inboxMessages, snapshot.drafts)
+    inboxMessages: overlayDrafts(
+      overlayInboxWithSentEmails(snapshot.inboxMessages, snapshot.sentEmails ?? []),
+      snapshot.drafts
+    ),
+    sentEmails: snapshot.sentEmails ?? []
   };
 }
 
@@ -140,7 +157,7 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
-    const { customers, invoices, inboxMessages } = await loadArData();
+    const { customers, invoices, inboxMessages, sentEmails } = await loadArData();
     const message = inboxMessages.find((item) => item.id === messageId);
     if (!message) return null;
 
@@ -158,54 +175,30 @@ export class XeroRevCollectService implements RevCollectService {
       : openInvoices.toSorted(
           (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
         )[0];
-    const days = focusInvoice
-      ? getDaysOverdueFromDueDate(focusInvoice.dueDate)
-      : customer.daysOverdue;
 
-    const invoiceSummary =
-      openInvoices.length === 1
-        ? `Invoice ${openInvoices[0].number}`
-        : `${openInvoices.length} open invoices (${openInvoices.map((invoice) => invoice.number).join(', ')})`;
-
-    const placeholderBody = focusInvoice
-      ? `${invoiceSummary} totaling ${new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD'
-        }).format(customer.balanceCents / 100)}. ${
-          days > 0
-            ? `Oldest overdue item is ${days} day${days === 1 ? '' : 's'} past due.`
-            : 'Nothing is overdue yet.'
-        } Connect Gmail to sync real email threads.`
-      : 'Connect Gmail to sync real collection email threads for this customer.';
-
-    const threadEmails: ThreadEmail[] = [
-      {
-        id: `${message.id}-note`,
-        threadId: message.id,
-        author: 'agent',
-        from: 'RevCollect',
-        to: [customer.email],
-        subject: message.subject,
-        body: placeholderBody,
-        sentAt: message.receivedAt
-      }
-    ];
-
+    const threadEmails = sentEmailsForThread(sentEmails, message.id, customer.id);
+    const latestSent = threadEmails[threadEmails.length - 1];
     const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
+    const timelineEvents = await this.getTimelineForCustomer(customer.id);
 
     return {
       message,
       customer,
       threadEmails,
-      timelineEvents: [],
+      timelineEvents,
       inboxContext,
       threadSummary: inboxContext.aiInsight,
       aiInsightText: inboxContext.aiInsight,
       deepAnalysisText: undefined,
-      latestEmail: threadEmails[0],
+      latestEmail: latestSent,
       agentDraftMeta,
       aiDraftBase: `Hi ${customer.name},\n\nFollowing up on overdue invoice${focusInvoice ? ` ${focusInvoice.number}` : 's'}. Please let us know if you need anything to process payment.\n\nThank you`,
-      lastAction: undefined,
+      lastAction: latestSent
+        ? {
+            title: 'Follow-up sent',
+            occurredAtLabel: formatPreparedAt(latestSent.sentAt)
+          }
+        : undefined,
       openInvoiceNumbers: openInvoices.map((invoice) => invoice.number)
     };
   }
@@ -287,9 +280,8 @@ export class XeroRevCollectService implements RevCollectService {
     const tenantId = await getIntegrationTenantId();
     const snapshot = await (await getCanonicalStore()).read(tenantId);
     const invoiceById = new Map(snapshot.invoices.map((invoice) => [invoice.id, invoice]));
-    return snapshot.payments
+    const payments = snapshot.payments
       .filter((payment) => payment.customerId === customerId)
-      .toSorted((left, right) => right.paidAt.localeCompare(left.paidAt))
       .map((payment) => {
         const invoice = payment.invoiceId ? invoiceById.get(payment.invoiceId) : undefined;
         return {
@@ -303,6 +295,10 @@ export class XeroRevCollectService implements RevCollectService {
           occurredAt: payment.paidAt
         };
       });
+    const sent = timelineEventsFromSentEmails(snapshot.sentEmails ?? [], customerId);
+    return [...payments, ...sent].toSorted((left, right) =>
+      right.occurredAt.localeCompare(left.occurredAt)
+    );
   }
 
   async getAgentDraftMetaForMessage(messageId: string): Promise<AgentDraftMeta | undefined> {
@@ -398,6 +394,45 @@ export class XeroRevCollectService implements RevCollectService {
     snapshot.workspaceSettings = structuredClone(settings);
     await store.write(tenantId, snapshot);
     return structuredClone(settings);
+  }
+
+  async sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult> {
+    const tenantId = await getIntegrationTenantId();
+    const { customers, inboxMessages } = await loadArData();
+    const customer = customers.find((item) => item.id === input.customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+    const to = customer.email.trim();
+    if (!to || !to.includes('@')) {
+      throw new Error('This customer has no email address in Xero');
+    }
+
+    const threadId = input.messageId ?? `xero-customer-${customer.id}`;
+    const message = inboxMessages.find(
+      (item) => item.id === threadId || item.customerId === customer.id
+    );
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    const body = appendCanSpamFooter(input.sentBody);
+    const existingThread = (snapshot.sentEmails ?? []).find(
+      (item) => item.customerId === customer.id && item.gmailThreadId
+    );
+    const sent = await sendGmailMessage({
+      tenantId,
+      to,
+      subject: message?.subject ?? `Follow-up — ${customer.company}`,
+      body,
+      fromName: snapshot.workspaceSettings?.sendFromName,
+      gmailThreadId: existingThread?.gmailThreadId
+    });
+    const email = sentEmailFromResult(sent, { threadId, customerId: customer.id });
+    await persistSentFollowUp({
+      tenantId,
+      customerId: customer.id,
+      email
+    });
+    clearArDataMemo(tenantId);
+    return { ok: true, email };
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {

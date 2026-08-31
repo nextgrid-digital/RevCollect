@@ -16,6 +16,8 @@ export interface EmailAttachment {
 export interface ThreadEmail {
   id: string;
   threadId: string;
+  customerId?: string;
+  gmailThreadId?: string;
   author: ConversationAuthor;
   from: string;
   to: string[];

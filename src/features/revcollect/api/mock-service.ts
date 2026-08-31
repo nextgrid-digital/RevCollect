@@ -34,7 +34,7 @@ import type {
   AriRunRecord,
   WorkspaceGeneralSettings
 } from '../types';
-import type { RevCollectService } from './service';
+import type { RevCollectService, SendInboxFollowUpInput } from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -205,6 +205,10 @@ export class MockRevCollectService implements RevCollectService {
   updateWorkspaceGeneralSettings(settings: WorkspaceGeneralSettings) {
     mutableWorkspaceGeneralSettings = structuredClone(settings);
     return resolveMock({ ...mutableWorkspaceGeneralSettings });
+  }
+
+  async sendInboxFollowUp(_input: SendInboxFollowUpInput) {
+    return { ok: true as const };
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {

@@ -1,5 +1,6 @@
 import { parseJsonBody } from '@/lib/json/parse-json-body';
-import type { RevCollectService } from './service';
+import { sendInboxFollowUpRequest } from '../extract/record-inbox-send';
+import type { RevCollectService, SendInboxFollowUpInput } from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -208,6 +209,10 @@ export class HttpXeroRevCollectService implements RevCollectService {
 
   updateWorkspaceGeneralSettings(settings: WorkspaceGeneralSettings) {
     return postJson<WorkspaceGeneralSettings>('updateWorkspaceGeneralSettings', settings);
+  }
+
+  sendInboxFollowUp(input: SendInboxFollowUpInput) {
+    return sendInboxFollowUpRequest(input);
   }
 
   async exportTenantData(_tenantId: TenantId): Promise<TenantDataExport> {

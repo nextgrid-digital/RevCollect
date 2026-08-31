@@ -19,6 +19,7 @@ import { extractSituation } from '@/features/revcollect/extract/extract-situatio
 import { emptyIntelligence } from './defaults';
 import { recomputePatternsForSnapshot } from './patterns';
 import { getCanonicalStore } from './store';
+import { overlayInboxWithSentEmails } from './sent-emails';
 import { INGEST_STALE_MS, type CanonicalPayment, type CanonicalSnapshot } from './types';
 
 function toCents(amount: number | undefined): number {
@@ -117,7 +118,6 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
 
   const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
   const customers: Customer[] = mapXeroCustomers(contacts, invoices);
-  const inboxMessages = buildSyntheticInboxFromInvoices(invoices, customers);
   const fromRegister = paymentsFromXeroPayments(rawPayments, invoices);
   const basePayments =
     fromRegister.length > 0 ? fromRegister : fallbackPaymentsFromInvoices(rawInvoices);
@@ -128,6 +128,10 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
 
   const store = await getCanonicalStore();
   const current = await store.read(tenantId);
+  const inboxMessages = overlayInboxWithSentEmails(
+    buildSyntheticInboxFromInvoices(invoices, customers),
+    current.sentEmails ?? []
+  );
   const previousPaymentIds = new Set(current.payments.map((payment) => payment.id));
   const intelligenceByCustomerId = { ...current.intelligenceByCustomerId };
   for (const customer of customers) {

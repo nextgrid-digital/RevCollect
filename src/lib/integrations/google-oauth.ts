@@ -95,6 +95,55 @@ export async function fetchGoogleAccountEmail(accessToken: string): Promise<stri
 
 const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 
+export interface GoogleRefreshedTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export function isGoogleInvalidGrantError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('invalid_grant') || message.includes('Token has been expired or revoked');
+}
+
+export async function refreshGoogleAccessToken(
+  config: GoogleOAuthConfig,
+  refreshToken: string
+): Promise<GoogleRefreshedTokens> {
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token'
+  });
+
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    const error = new Error(`Google token refresh failed: ${response.status} ${detail}`);
+    if (isGoogleInvalidGrantError(error) || detail.includes('invalid_grant')) {
+      error.name = 'GoogleInvalidGrantError';
+    }
+    throw error;
+  }
+
+  const payload = (await response.json()) as GoogleTokenResponse;
+  if (!payload.access_token) {
+    throw new Error('Google token refresh did not return an access token');
+  }
+
+  return {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token ?? refreshToken,
+    expiresIn: payload.expires_in
+  };
+}
+
 export async function revokeGoogleToken(token: string): Promise<void> {
   const response = await fetch(GOOGLE_REVOKE_URL, {
     method: 'POST',

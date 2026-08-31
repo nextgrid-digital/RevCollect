@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useIsHydrated } from '@/hooks/use-is-hydrated';
 import { revcollectKeys, useIntegrationStatus } from '../../api/queries';
 import { formatLastSyncLabel } from '../../utils';
 import {
@@ -80,6 +81,7 @@ function IntegrationConnectToast() {
 }
 
 export function SettingsIntegrationsView() {
+  const isHydrated = useIsHydrated();
   const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
 
   return (
@@ -87,7 +89,7 @@ export function SettingsIntegrationsView() {
       <Suspense fallback={null}>
         <IntegrationConnectToast />
       </Suspense>
-      {isError ? (
+      {isHydrated && isError ? (
         <div className='space-y-3 py-2'>
           <p className='text-destructive text-sm'>Could not load integrations.</p>
           <p className='text-muted-foreground text-sm'>
@@ -100,7 +102,7 @@ export function SettingsIntegrationsView() {
             <IntegrationReconnectLinks returnTo='/settings/integrations' />
           </div>
         </div>
-      ) : isPending || !integrationStatus ? (
+      ) : !isHydrated || isPending || !integrationStatus ? (
         <p className='text-muted-foreground text-sm'>Loading integrations…</p>
       ) : (
         integrations.map(({ key, href, connectPath, icon: Icon }, index) => {

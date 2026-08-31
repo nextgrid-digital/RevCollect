@@ -24,7 +24,8 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
     return {
       ...emptySnapshot(),
       ...parsed,
-      ariRuns: parsed.ariRuns ?? parsed.chaseRuns ?? []
+      ariRuns: parsed.ariRuns ?? parsed.chaseRuns ?? [],
+      sentEmails: parsed.sentEmails ?? []
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

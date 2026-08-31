@@ -24,6 +24,13 @@ export interface XeroPhone {
   PhoneCountryCode?: string;
 }
 
+export interface XeroContactPerson {
+  FirstName?: string;
+  LastName?: string;
+  EmailAddress?: string;
+  IncludeInEmails?: boolean;
+}
+
 export interface XeroContact {
   ContactID: string;
   Name?: string;
@@ -31,6 +38,7 @@ export interface XeroContact {
   IsCustomer?: boolean;
   ContactStatus?: string;
   Phones?: XeroPhone[];
+  ContactPersons?: XeroContactPerson[];
 }
 
 export interface XeroInvoiceContact {

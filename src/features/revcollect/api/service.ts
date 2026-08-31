@@ -28,6 +28,19 @@ import type {
   TenantId
 } from './types';
 
+export interface SendInboxFollowUpInput {
+  customerId: string;
+  sentBody: string;
+  originalBody?: string;
+  kind?: 'reply' | 'draft_edit';
+  messageId?: string;
+}
+
+export interface SendInboxFollowUpResult {
+  ok: true;
+  email?: ThreadEmail;
+}
+
 export interface RevCollectService {
   getTenantId(): TenantId;
 
@@ -66,6 +79,7 @@ export interface RevCollectService {
   updateWorkspaceGeneralSettings(
     settings: WorkspaceGeneralSettings
   ): Promise<WorkspaceGeneralSettings>;
+  sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult>;
 
   exportTenantData(tenantId: TenantId): Promise<TenantDataExport>;
   requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult>;

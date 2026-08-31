@@ -5,6 +5,7 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useIntegrationStatus } from '@/features/revcollect/api/queries';
 import { formatLastSyncLabel } from '@/features/revcollect/utils';
+import { useIsHydrated } from '@/hooks/use-is-hydrated';
 
 function StatusIcon({ icon }: { icon: 'check' | 'close' | 'clock' }) {
   switch (icon) {
@@ -49,9 +50,10 @@ function StatusPill({
 }
 
 export function WorkspaceConnectionStatus() {
+  const isHydrated = useIsHydrated();
   const { data: integrationStatus } = useIntegrationStatus();
 
-  if (!integrationStatus) return null;
+  if (!isHydrated || !integrationStatus) return null;
 
   const { xero, gmail } = integrationStatus;
   const lastSyncAt = xero.lastSyncAt ?? null;
@@ -83,7 +85,7 @@ export function WorkspaceConnectionStatus() {
           label={lastSyncLabel}
           title={
             lastSyncAt
-              ? `Last synced ${new Date(lastSyncAt).toLocaleString()}`
+              ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
               : 'Xero has not synced yet'
           }
         />

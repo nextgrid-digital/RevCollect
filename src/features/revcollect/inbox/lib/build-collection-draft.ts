@@ -15,8 +15,6 @@ const TONE_CLOSERS: Record<CollectionTone, string> = {
 const PLAYBOOK_BODIES: Record<CollectionPlaybook, string> = {
   standard:
     'We are following up on the open balance on your account. Please confirm when payment will be released or if any invoices require clarification from our billing team.',
-  dispute:
-    'To resolve the open dispute, please share the invoice numbers in question and any supporting documentation. Our billing team will review credits and adjustments and respond with a reconciled statement.',
   final_notice:
     'This is a final notice regarding your overdue balance. Unless payment or a written payment commitment is received within five business days, the account may be referred for further collection action per your agreement terms.'
 };

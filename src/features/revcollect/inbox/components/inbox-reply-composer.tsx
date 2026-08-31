@@ -19,9 +19,7 @@ import { Icons } from '@/components/icons';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { useAgentConfig } from '../../api/queries';
-import { appendCanSpamFooter } from '../../compliance/can-spam';
-import { recordInboxSend } from '../../extract/record-inbox-send';
+import { useAgentConfig, useSendInboxFollowUp } from '../../api/queries';
 import type { AgentConfig, CollectionStatus } from '../../types';
 import {
   COLLECTION_PLAYBOOKS,
@@ -178,6 +176,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     const autoRunId = useId();
     const rootRef = useRef<HTMLDivElement>(null);
     const { data: agentConfig } = useAgentConfig();
+    const sendFollowUp = useSendInboxFollowUp();
     const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
     const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
 
@@ -299,18 +298,24 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     }, [applyDraft]);
 
     const handleSend = useCallback(() => {
-      if (!body.trim()) return;
-      appendCanSpamFooter(body);
-      if (customerId) {
-        void recordInboxSend({
+      const sentBody = body.trim();
+      if (!sentBody || sendFollowUp.isPending) return;
+      if (!customerId) {
+        toast.error('No customer on this thread');
+        return;
+      }
+      sendFollowUp.mutate(
+        {
           customerId,
           originalBody: baseDraft,
-          sentBody: body,
+          sentBody,
           kind: 'reply'
-        });
-      }
-      toast.success('Reply sent (mock)');
-    }, [baseDraft, body, customerId]);
+        },
+        {
+          onError: () => setBody(sentBody)
+        }
+      );
+    }, [baseDraft, body, customerId, sendFollowUp]);
 
     useImperativeHandle(
       ref,
@@ -335,6 +340,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           onChange={setBody}
           placeholder={placeholder}
           onSend={handleSend}
+          disabled={sendFollowUp.isPending}
           leftActions={
             isAgentDraft ? undefined : (
               <ComposerToolbar
