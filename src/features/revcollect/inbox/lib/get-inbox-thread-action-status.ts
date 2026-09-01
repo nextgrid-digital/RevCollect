@@ -1,9 +1,11 @@
 import type { Customer, InboxMessage, ReplyIntent } from '../../types';
+import { isBrokenPromise } from '../../lib/collection-decision';
 
 export type InboxThreadActionStatus =
   | 'ai_draft_ready'
   | 'awaiting_reply'
   | 'monitoring'
+  | 'promise_missed'
   | 'up_to_date';
 
 function capitalizeIntent(intent: ReplyIntent): string {
@@ -40,12 +42,20 @@ export function getInboxThreadActionStatus(
   message: InboxMessage,
   customer: Customer
 ): InboxThreadActionStatus {
-  if (customer.status === 'promised' || customer.status === 'in_dispute') {
+  if (customer.status === 'in_dispute') {
+    return 'monitoring';
+  }
+
+  if (customer.status === 'promised' && !isBrokenPromise(customer)) {
     return 'monitoring';
   }
 
   if (message.agentDraftReady) {
     return 'ai_draft_ready';
+  }
+
+  if (isBrokenPromise(customer)) {
+    return 'promise_missed';
   }
 
   if (message.unread) {
@@ -60,5 +70,5 @@ export function getInboxThreadActionStatus(
 }
 
 export function threadNeedsAttention(status: InboxThreadActionStatus): boolean {
-  return status === 'ai_draft_ready' || status === 'awaiting_reply';
+  return status === 'ai_draft_ready' || status === 'awaiting_reply' || status === 'promise_missed';
 }

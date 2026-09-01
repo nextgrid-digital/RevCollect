@@ -63,6 +63,13 @@ function getInboxThreadStatusDisplay(
         variant: 'attention',
         icon: Icons.inbox
       };
+    case 'promise_missed':
+      return {
+        label: customer.promisedDate
+          ? `Promise missed · ${formatPromisedDateLabel(customer.promisedDate)}`
+          : 'Promise missed',
+        variant: 'attention'
+      };
     case 'monitoring': {
       if (customer.status === 'promised') {
         return {
@@ -101,7 +108,9 @@ function getSecondaryOverdueChip(
   daysOverdue: number
 ): InboxListPillItem | null {
   if (daysOverdue <= 0) return null;
-  if (status !== 'ai_draft_ready' && status !== 'awaiting_reply') return null;
+  if (status !== 'ai_draft_ready' && status !== 'awaiting_reply' && status !== 'promise_missed') {
+    return null;
+  }
 
   return {
     label: `${daysOverdue}d overdue`,

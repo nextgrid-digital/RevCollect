@@ -1,5 +1,10 @@
 import { getDaysOverdueFromDueDate } from '@/features/revcollect/utils';
 import { isOpenCanonicalInvoice } from '@/features/revcollect/lib/invoice-open';
+import {
+  formatPromisedDateLabel,
+  isBrokenPromise
+} from '@/features/revcollect/lib/collection-decision';
+import type { Customer, Invoice } from '@/features/revcollect/types';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { queueFollowUpDraft } from './queue-follow-up-draft';
@@ -24,7 +29,9 @@ export async function runOvernightAri(
   if (!options?.forceHour && config.behaviors.dailyDigest && currentHour !== digestHour) {
     return { tenantId, drafted: 0, skipped: 0, bullets: [] };
   }
-  if (!config.behaviors.autoDraftFollowUps || !config.isActive) {
+
+  const { autoDraftFollowUps, promiseTracking } = config.behaviors;
+  if (!config.isActive || (!autoDraftFollowUps && !promiseTracking)) {
     const bullets = [
       'ARI is paused — activate the agent and enable auto-draft follow-ups in Agent settings.'
     ];
@@ -32,31 +39,34 @@ export async function runOvernightAri(
     return { tenantId, drafted: 0, skipped: 0, bullets };
   }
 
-  const overdueCustomers = snapshot.customers.filter(
-    (customer) => customer.daysOverdue > 0 && customer.balanceCents > 0
-  );
+  const brokenPromises = promiseTracking
+    ? snapshot.customers.filter((customer) => isBrokenPromise(customer))
+    : [];
+  const overdueCustomers = autoDraftFollowUps
+    ? snapshot.customers.filter(
+        (customer) =>
+          customer.daysOverdue > 0 &&
+          customer.balanceCents > 0 &&
+          !brokenPromises.some((item) => item.id === customer.id)
+      )
+    : [];
+  const targets = [...brokenPromises, ...overdueCustomers].slice(0, 25);
+
   let drafted = 0;
   let skipped = 0;
   const bullets: string[] = [];
 
-  for (const customer of overdueCustomers.slice(0, 25)) {
+  for (const customer of targets) {
+    const broken = isBrokenPromise(customer);
     const result = await queueFollowUpDraft({
       tenantId,
       customerId: customer.id,
-      tone: config.tone
+      tone: config.tone,
+      followBrokenPromise: broken
     });
     if (result.draft) {
       drafted += 1;
-      const invoices = snapshot.invoices
-        .filter((invoice) => invoice.customerId === customer.id)
-        .filter(isOpenCanonicalInvoice);
-      const oldest = invoices.toSorted(
-        (left, right) =>
-          getDaysOverdueFromDueDate(right.dueDate) - getDaysOverdueFromDueDate(left.dueDate)
-      )[0];
-      bullets.push(
-        `${oldest?.number ?? customer.company} (${customer.company}) is ${customer.daysOverdue} days overdue — draft queued for review`
-      );
+      bullets.push(overnightDraftBullet(customer, snapshot.invoices, broken));
     } else {
       skipped += 1;
       if (result.skipped) {
@@ -71,4 +81,19 @@ export async function runOvernightAri(
 
   await recordAriRun({ tenantId, bullets, digestHour });
   return { tenantId, drafted, skipped, bullets };
+}
+
+function overnightDraftBullet(customer: Customer, invoices: Invoice[], broken: boolean): string {
+  if (broken && customer.promisedDate) {
+    return `${customer.company} promised ${formatPromisedDateLabel(customer.promisedDate)} and hasn't paid — draft queued for review`;
+  }
+
+  const oldest = invoices
+    .filter((invoice) => invoice.customerId === customer.id)
+    .filter(isOpenCanonicalInvoice)
+    .toSorted(
+      (left, right) =>
+        getDaysOverdueFromDueDate(right.dueDate) - getDaysOverdueFromDueDate(left.dueDate)
+    )[0];
+  return `${oldest?.number ?? customer.company} (${customer.company}) is ${customer.daysOverdue} days overdue — draft queued for review`;
 }

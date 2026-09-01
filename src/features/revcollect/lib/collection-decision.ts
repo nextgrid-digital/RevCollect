@@ -71,6 +71,12 @@ export function applyCollectionDecisionToCustomer(
   }
 }
 
+export function isBrokenPromise(customer: Customer, now = new Date()): boolean {
+  if (customer.status !== 'promised' || customer.balanceCents <= 0) return false;
+  if (!customer.promisedDate) return false;
+  return customer.promisedDate < todayIsoDate(now);
+}
+
 export function restoreCollectionOverrides(
   customers: Customer[],
   previous: Customer[]
@@ -82,6 +88,7 @@ export function restoreCollectionOverrides(
     }
     const prev = previousById.get(customer.id);
     if (!prev || !isCollectionOverrideStatus(prev.status)) return customer;
+    if (prev.status === 'promised' && isBrokenPromise(prev)) return customer;
     return {
       ...customer,
       status: prev.status,
@@ -90,10 +97,12 @@ export function restoreCollectionOverrides(
   });
 }
 
-export function collectionFollowUpSkipReason(customer: Customer): string | undefined {
+export function collectionFollowUpSkipReason(
+  customer: Customer,
+  options?: { followBrokenPromise?: boolean }
+): string | undefined {
   if (customer.status === 'in_dispute') return 'in_dispute';
   if (customer.status !== 'promised') return undefined;
-  if (!customer.promisedDate) return 'promised';
-  if (customer.promisedDate >= todayIsoDate()) return 'promised';
-  return undefined;
+  if (options?.followBrokenPromise && isBrokenPromise(customer)) return undefined;
+  return 'promised';
 }

@@ -9,20 +9,25 @@ import { getCanonicalStore } from '@/lib/canonical/store';
 import type { AgentDraftRecord } from '@/lib/canonical/types';
 import type { AgentDraftTone } from '@/features/revcollect/types';
 import { isOpenCanonicalInvoice } from '@/features/revcollect/lib/invoice-open';
-import { collectionFollowUpSkipReason } from '@/features/revcollect/lib/collection-decision';
+import {
+  applyCollectionDecisionToCustomer,
+  collectionFollowUpSkipReason,
+  isBrokenPromise
+} from '@/features/revcollect/lib/collection-decision';
 
 export async function queueFollowUpDraft(input: {
   tenantId: string;
   customerId: string;
   tone?: AgentDraftTone;
+  followBrokenPromise?: boolean;
 }): Promise<{ draft: AgentDraftRecord | null; skipped?: string }> {
-  const { tenantId, customerId, tone = 'professional' } = input;
+  const { tenantId, customerId, tone = 'professional', followBrokenPromise = false } = input;
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
   const customer = snapshot.customers.find((item) => item.id === customerId);
   if (!customer) return { draft: null, skipped: 'customer_not_found' };
 
-  const collectionSkip = collectionFollowUpSkipReason(customer);
+  const collectionSkip = collectionFollowUpSkipReason(customer, { followBrokenPromise });
   if (collectionSkip) return { draft: null, skipped: collectionSkip };
 
   const intelligence = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
@@ -32,12 +37,14 @@ export async function queueFollowUpDraft(input: {
   const invoices = snapshot.invoices
     .filter((invoice) => invoice.customerId === customerId)
     .filter(isOpenCanonicalInvoice);
+  const brokenPromise = followBrokenPromise && isBrokenPromise(customer);
   const assembled = await assembleCustomerContext(tenantId, customerId);
   const template = templateFollowUpDraft({
     customer,
     invoices,
     greeting: intelligence.preferences.greeting,
-    signoff: intelligence.preferences.signoff
+    signoff: intelligence.preferences.signoff,
+    promisedDate: brokenPromise ? customer.promisedDate : undefined
   });
 
   let body = template;
@@ -46,7 +53,9 @@ export async function queueFollowUpDraft(input: {
     prompt: [
       assembled?.promptBlock ?? '',
       '',
-      `Write a short ${tone} collections follow-up email.`,
+      brokenPromise && customer.promisedDate
+        ? `They promised to pay by ${customer.promisedDate} and have not. Write a short ${tone} follow-up.`
+        : `Write a short ${tone} collections follow-up email.`,
       'Do not invent invoice numbers, amounts, dates, or names.',
       'Do not claim the email was sent. This is a draft for human approval.'
     ].join('\n')
@@ -66,7 +75,9 @@ export async function queueFollowUpDraft(input: {
     id: randomUUID(),
     threadId,
     customerId,
-    title: `Follow-up · ${customer.company}`,
+    title: brokenPromise
+      ? `Promise missed · ${customer.company}`
+      : `Follow-up · ${customer.company}`,
     body,
     tone,
     preparedAt: new Date().toISOString()
@@ -76,6 +87,15 @@ export async function queueFollowUpDraft(input: {
   snapshot.inboxMessages = snapshot.inboxMessages.map((message) =>
     message.customerId === customerId ? { ...message, agentDraftReady: true } : message
   );
+  if (brokenPromise) {
+    const released = applyCollectionDecisionToCustomer(customer, {
+      customerId,
+      action: 'chase_again'
+    });
+    snapshot.customers = snapshot.customers.map((item) =>
+      item.id === released.id ? released : item
+    );
+  }
   await store.write(tenantId, snapshot);
   return { draft };
 }
