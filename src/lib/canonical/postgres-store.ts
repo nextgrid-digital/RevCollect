@@ -95,6 +95,7 @@ function mapCustomer(row: CustomerRow): Customer {
     balanceCents: row.balance_cents,
     daysOverdue: row.days_overdue,
     promisedDate: row.promised_date?.slice(0, 10) || undefined,
+    classifiedReplyId: intelligence.classifiedReplyId,
     relationshipState: intelligence.relationshipState
   };
 }
@@ -246,7 +247,10 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           )
             ? 'sent'
             : 'idle',
-          intelligence
+          intelligence: {
+            ...intelligence,
+            classifiedReplyId: customer.classifiedReplyId
+          }
         };
       }),
       { onConflict: 'id' }

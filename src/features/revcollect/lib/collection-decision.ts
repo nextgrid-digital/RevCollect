@@ -92,7 +92,8 @@ export function restoreCollectionOverrides(
     return {
       ...customer,
       status: prev.status,
-      promisedDate: prev.status === 'promised' ? prev.promisedDate : undefined
+      promisedDate: prev.status === 'promised' ? prev.promisedDate : undefined,
+      classifiedReplyId: prev.classifiedReplyId
     };
   });
 }

@@ -52,6 +52,7 @@ export interface Customer {
   balanceCents: number;
   daysOverdue: number;
   promisedDate?: string;
+  classifiedReplyId?: string;
   relationshipState?: RelationshipState;
 }
 

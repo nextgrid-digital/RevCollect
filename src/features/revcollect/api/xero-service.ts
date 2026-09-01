@@ -26,6 +26,7 @@ import {
   sentEmailFromResult,
   GmailNotConnectedError
 } from '@/lib/integrations/gmail-api';
+import { applyAutoPromises } from '@/lib/ari/apply-auto-promises';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -100,13 +101,22 @@ function clearArDataMemo(tenantId: string): void {
 }
 
 async function refreshInboxFromGmail(tenantId: string): Promise<void> {
+  let didRehome = false;
+  let didSync = false;
   try {
-    const didRehome = await persistRehomedSentEmails(tenantId);
-    const didSync = await syncGmailThreads(tenantId);
-    if (didRehome || didSync) clearArDataMemo(tenantId);
+    didRehome = await persistRehomedSentEmails(tenantId);
+    didSync = await syncGmailThreads(tenantId);
   } catch (error) {
-    if (error instanceof GmailNotConnectedError) return;
-    console.error('[gmail] inbox sync failed:', error);
+    if (!(error instanceof GmailNotConnectedError)) {
+      console.error('[gmail] inbox sync failed:', error);
+    }
+  }
+
+  try {
+    const didPromise = await applyAutoPromises(tenantId);
+    if (didRehome || didSync || didPromise) clearArDataMemo(tenantId);
+  } catch (error) {
+    console.error('[ari] auto-promise failed:', error);
   }
 }
 
@@ -442,7 +452,14 @@ export class XeroRevCollectService implements RevCollectService {
       throw new Error('Customer not found');
     }
 
-    const updated = applyCollectionDecisionToCustomer(customer, input);
+    const latestReply = (snapshot.sentEmails ?? [])
+      .filter((email) => email.author === 'customer' && email.customerId === customer.id)
+      .toSorted((left, right) => left.sentAt.localeCompare(right.sentAt))
+      .at(-1);
+    const updated = {
+      ...applyCollectionDecisionToCustomer(customer, input),
+      classifiedReplyId: latestReply?.id ?? customer.classifiedReplyId
+    };
     snapshot.customers = snapshot.customers.map((item) =>
       item.id === updated.id ? updated : item
     );

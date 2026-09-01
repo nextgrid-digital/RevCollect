@@ -1,4 +1,5 @@
 import { complete, parseJsonObject } from '@/lib/ai/complete';
+import { parsePromisedDateFromText } from './parse-promise-date';
 
 export type ReplyIntentClass =
   | 'deflection'
@@ -36,13 +37,17 @@ function heuristicIntent(text: string): { intent: ReplyIntentClass; label: strin
   if (/dispute|incorrect|not our invoice/.test(lower)) {
     return { intent: 'dispute', label: 'Dispute' };
   }
-  if (/will pay|promise|by friday|next week/.test(lower)) {
+  if (/will pay|i['’]ll pay|promise|by friday|next week/.test(lower)) {
     return { intent: 'promise', label: 'Promise to pay' };
   }
   if (/out of office|forwarded|wrong person/.test(lower)) {
     return { intent: 'deflection', label: 'Deflection' };
   }
   return { intent: 'other', label: 'Unclassified reply' };
+}
+
+export function replyLooksLikePromise(text: string): boolean {
+  return heuristicIntent(text).intent === 'promise';
 }
 
 export async function classifyReply(
@@ -63,7 +68,8 @@ export async function classifyReply(
 export async function extractPromiseDate(
   text: string
 ): Promise<{ promiseDate: string | null; confidence: number }> {
-  const iso = text.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1] ?? null;
+  const iso =
+    parsePromisedDateFromText(text) ?? text.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1] ?? null;
   const result = await complete({
     taskType: 'extract',
     prompt: `Extract a promised payment date as YYYY-MM-DD or null.\n${text}`,
@@ -73,8 +79,9 @@ export async function extractPromiseDate(
     return { promiseDate: iso, confidence: iso ? 0.5 : 0 };
   }
   const parsed = parseJsonObject<{ promiseDate: string | null; confidence?: number }>(result.text);
+  const promiseDate = iso ?? parsed?.promiseDate ?? null;
   return {
-    promiseDate: parsed?.promiseDate ?? iso,
-    confidence: parsed?.confidence ?? (parsed?.promiseDate ? 0.7 : 0)
+    promiseDate,
+    confidence: parsed?.confidence ?? (promiseDate ? 0.7 : 0)
   };
 }

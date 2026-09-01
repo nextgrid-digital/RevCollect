@@ -50,6 +50,7 @@ export interface CustomerIntelligence {
   preferences: CustomerPreferences;
   relationshipState: RelationshipState;
   installmentHistory: InstallmentHistoryEntry[];
+  classifiedReplyId?: string;
 }
 
 export interface CanonicalPayment {
