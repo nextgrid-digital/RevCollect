@@ -28,6 +28,12 @@ export class GmailNotConnectedError extends Error {
   }
 }
 
+export interface GmailSendAttachment {
+  filename: string;
+  mimeType: string;
+  content: Buffer;
+}
+
 export interface GmailSendInput {
   tenantId: string;
   to: string;
@@ -35,6 +41,7 @@ export interface GmailSendInput {
   body: string;
   fromName?: string;
   gmailThreadId?: string;
+  attachments?: GmailSendAttachment[];
 }
 
 export interface GmailSendResult {
@@ -76,24 +83,63 @@ function formatFromHeader(email: string, displayName?: string): string {
   return `${encodeHeaderValue(name)} <${email}>`;
 }
 
+function foldBase64(value: string): string {
+  return value.replace(/(.{76})/g, '$1\r\n').replace(/\r\n$/, '');
+}
+
 function buildRawMessage(input: {
   fromHeader: string;
   to: string;
   subject: string;
   body: string;
+  attachments?: GmailSendAttachment[];
 }): string {
-  const encodedBody = Buffer.from(input.body, 'utf8').toString('base64');
-  const rfc822 = [
+  const encodedBody = foldBase64(Buffer.from(input.body, 'utf8').toString('base64'));
+  const attachments = input.attachments ?? [];
+
+  if (attachments.length === 0) {
+    const rfc822 = [
+      `From: ${input.fromHeader}`,
+      `To: ${input.to}`,
+      `Subject: ${encodeHeaderValue(input.subject)}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      encodedBody
+    ].join('\r\n');
+    return Buffer.from(rfc822, 'utf8').toString('base64url');
+  }
+
+  const boundary = `revcollect_${crypto.randomUUID().replaceAll('-', '')}`;
+  const parts = [
     `From: ${input.fromHeader}`,
     `To: ${input.to}`,
     `Subject: ${encodeHeaderValue(input.subject)}`,
     'MIME-Version: 1.0',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
     encodedBody
-  ].join('\r\n');
-  return Buffer.from(rfc822, 'utf8').toString('base64url');
+  ];
+
+  for (const attachment of attachments) {
+    const safeName = attachment.filename.replaceAll('"', '');
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${attachment.mimeType}; name="${safeName}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${safeName}"`,
+      '',
+      foldBase64(attachment.content.toString('base64'))
+    );
+  }
+
+  parts.push(`--${boundary}--`, '');
+  return Buffer.from(parts.join('\r\n'), 'utf8').toString('base64url');
 }
 
 async function getGmailAccessToken(
@@ -147,7 +193,8 @@ export async function sendGmailMessage(input: GmailSendInput): Promise<GmailSend
     fromHeader: formatFromHeader(email, input.fromName),
     to: input.to,
     subject: input.subject,
-    body: input.body
+    body: input.body,
+    attachments: input.attachments
   });
 
   const response = await fetch(GMAIL_SEND_URL, {

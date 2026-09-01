@@ -1,6 +1,10 @@
 import 'server-only';
 import { after } from 'next/server';
-import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import {
+  fetchXeroInvoicePdf,
+  getXeroAccessContext,
+  XeroNotConnectedError
+} from '@/lib/integrations/xero-api';
 import { getIntegrationStatus as getLiveIntegrationStatus } from '@/lib/integrations/get-integration-status';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import {
@@ -26,6 +30,7 @@ import {
   sentEmailFromResult,
   GmailNotConnectedError
 } from '@/lib/integrations/gmail-api';
+import { MAX_INVOICE_ATTACHMENTS, sanitizeInvoicePdfFilename } from '../lib/invoice-pdf';
 import { applyAutoPromises } from '@/lib/ari/apply-auto-promises';
 import { applyRelationshipSignals } from '@/lib/ari/apply-relationship-signals';
 import { templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
@@ -288,7 +293,8 @@ export class XeroRevCollectService implements RevCollectService {
             occurredAtLabel: formatPreparedAt(latestSent.sentAt)
           }
         : undefined,
-      openInvoiceNumbers: openInvoices.map((invoice) => invoice.number)
+      openInvoiceNumbers: openInvoices.map((invoice) => invoice.number),
+      openInvoices: openInvoices.map((invoice) => ({ id: invoice.id, number: invoice.number }))
     };
   }
 
@@ -547,7 +553,7 @@ export class XeroRevCollectService implements RevCollectService {
 
   async sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult> {
     const tenantId = await getIntegrationTenantId();
-    const { customers, inboxMessages } = await loadArData();
+    const { customers, invoices, inboxMessages } = await loadArData();
     const customer = customers.find((item) => item.id === input.customerId);
     if (!customer) {
       throw new Error('Customer not found');
@@ -560,6 +566,38 @@ export class XeroRevCollectService implements RevCollectService {
     const blocked = new Set(policy.doNotContact.map((email) => email.trim().toLowerCase()));
     if (policy.state === 'do_not_contact' || blocked.has(to.toLowerCase())) {
       throw new Error('This contact is on the do-not-contact list');
+    }
+
+    const attachedIds = [...new Set(input.attachedInvoiceIds ?? [])];
+    if (attachedIds.length > MAX_INVOICE_ATTACHMENTS) {
+      throw new Error(`You can attach up to ${MAX_INVOICE_ATTACHMENTS} invoices`);
+    }
+    const customerInvoices = invoices.filter((invoice) => invoice.customerId === customer.id);
+    const attachedInvoices = attachedIds.map((invoiceId) => {
+      const invoice = customerInvoices.find((item) => item.id === invoiceId);
+      if (!invoice) {
+        throw new Error('One of the selected invoices is not on this customer');
+      }
+      return invoice;
+    });
+
+    let attachments: Array<{ filename: string; mimeType: string; content: Buffer }> | undefined;
+    if (attachedInvoices.length > 0) {
+      const context = await getXeroAccessContext(tenantId);
+      attachments = await Promise.all(
+        attachedInvoices.map(async (invoice) => {
+          try {
+            const content = await fetchXeroInvoicePdf(context, invoice.id);
+            return {
+              filename: `${sanitizeInvoicePdfFilename(invoice.number)}.pdf`,
+              mimeType: 'application/pdf',
+              content
+            };
+          } catch {
+            throw new Error(`Could not fetch PDF for ${invoice.number}`);
+          }
+        })
+      );
     }
 
     const threadId = input.messageId ?? `xero-customer-${customer.id}`;
@@ -577,7 +615,8 @@ export class XeroRevCollectService implements RevCollectService {
       subject: message?.subject ?? `Follow-up — ${customer.company}`,
       body,
       fromName: snapshot.workspaceSettings?.sendFromName,
-      gmailThreadId: existingThread?.gmailThreadId
+      gmailThreadId: existingThread?.gmailThreadId,
+      attachments
     });
     const email = sentEmailFromResult(sent, { threadId, customerId: customer.id });
     await persistSentFollowUp({

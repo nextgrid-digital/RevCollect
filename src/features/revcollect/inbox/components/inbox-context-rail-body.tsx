@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { memo, useEffect, useState } from 'react';
-import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import {
   Accordion,
@@ -24,6 +23,7 @@ import { InboxContextMetricsGrid } from './inbox-context-metrics-grid';
 import { InboxContextRailSection } from './inbox-context-rail-section';
 import { InboxContextSectionLabel } from './inbox-context-section-label';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
+import { MAX_INVOICE_ATTACHMENTS, toInvoiceRef } from '../../lib/invoice-pdf';
 
 interface InboxContextRailBodyProps {
   customer: Customer;
@@ -78,9 +78,13 @@ function InboxContextRailBodyComponent({
     writeInboxInsightsDetailsExpanded(value.includes('details'));
   };
 
+  const attachedCount = attachment?.attachedInvoices.length ?? 0;
+  const remainingAttachmentSlots = Math.max(0, MAX_INVOICE_ATTACHMENTS - attachedCount);
   const unattachedPreview = previewInvoices.filter(
-    (invoice) => !attachment?.isAttached(invoice.number)
+    (invoice) => !attachment?.isAttached(invoice.id)
   );
+  const canAttachMore =
+    Boolean(attachment) && remainingAttachmentSlots > 0 && unattachedPreview.length > 0;
 
   return (
     <div className='flex w-full shrink-0 flex-col gap-3'>
@@ -98,19 +102,20 @@ function InboxContextRailBodyComponent({
         <section className='w-full min-w-0 shrink-0'>
           <div className='flex items-center justify-between gap-2 px-1'>
             <InboxContextSectionLabel>Open invoices</InboxContextSectionLabel>
-            {attachment && unattachedPreview.length > 0 ? (
+            {canAttachMore ? (
               <Button
                 type='button'
                 variant='ghost'
-                size='icon'
-                className='text-muted-foreground hover:text-foreground size-6'
+                size='sm'
+                className='text-muted-foreground hover:text-foreground h-6 px-2 text-xs'
                 onClick={() =>
-                  attachment.attachInvoices(unattachedPreview.map((invoice) => invoice.number))
+                  attachment?.attachInvoices(
+                    unattachedPreview.slice(0, remainingAttachmentSlots).map(toInvoiceRef)
+                  )
                 }
-                aria-label={`Attach all ${unattachedPreview.length} invoices`}
-                title='Attach all invoices'
+                aria-label={`Attach all ${Math.min(unattachedPreview.length, remainingAttachmentSlots)} invoices`}
               >
-                <Icons.add className='size-3.5' />
+                Attach all
               </Button>
             ) : null}
           </div>
@@ -119,8 +124,12 @@ function InboxContextRailBodyComponent({
               <InboxContextInvoiceCard
                 key={invoice.id}
                 invoice={invoice}
-                isAttached={attachment?.isAttached(invoice.number) ?? false}
-                onAttach={attachment ? () => attachment.attachInvoice(invoice.number) : undefined}
+                isAttached={attachment?.isAttached(invoice.id) ?? false}
+                onToggle={
+                  attachment && (attachment.isAttached(invoice.id) || remainingAttachmentSlots > 0)
+                    ? () => attachment.toggleInvoice(toInvoiceRef(invoice))
+                    : undefined
+                }
               />
             ))}
             {hasMoreInvoices ? (

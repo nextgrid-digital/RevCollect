@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSendInboxFollowUp } from '../../api/queries';
 import type { AgentDraftMeta } from '../../types';
+import { InboxAttachedInvoiceChips } from './inbox-attached-invoice-chips';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 
 interface InboxAgentDraftPanelProps {
@@ -23,7 +24,7 @@ export function InboxAgentDraftPanel({
   className
 }: InboxAgentDraftPanelProps) {
   const attachment = useOptionalInboxThreadAttachment();
-  const attachedInvoiceNumbers = attachment?.attachedInvoiceNumbers ?? [];
+  const attachedInvoices = attachment?.attachedInvoices ?? [];
   const [body, setBody] = useState(draftMeta.body);
   const [isSent, setIsSent] = useState(false);
   const [aiEditOpen, setAiEditOpen] = useState(false);
@@ -54,17 +55,26 @@ export function InboxAgentDraftPanel({
         customerId,
         originalBody: draftMeta.body,
         sentBody: body,
-        kind
+        kind,
+        attachedInvoiceIds: attachment?.attachedInvoiceIds
       },
       {
         onSuccess: () => setIsSent(true)
       }
     );
-  }, [body, customerId, draftMeta.body, isSending, isSent, sendFollowUp]);
+  }, [
+    attachment?.attachedInvoiceIds,
+    body,
+    customerId,
+    draftMeta.body,
+    isSending,
+    isSent,
+    sendFollowUp
+  ]);
 
   const handleDetachInvoice = useCallback(
-    (invoiceNumber: string) => {
-      attachment?.detachInvoice(invoiceNumber);
+    (invoiceId: string) => {
+      attachment?.detachInvoice(invoiceId);
     },
     [attachment]
   );
@@ -91,31 +101,11 @@ export function InboxAgentDraftPanel({
         </p>
       </header>
 
-      {attachedInvoiceNumbers.length > 0 ? (
-        <div className='flex flex-wrap gap-2'>
-          {attachedInvoiceNumbers.map((invoiceNumber) => (
-            <div
-              key={invoiceNumber}
-              className='bg-muted/70 inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs'
-            >
-              <Icons.fileTypePdf className='text-muted-foreground size-3.5 shrink-0' />
-              <span className='text-foreground font-medium tabular-nums'>{invoiceNumber}</span>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon'
-                className='text-muted-foreground hover:text-foreground size-5 shrink-0'
-                onClick={() => handleDetachInvoice(invoiceNumber)}
-                aria-label={`Remove ${invoiceNumber}`}
-              >
-                <Icons.close className='size-3' />
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className='text-muted-foreground text-xs'>No invoices attached</p>
-      )}
+      <InboxAttachedInvoiceChips
+        invoices={attachedInvoices}
+        onDetach={isSent ? undefined : handleDetachInvoice}
+        disabled={isSent}
+      />
 
       <div className='border-input bg-card overflow-hidden rounded-2xl border'>
         <Textarea

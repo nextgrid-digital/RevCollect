@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
           sentBody?: string;
           kind?: 'reply' | 'draft_edit';
           messageId?: string;
+          attachedInvoiceIds?: string[];
         };
         if (!payload?.customerId || !payload.sentBody) {
           return NextResponse.json({ error: 'customerId and sentBody required' }, { status: 400 });
@@ -187,7 +188,8 @@ export async function POST(request: NextRequest) {
           sentBody: payload.sentBody,
           originalBody: payload.originalBody,
           kind,
-          messageId: payload.messageId
+          messageId: payload.messageId,
+          attachedInvoiceIds: payload.attachedInvoiceIds
         });
         try {
           if (payload.originalBody) {

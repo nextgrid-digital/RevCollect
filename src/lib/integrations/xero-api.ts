@@ -278,6 +278,27 @@ async function xeroGet<T>(
   return xeroRequest<T>(context, 'GET', path, { query });
 }
 
+export async function fetchXeroInvoicePdf(
+  context: XeroAccessContext,
+  invoiceId: string
+): Promise<Buffer> {
+  const url = new URL(`${XERO_ACCOUNTING_BASE}/Invoices/${encodeURIComponent(invoiceId)}`);
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${context.accessToken}`,
+      'Xero-Tenant-Id': context.xeroTenantId,
+      Accept: 'application/pdf'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not fetch invoice PDF from Xero (${response.status}).`);
+  }
+
+  return Buffer.from(await response.arrayBuffer());
+}
+
 async function paginateXero<T>(fetchPage: (page: number) => Promise<T[]>): Promise<T[]> {
   const items: T[] = [];
   for (let page = 1; page <= XERO_MAX_PAGES; page += 1) {

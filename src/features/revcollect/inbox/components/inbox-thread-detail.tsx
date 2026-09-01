@@ -76,9 +76,9 @@ export function InboxThreadDetail({
     [selection, selectionMatchesMessage]
   );
 
-  const initialAttachedInvoiceNumbers = useMemo(
+  const initialAttachedInvoices = useMemo(
     () =>
-      selectionMatchesMessage && selection?.agentDraftMeta ? selection.openInvoiceNumbers : [],
+      selectionMatchesMessage && selection?.agentDraftMeta ? (selection.openInvoices ?? []) : [],
     [selection, selectionMatchesMessage]
   );
 
@@ -218,120 +218,129 @@ export function InboxThreadDetail({
   };
 
   const showPeekMobileContext = variant === 'peek' && isMobile;
+  const skipAttachmentProvider = layout === 'workspace';
+
+  const thread = (
+    <div className={cn('bg-background flex min-h-0 min-w-0 flex-1 flex-col', className)}>
+      <div className={cn('flex min-h-0 flex-1', layout === 'default' && inboxCanvasPadding)}>
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 gap-4',
+            layout === 'default' && 'mx-auto w-full max-w-6xl',
+            layout === 'default' && peekLayout === 'center' && 'md:gap-3'
+          )}
+        >
+          <div
+            className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+            data-inbox-thread-pane
+          >
+            <div
+              className={cn(
+                inboxCenterMaxWidth,
+                'shrink-0',
+                layout === 'workspace' && 'flex flex-col gap-2'
+              )}
+            >
+              {variant !== 'peek' || showPeekMobileContext ? (
+                <InboxThreadToolbar
+                  customer={customer}
+                  message={message}
+                  agentDraftMeta={selection.agentDraftMeta}
+                  contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
+                  showSubject={variant !== 'peek' && !(isMobile && layout === 'workspace')}
+                  showHeroAction={variant !== 'peek'}
+                  showBackButton={variant === 'full'}
+                  className={
+                    layout === 'workspace'
+                      ? undefined
+                      : variant === 'peek'
+                        ? 'h-8'
+                        : 'h-auto pt-1 pb-2'
+                  }
+                />
+              ) : null}
+              {layout === 'workspace' ? (
+                <div className='border-border/60 border-b' aria-hidden />
+              ) : null}
+            </div>
+
+            <div
+              ref={threadScrollRef}
+              data-inbox-thread-scroll
+              className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'
+            >
+              <div className={cn(inboxCenterMaxWidth, 'flex min-h-full flex-col px-4 pb-2')}>
+                <InboxThreadTransition messageId={messageId} className='min-h-full flex-1'>
+                  <ConversationThread
+                    emails={threadEmails}
+                    customerName={customer.name}
+                    customerCompany={customer.company}
+                    latestCustomerEmailId={replyToEmail?.id}
+                    replyIntentLabel={message.replyIntentLabel}
+                    autoScrollToLatestEmail={false}
+                  />
+                </InboxThreadTransition>
+              </div>
+            </div>
+            <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-2')}>
+              {threadEmails.at(-1)?.author === 'customer' && customer.balanceCents > 0 ? (
+                <InboxReplyActions
+                  customer={customer}
+                  onChaseAgain={focusInboxComposer}
+                  className='mb-3'
+                />
+              ) : (
+                <div className='mb-3'>
+                  <RelationshipPauseSheet customer={customer} />
+                </div>
+              )}
+              <InboxRelationshipBanner customer={customer} />
+              <InboxThreadComposer
+                agentDraftMeta={selection.agentDraftMeta}
+                aiDraftBase={selection.aiDraftBase}
+                customerStatus={customer.status}
+                customerId={customer.id}
+                customer={customer}
+                autoFocus={variant === 'peek'}
+              />
+            </div>
+          </div>
+
+          {layout !== 'workspace' ? (
+            <div
+              className={cn(
+                'hidden min-h-0 shrink-0 flex-col self-stretch md:flex',
+                peekLayout === 'center' ? 'w-64' : inboxContextWidth
+              )}
+            >
+              <div
+                className={cn(
+                  inboxContextCard,
+                  inboxContextCardSticky,
+                  'flex min-h-0 w-full flex-1 flex-col'
+                )}
+              >
+                <div className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl'>
+                  <InboxContextSidebar {...contextSidebarProps} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (skipAttachmentProvider) {
+    return thread;
+  }
 
   return (
     <InboxThreadAttachmentProvider
       resetKey={messageId}
-      initialAttachedInvoiceNumbers={initialAttachedInvoiceNumbers}
+      initialAttachedInvoices={initialAttachedInvoices}
     >
-      <div className={cn('bg-background flex min-h-0 min-w-0 flex-1 flex-col', className)}>
-        <div className={cn('flex min-h-0 flex-1', layout === 'default' && inboxCanvasPadding)}>
-          <div
-            className={cn(
-              'flex min-h-0 min-w-0 flex-1 gap-4',
-              layout === 'default' && 'mx-auto w-full max-w-6xl',
-              layout === 'default' && peekLayout === 'center' && 'md:gap-3'
-            )}
-          >
-            <div
-              className='flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
-              data-inbox-thread-pane
-            >
-              <div
-                className={cn(
-                  inboxCenterMaxWidth,
-                  'shrink-0',
-                  layout === 'workspace' && 'flex flex-col gap-2'
-                )}
-              >
-                {variant !== 'peek' || showPeekMobileContext ? (
-                  <InboxThreadToolbar
-                    customer={customer}
-                    message={message}
-                    agentDraftMeta={selection.agentDraftMeta}
-                    contextSidebar={<InboxContextSidebar {...contextSidebarProps} />}
-                    showSubject={variant !== 'peek' && !(isMobile && layout === 'workspace')}
-                    showHeroAction={variant !== 'peek'}
-                    showBackButton={variant === 'full'}
-                    className={
-                      layout === 'workspace'
-                        ? undefined
-                        : variant === 'peek'
-                          ? 'h-8'
-                          : 'h-auto pt-1 pb-2'
-                    }
-                  />
-                ) : null}
-                {layout === 'workspace' ? (
-                  <div className='border-border/60 border-b' aria-hidden />
-                ) : null}
-              </div>
-
-              <div
-                ref={threadScrollRef}
-                data-inbox-thread-scroll
-                className='scroll-stable min-h-0 flex-1 overflow-x-hidden overflow-y-auto'
-              >
-                <div className={cn(inboxCenterMaxWidth, 'flex min-h-full flex-col px-4 pb-2')}>
-                  <InboxThreadTransition messageId={messageId} className='min-h-full flex-1'>
-                    <ConversationThread
-                      emails={threadEmails}
-                      customerName={customer.name}
-                      customerCompany={customer.company}
-                      latestCustomerEmailId={replyToEmail?.id}
-                      replyIntentLabel={message.replyIntentLabel}
-                      autoScrollToLatestEmail={false}
-                    />
-                  </InboxThreadTransition>
-                </div>
-              </div>
-              <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-2')}>
-                {threadEmails.at(-1)?.author === 'customer' && customer.balanceCents > 0 ? (
-                  <InboxReplyActions
-                    customer={customer}
-                    onChaseAgain={focusInboxComposer}
-                    className='mb-3'
-                  />
-                ) : (
-                  <div className='mb-3'>
-                    <RelationshipPauseSheet customer={customer} />
-                  </div>
-                )}
-                <InboxRelationshipBanner customer={customer} />
-                <InboxThreadComposer
-                  agentDraftMeta={selection.agentDraftMeta}
-                  aiDraftBase={selection.aiDraftBase}
-                  customerStatus={customer.status}
-                  customerId={customer.id}
-                  customer={customer}
-                  autoFocus={variant === 'peek'}
-                />
-              </div>
-            </div>
-
-            {layout !== 'workspace' ? (
-              <div
-                className={cn(
-                  'hidden min-h-0 shrink-0 flex-col self-stretch md:flex',
-                  peekLayout === 'center' ? 'w-64' : inboxContextWidth
-                )}
-              >
-                <div
-                  className={cn(
-                    inboxContextCard,
-                    inboxContextCardSticky,
-                    'flex min-h-0 w-full flex-1 flex-col'
-                  )}
-                >
-                  <div className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl'>
-                    <InboxContextSidebar {...contextSidebarProps} />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      {thread}
     </InboxThreadAttachmentProvider>
   );
 }

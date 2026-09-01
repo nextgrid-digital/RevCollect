@@ -65,6 +65,7 @@ export interface InboxSelectionData {
   aiDraftBase: string;
   lastAction: LastActionInsight | undefined;
   openInvoiceNumbers: string[];
+  openInvoices: Array<{ id: string; number: string }>;
 }
 
 export interface TenantDataExport {

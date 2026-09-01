@@ -6,7 +6,6 @@ import { InboxContextRailBody } from '../inbox/components/inbox-context-rail-bod
 import { InboxDeepAnalysisCard } from '../inbox/components/inbox-deep-analysis-card';
 import type { Customer, CustomerInboxContext, ThreadEmail, TimelineEvent } from '../types';
 import { RelationshipBadge } from './relationship-badge';
-import { RelationshipPauseSheet } from './relationship-pause-sheet';
 
 const XERO_PLACEHOLDER_EMAIL = 'no-email@xero.local';
 
@@ -67,11 +66,7 @@ export function CustomerContextPanelFloatingHeader({
             <RelationshipBadge customer={customer} />
           </div>
         </div>
-        {actions ? (
-          <div className='shrink-0 self-start'>{actions}</div>
-        ) : (
-          <RelationshipPauseSheet customer={customer} className='rounded-full' />
-        )}
+        {actions ? <div className='shrink-0 self-start'>{actions}</div> : null}
       </div>
     </div>
   );
@@ -124,9 +119,8 @@ export function CustomerContextPanel({
             {customer.company}
           </Link>
           <CustomerXeroEmail email={customer.email} />
-          <div className='mt-1 flex flex-wrap items-center gap-2'>
+          <div className='mt-1'>
             <RelationshipBadge customer={customer} />
-            <RelationshipPauseSheet customer={customer} className='rounded-full' />
           </div>
         </div>
       </div>

@@ -32,6 +32,8 @@ import { followUpDecision } from '../../lib/relationship-policy';
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
+import { InboxAttachedInvoiceChips } from './inbox-attached-invoice-chips';
+import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
 import {
   findInboxThreadScrollContainer,
   scrollInboxThreadToBottomAfterLayout
@@ -180,6 +182,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     const rootRef = useRef<HTMLDivElement>(null);
     const { data: agentConfig } = useAgentConfig();
     const sendFollowUp = useSendInboxFollowUp();
+    const attachment = useOptionalInboxThreadAttachment();
     const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
     const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
     const resolvedPlaybook = defaultPlaybookForCustomer(customerStatus, {
@@ -323,13 +326,14 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           customerId,
           originalBody: baseDraft,
           sentBody,
-          kind: 'reply'
+          kind: 'reply',
+          attachedInvoiceIds: attachment?.attachedInvoiceIds
         },
         {
           onError: () => setBody(sentBody)
         }
       );
-    }, [baseDraft, body, customerId, sendFollowUp]);
+    }, [attachment?.attachedInvoiceIds, baseDraft, body, customerId, sendFollowUp]);
 
     useImperativeHandle(
       ref,
@@ -343,7 +347,14 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     );
 
     return (
-      <div ref={rootRef} className={cn('space-y-0', className)}>
+      <div ref={rootRef} className={cn('space-y-2', className)}>
+        {attachment ? (
+          <InboxAttachedInvoiceChips
+            invoices={attachment.attachedInvoices}
+            onDetach={attachment.detachInvoice}
+            disabled={sendFollowUp.isPending}
+          />
+        ) : null}
         <InputBar
           fillWidth
           maxTextareaHeight={360}

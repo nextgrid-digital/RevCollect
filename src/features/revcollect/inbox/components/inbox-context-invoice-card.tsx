@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, getDaysOverdueFromDueDate } from '../../utils';
 import { invoiceAmountDueCents } from '../../lib/invoice-open';
+import { invoicePdfPath } from '../../lib/invoice-pdf';
 import type { Invoice } from '../../types';
 
 interface InboxContextInvoiceCardProps {
   invoice: Invoice;
   isAttached?: boolean;
-  onAttach?: () => void;
+  onToggle?: () => void;
 }
 
 const overduePillClasses = {
@@ -32,7 +33,7 @@ function getOverduePillClass(daysOverdue: number): string {
 export function InboxContextInvoiceCard({
   invoice,
   isAttached = false,
-  onAttach
+  onToggle
 }: InboxContextInvoiceCardProps) {
   const daysOverdue = getDaysOverdueFromDueDate(invoice.dueDate);
   const showOverdue = daysOverdue > 0;
@@ -40,7 +41,16 @@ export function InboxContextInvoiceCard({
   return (
     <div className='bg-card w-full min-w-0 shrink-0 rounded-2xl px-3 py-2 shadow-sm ring-1 ring-border/60'>
       <div className='flex min-w-0 items-center gap-1.5'>
-        <span className='min-w-0 truncate text-sm font-semibold'>{invoice.number}</span>
+        <a
+          href={invoicePdfPath(invoice.id)}
+          target='_blank'
+          rel='noopener noreferrer'
+          className='hover:text-foreground/80 min-w-0 truncate text-sm font-semibold underline-offset-2 hover:underline'
+          aria-label={`Preview ${invoice.number} PDF`}
+          title='Preview invoice PDF'
+        >
+          {invoice.number}
+        </a>
         {showOverdue ? (
           <span
             className={cn(
@@ -59,28 +69,24 @@ export function InboxContextInvoiceCard({
         >
           {formatCurrency(invoiceAmountDueCents(invoice))}
         </span>
-        {onAttach !== undefined ? (
-          isAttached ? (
-            <span
-              className='text-emerald-600 flex size-7 shrink-0 items-center justify-center dark:text-emerald-400'
-              aria-label={`${invoice.number} attached`}
-              title='Attached'
-            >
-              <Icons.check className='size-4' />
-            </span>
-          ) : onAttach ? (
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon'
-              className='text-muted-foreground hover:text-foreground size-7 shrink-0'
-              onClick={onAttach}
-              aria-label={`Attach ${invoice.number}`}
-              title='Attach invoice'
-            >
-              <Icons.add className='size-4' />
-            </Button>
-          ) : null
+        {onToggle ? (
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            className={cn(
+              'size-7 shrink-0',
+              isAttached
+                ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            onClick={onToggle}
+            aria-label={isAttached ? `Detach ${invoice.number}` : `Attach ${invoice.number}`}
+            aria-pressed={isAttached}
+            title={isAttached ? 'Remove from reply' : 'Attach invoice'}
+          >
+            {isAttached ? <Icons.check className='size-4' /> : <Icons.add className='size-4' />}
+          </Button>
         ) : null}
       </div>
     </div>

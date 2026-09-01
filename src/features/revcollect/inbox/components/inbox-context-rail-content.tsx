@@ -19,12 +19,12 @@ export function InboxContextRailContent() {
   }
 
   const hasAgentDraft = Boolean(data.agentDraftMeta);
-  const initialAttachedInvoiceNumbers = hasAgentDraft ? data.openInvoiceNumbers : [];
+  const initialAttachedInvoices = hasAgentDraft ? (data.openInvoices ?? []) : [];
 
   return (
     <InboxThreadAttachmentProvider
       resetKey={selectedMessageId}
-      initialAttachedInvoiceNumbers={initialAttachedInvoiceNumbers}
+      initialAttachedInvoices={initialAttachedInvoices}
     >
       <InboxContextSidebar
         customer={data.customer}

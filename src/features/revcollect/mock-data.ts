@@ -25,6 +25,7 @@ import {
   filterInvoicesForReport
 } from './aging/lib/aging-report';
 import { enrichTimelineWithThreads } from './inbox/lib/enrich-timeline-with-threads';
+import { isOpenCanonicalInvoice } from './lib/invoice-open';
 import { createInboxThreadData } from './mock-inbox-threads';
 import { formatRelativeDate } from './utils';
 
@@ -1382,10 +1383,16 @@ export function getLastActionForCustomer(customerId: string): LastActionInsight 
   };
 }
 
-export function getOpenInvoiceNumbersForCustomer(customerId: string): string[] {
+export function getOpenInvoicesForCustomer(
+  customerId: string
+): Array<{ id: string; number: string }> {
   return getInvoicesForCustomer(customerId)
-    .filter((invoice) => invoice.status !== 'current')
-    .map((invoice) => invoice.number);
+    .filter(isOpenCanonicalInvoice)
+    .map((invoice) => ({ id: invoice.id, number: invoice.number }));
+}
+
+export function getOpenInvoiceNumbersForCustomer(customerId: string): string[] {
+  return getOpenInvoicesForCustomer(customerId).map((invoice) => invoice.number);
 }
 
 const sortedThreadEmailsCache = new Map<string, ThreadEmail[]>();

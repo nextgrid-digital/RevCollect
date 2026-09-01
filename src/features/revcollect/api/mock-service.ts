@@ -17,6 +17,7 @@ import {
   getInvoicesForCustomer,
   getLastActionForCustomer,
   getOpenInvoiceNumbersForCustomer,
+  getOpenInvoicesForCustomer,
   getThreadEmails,
   getTimelineForCustomer,
   inboxMessages,
@@ -104,7 +105,8 @@ export class MockRevCollectService implements RevCollectService {
       agentDraftMeta: getAgentDraftMetaForMessage(message.id),
       aiDraftBase: getAiDraftForMessage(message.id),
       lastAction: getLastActionForCustomer(customer.id),
-      openInvoiceNumbers: getOpenInvoiceNumbersForCustomer(customer.id)
+      openInvoiceNumbers: getOpenInvoiceNumbersForCustomer(customer.id),
+      openInvoices: getOpenInvoicesForCustomer(customer.id)
     };
   }
 

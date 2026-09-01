@@ -39,6 +39,7 @@ export interface SendInboxFollowUpInput {
   originalBody?: string;
   kind?: 'reply' | 'draft_edit';
   messageId?: string;
+  attachedInvoiceIds?: string[];
 }
 
 export interface SendInboxFollowUpResult {

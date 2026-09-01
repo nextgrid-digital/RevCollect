@@ -14,6 +14,7 @@ import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { useInboxOpenMode } from './inbox-open-mode-context';
 import { InboxMessageList } from './inbox-message-list';
 import { InboxMessageListTitle } from './inbox-message-list-header';
+import { InboxThreadAttachmentProvider } from './inbox-thread-attachment-context';
 import { InboxThreadDetail } from './inbox-thread-detail';
 import { InboxWorkspaceContextColumn } from './inbox-workspace-context-column';
 
@@ -35,6 +36,10 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   const { data: selection } = useInboxSelectionData(activeMessageId);
   const messageSubject =
     selection?.message.id === activeMessageId ? selection.message.subject : '…';
+  const initialAttachedInvoices =
+    selection?.message.id === activeMessageId && selection.agentDraftMeta
+      ? (selection.openInvoices ?? [])
+      : [];
 
   const handleSelectMessage = useCallback(
     (id: string) => {
@@ -97,13 +102,18 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
   );
 
   const desktopWorkspace = activeMessageId ? (
-    <div className='flex min-h-0 min-w-0 flex-1 gap-4'>
-      {threadColumn}
-      <InboxWorkspaceContextColumn
-        messageId={activeMessageId}
-        onActivityEmailClick={activityEmailClickHandler}
-      />
-    </div>
+    <InboxThreadAttachmentProvider
+      resetKey={activeMessageId}
+      initialAttachedInvoices={initialAttachedInvoices}
+    >
+      <div className='flex min-h-0 min-w-0 flex-1 gap-4'>
+        {threadColumn}
+        <InboxWorkspaceContextColumn
+          messageId={activeMessageId}
+          onActivityEmailClick={activityEmailClickHandler}
+        />
+      </div>
+    </InboxThreadAttachmentProvider>
   ) : (
     threadColumn
   );
@@ -126,7 +136,14 @@ export function InboxWorkspace({ messageId }: InboxWorkspaceProps) {
                 {listContent(false)}
               </WorkspaceCard>
             ) : null}
-            {showThreadOnMobile ? threadColumn : null}
+            {showThreadOnMobile ? (
+              <InboxThreadAttachmentProvider
+                resetKey={activeMessageId ?? undefined}
+                initialAttachedInvoices={initialAttachedInvoices}
+              >
+                {threadColumn}
+              </InboxThreadAttachmentProvider>
+            ) : null}
           </div>
         ) : (
           <>
