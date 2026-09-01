@@ -10,7 +10,7 @@ import {
   emptyIntelligence
 } from '@/lib/canonical/defaults';
 import { ensureXeroIngest, scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
-import { scheduleBackgroundGmailSync } from '@/lib/canonical/sync-gmail';
+import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
   overlayInboxWithSentEmails,
   persistSentFollowUp,
@@ -19,7 +19,11 @@ import {
 } from '@/lib/canonical/sent-emails';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { appendCanSpamFooter } from '../compliance/can-spam';
-import { sendGmailMessage, sentEmailFromResult } from '@/lib/integrations/gmail-api';
+import {
+  sendGmailMessage,
+  sentEmailFromResult,
+  GmailNotConnectedError
+} from '@/lib/integrations/gmail-api';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -93,6 +97,16 @@ function clearArDataMemo(tenantId: string): void {
   arDataMemo.delete(tenantId);
 }
 
+async function refreshInboxFromGmail(tenantId: string): Promise<void> {
+  try {
+    const didSync = await syncGmailThreads(tenantId);
+    if (didSync) clearArDataMemo(tenantId);
+  } catch (error) {
+    if (error instanceof GmailNotConnectedError) return;
+    console.error('[gmail] inbox sync failed:', error);
+  }
+}
+
 async function readArData(tenantId: string): Promise<LoadedArData> {
   let snapshot = await (await getCanonicalStore()).read(tenantId);
   const empty = snapshot.customers.length === 0 && snapshot.invoices.length === 0;
@@ -157,6 +171,8 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async listInboxMessages() {
+    const tenantId = await getIntegrationTenantId();
+    await refreshInboxFromGmail(tenantId);
     const { inboxMessages } = await loadArData();
     return inboxMessages;
   }
@@ -172,6 +188,8 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
+    const tenantId = await getIntegrationTenantId();
+    await refreshInboxFromGmail(tenantId);
     const { customers, invoices, inboxMessages, sentEmails } = await loadArData();
     const message = inboxMessages.find((item) => item.id === messageId);
     if (!message) return null;

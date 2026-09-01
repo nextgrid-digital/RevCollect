@@ -332,12 +332,12 @@ export async function fetchGmailThreadMessages(
     .filter((message): message is NonNullable<typeof message> => Boolean(message));
 }
 
-export async function searchGmailFromAddress(
+export async function searchGmailByQuery(
   tenantId: string,
-  fromEmail: string
+  query: string,
+  maxThreads = 8
 ): Promise<NonNullable<ReturnType<typeof mapGmailMessage>>[]> {
   const { accessToken, email } = await getGmailAccessToken(tenantId);
-  const query = `from:${fromEmail} newer_than:90d`;
   const listed = await gmailGet<{ messages?: { id?: string; threadId?: string }[] }>(
     accessToken,
     `/messages?q=${encodeURIComponent(query)}&maxResults=15`
@@ -347,7 +347,7 @@ export async function searchGmailFromAddress(
   ] as string[];
   const threads = await Promise.all(
     threadIds
-      .slice(0, 8)
+      .slice(0, maxThreads)
       .map((threadId) =>
         gmailGet<{ messages?: GmailMessageResource[] }>(
           accessToken,
@@ -360,6 +360,13 @@ export async function searchGmailFromAddress(
       .map((message) => mapGmailMessage(message, email))
       .filter((message): message is NonNullable<typeof message> => Boolean(message))
   );
+}
+
+export async function searchGmailFromAddress(
+  tenantId: string,
+  fromEmail: string
+): Promise<NonNullable<ReturnType<typeof mapGmailMessage>>[]> {
+  return searchGmailByQuery(tenantId, `from:${fromEmail} newer_than:90d`);
 }
 
 export async function getConnectedGmailEmail(tenantId: string): Promise<string | null> {

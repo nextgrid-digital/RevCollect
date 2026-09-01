@@ -60,7 +60,8 @@ export function inboxMessagesQueryOptions() {
   return queryOptions({
     queryKey: revcollectKeys.inboxMessages(),
     queryFn: () => getRevCollectService().listInboxMessages(),
-    staleTime: AR_STALE_TIME_MS
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 }
 
@@ -69,7 +70,8 @@ export function inboxSelectionQueryOptions(messageId: string | null) {
     queryKey: revcollectKeys.inboxSelection(messageId ?? ''),
     queryFn: () => getRevCollectService().getInboxSelectionData(messageId!),
     enabled: !!messageId,
-    staleTime: AR_STALE_TIME_MS
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 }
 
