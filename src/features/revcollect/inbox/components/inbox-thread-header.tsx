@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { AgentDraftMeta, Customer } from '../../types';
 import { getInboxThreadHeroMessage } from './inbox-thread-hero-action';
+import { RelationshipBadge } from '../../components/relationship-badge';
 
 interface InboxThreadHeaderProps {
   customer: Customer;
@@ -38,6 +39,7 @@ export function InboxThreadHeader({
         <p className='text-foreground/80 min-w-0 shrink truncate text-xs font-medium'>
           {heroMessage}
         </p>
+        <RelationshipBadge customer={customer} className='ml-1 shrink-0' />
       </div>
     </header>
   );

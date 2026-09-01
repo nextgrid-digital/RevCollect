@@ -10,6 +10,8 @@ import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
 import { InboxContextSidebar } from './inbox-context-sidebar';
 import { InboxThreadComposer } from './inbox-thread-composer';
 import { InboxReplyActions } from './inbox-reply-actions';
+import { InboxRelationshipBanner } from './inbox-relationship-banner';
+import { RelationshipPauseSheet } from '../../components/relationship-pause-sheet';
 import { InboxThreadAttachmentProvider } from './inbox-thread-attachment-context';
 import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
@@ -290,12 +292,18 @@ export function InboxThreadDetail({
                     onChaseAgain={focusInboxComposer}
                     className='mb-3'
                   />
-                ) : null}
+                ) : (
+                  <div className='mb-3'>
+                    <RelationshipPauseSheet customer={customer} />
+                  </div>
+                )}
+                <InboxRelationshipBanner customer={customer} />
                 <InboxThreadComposer
                   agentDraftMeta={selection.agentDraftMeta}
                   aiDraftBase={selection.aiDraftBase}
                   customerStatus={customer.status}
                   customerId={customer.id}
+                  customer={customer}
                   autoFocus={variant === 'peek'}
                 />
               </div>

@@ -12,6 +12,7 @@ import type {
   AgingReportPeriod,
   AgingReportSort
 } from '@/features/revcollect/types';
+import type { RelationshipPolicyInput } from '@/features/revcollect/lib/relationship-policy';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
           customerId?: string;
           action?: 'promised' | 'dispute' | 'chase_again';
           promisedDate?: string;
+          invoiceId?: string;
         };
         if (!payload?.customerId || !payload.action) {
           return NextResponse.json({ error: 'customerId and action required' }, { status: 400 });
@@ -151,9 +153,17 @@ export async function POST(request: NextRequest) {
           await service.recordCollectionDecision({
             customerId: payload.customerId,
             action: payload.action,
-            promisedDate: payload.promisedDate
+            promisedDate: payload.promisedDate,
+            invoiceId: payload.invoiceId
           })
         );
+      }
+      case 'recordRelationshipPolicy': {
+        const payload = body.payload as RelationshipPolicyInput;
+        if (!payload?.customerId || !payload.action) {
+          return NextResponse.json({ error: 'customerId and action required' }, { status: 400 });
+        }
+        return NextResponse.json(await service.recordRelationshipPolicy(payload));
       }
       case 'recordInboxSend': {
         const userId = await getAuthUserId();

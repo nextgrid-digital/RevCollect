@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { WorkspaceFilterPillsRow } from '@/features/revcollect/components/workspace-filter-pills-row';
 import type { InboxListFilter } from '../lib/filter-inbox-messages';
 import type { InboxMessageListVariant } from './inbox-message-list';
+import { InboxOpenModeMenu } from './inbox-open-mode-menu';
 
 interface InboxMessageListTitleProps {
   variant?: InboxMessageListVariant;
@@ -14,7 +15,7 @@ interface InboxMessageListTitleProps {
 }
 
 export function InboxMessageListTitle({ className }: InboxMessageListTitleProps) {
-  return <WorkspacePageTitle title='Inbox' className={className} />;
+  return <WorkspacePageTitle title='Inbox' className={className} actions={<InboxOpenModeMenu />} />;
 }
 
 interface InboxMessageListHeaderProps {

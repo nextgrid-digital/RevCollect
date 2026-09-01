@@ -53,3 +53,43 @@ export function validateDraftAgainstFacts(draft: string, allowed: DraftFacts): V
 
   return { ok: errors.length === 0, errors };
 }
+
+const BLOCKED_PHRASES = ['final warning', 'legal action', 'penalty', 'you are avoiding'] as const;
+
+export interface CollectionLanguageOptions {
+  allowLegalLanguage?: boolean;
+  allowLateFeeMentions?: boolean;
+}
+
+export function validateCollectionLanguage(
+  draft: string,
+  options?: CollectionLanguageOptions
+): ValidationResult {
+  const errors: string[] = [];
+  const lower = draft.toLowerCase();
+
+  if (!options?.allowLegalLanguage) {
+    for (const phrase of BLOCKED_PHRASES) {
+      if (lower.includes(phrase)) {
+        errors.push(`Blocked phrase: ${phrase}`);
+      }
+    }
+  }
+
+  if (!options?.allowLateFeeMentions && /late fee|late fees|finance charge/.test(lower)) {
+    errors.push('Blocked phrase: late fee');
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+export function validateQueuedDraft(
+  draft: string,
+  allowed: DraftFacts,
+  options?: CollectionLanguageOptions
+): ValidationResult {
+  const facts = validateDraftAgainstFacts(draft, allowed);
+  const language = validateCollectionLanguage(draft, options);
+  const errors = [...facts.errors, ...language.errors];
+  return { ok: errors.length === 0, errors };
+}

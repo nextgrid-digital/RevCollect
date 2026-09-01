@@ -1,10 +1,14 @@
 import { randomUUID } from 'crypto';
 import { complete } from '@/lib/ai/complete';
-import { templateFollowUpDraft } from '@/lib/ai/template-draft';
-import { validateDraftAgainstFacts } from '@/lib/ai/validators';
+import { templateFollowUpDraft, templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
+import { validateQueuedDraft } from '@/lib/ai/validators';
 import { assembleCustomerContext } from '@/features/revcollect/context/assemble-context';
 import { ariSkipReason } from '@/features/revcollect/extract/relationship-gate';
-import { emptyIntelligence } from '@/lib/canonical/defaults';
+import {
+  DEFAULT_AGENT_CONFIG,
+  defaultWorkspaceAgentConfig,
+  emptyIntelligence
+} from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import type { AgentDraftRecord } from '@/lib/canonical/types';
 import type { AgentDraftTone } from '@/features/revcollect/types';
@@ -14,6 +18,7 @@ import {
   collectionFollowUpSkipReason,
   isBrokenPromise
 } from '@/features/revcollect/lib/collection-decision';
+import { followUpDecision } from '@/features/revcollect/lib/relationship-policy';
 
 export async function queueFollowUpDraft(input: {
   tenantId: string;
@@ -30,22 +35,39 @@ export async function queueFollowUpDraft(input: {
   const collectionSkip = collectionFollowUpSkipReason(customer, { followBrokenPromise });
   if (collectionSkip) return { draft: null, skipped: collectionSkip };
 
-  const intelligence = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
-  const skip = ariSkipReason(intelligence.relationshipState);
+  const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
+  const skip = ariSkipReason(customer, {
+    overnight: true,
+    allowOvernightManualOnly: config.behaviors.overnightDraftManualOnly
+  });
   if (skip) return { draft: null, skipped: skip };
 
+  const decision = followUpDecision(customer, {
+    overnight: true,
+    allowOvernightManualOnly: config.behaviors.overnightDraftManualOnly
+  });
+
+  const intelligence = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
   const invoices = snapshot.invoices
     .filter((invoice) => invoice.customerId === customerId)
     .filter(isOpenCanonicalInvoice);
   const brokenPromise = followBrokenPromise && isBrokenPromise(customer);
   const assembled = await assembleCustomerContext(tenantId, customerId);
-  const template = templateFollowUpDraft({
-    customer,
-    invoices,
-    greeting: intelligence.preferences.greeting,
-    signoff: intelligence.preferences.signoff,
-    promisedDate: brokenPromise ? customer.promisedDate : undefined
-  });
+  const template =
+    decision.draftKind === 'payment_verification'
+      ? templatePaymentVerificationDraft({
+          customer,
+          invoices,
+          greeting: intelligence.preferences.greeting,
+          signoff: intelligence.preferences.signoff
+        })
+      : templateFollowUpDraft({
+          customer,
+          invoices,
+          greeting: intelligence.preferences.greeting,
+          signoff: intelligence.preferences.signoff,
+          promisedDate: brokenPromise ? customer.promisedDate : undefined
+        });
 
   let body = template;
   const generated = await complete({
@@ -53,17 +75,24 @@ export async function queueFollowUpDraft(input: {
     prompt: [
       assembled?.promptBlock ?? '',
       '',
-      brokenPromise && customer.promisedDate
-        ? `They promised to pay by ${customer.promisedDate} and have not. Write a short ${tone} follow-up.`
-        : `Write a short ${tone} collections follow-up email.`,
+      decision.draftKind === 'payment_verification'
+        ? `They said payment was already sent. Write a short ${tone} thank-you that asks for a payment reference. Do not say the invoice is overdue or chase payment.`
+        : brokenPromise && customer.promisedDate
+          ? `They promised to pay by ${customer.promisedDate} and have not. Write a short ${tone} follow-up.`
+          : `Write a short ${tone} collections follow-up email.`,
       'Do not invent invoice numbers, amounts, dates, or names.',
-      'Do not claim the email was sent. This is a draft for human approval.'
+      'Do not claim the email was sent. This is a draft for human approval.',
+      'Do not mention legal action, penalties, late fees, or that they are avoiding payment.'
     ].join('\n')
   });
   if (generated.source === 'model' && generated.text) {
-    const validation = validateDraftAgainstFacts(
+    const validation = validateQueuedDraft(
       generated.text,
-      assembled?.facts ?? { invoiceNumbers: [], amounts: [], dates: [] }
+      assembled?.facts ?? { invoiceNumbers: [], amounts: [], dates: [] },
+      {
+        allowLegalLanguage: config.behaviors.allowLegalLanguage,
+        allowLateFeeMentions: config.behaviors.allowLateFeeMentions
+      }
     );
     if (validation.ok) {
       body = generated.text;
@@ -75,9 +104,12 @@ export async function queueFollowUpDraft(input: {
     id: randomUUID(),
     threadId,
     customerId,
-    title: brokenPromise
-      ? `Promise missed · ${customer.company}`
-      : `Follow-up · ${customer.company}`,
+    title:
+      decision.draftKind === 'payment_verification'
+        ? `Payment to reconcile · ${customer.company}`
+        : brokenPromise
+          ? `Promise missed · ${customer.company}`
+          : `Follow-up · ${customer.company}`,
     body,
     tone,
     preparedAt: new Date().toISOString()

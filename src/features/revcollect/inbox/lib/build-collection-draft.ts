@@ -16,7 +16,11 @@ const PLAYBOOK_BODIES: Record<CollectionPlaybook, string> = {
   standard:
     'We are following up on the open balance on your account. Please confirm when payment will be released or if any invoices require clarification from our billing team.',
   final_notice:
-    'This is a final notice regarding your overdue balance. Unless payment or a written payment commitment is received within five business days, the account may be referred for further collection action per your agreement terms.'
+    'Please confirm when payment will be released. If you need copies of the invoices or a statement, we can send those today.',
+  payment_verification:
+    'Thank you — we saw that payment may already be on the way. A payment reference or remittance advice helps us match it to the open invoice.',
+  dispute_hold:
+    'Thanks for flagging this. We have paused collection while we review. Please share any supporting detail so we can resolve it.'
 };
 
 export type BuildCollectionDraftInput = {
@@ -44,7 +48,10 @@ export function buildCollectionDraft({
   const core = stripTrailingSignature(baseDraft, signature);
   const middle = PLAYBOOK_BODIES[playbook];
   const opener = TONE_OPENERS[tone];
-  const closer = TONE_CLOSERS[tone];
+  const closer =
+    playbook === 'payment_verification' || playbook === 'dispute_hold'
+      ? 'Please let us know if you have any questions.'
+      : TONE_CLOSERS[tone];
 
   const parts = [opener, middle, closer];
   if (core && !parts.some((p) => core.includes(p.slice(0, 24)))) {

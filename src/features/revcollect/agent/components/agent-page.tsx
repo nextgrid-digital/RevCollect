@@ -15,6 +15,7 @@ import { followUpStyleToTone } from '../lib/follow-up-style';
 import { readAgentSetupDone, writeAgentSetupDone } from '../lib/agent-setup-storage';
 import { AgentAddonPaywall } from './agent-addon-paywall';
 import { AgentBehaviorsSection } from './agent-behaviors-section';
+import { AgentRelationshipSafetySection } from './agent-relationship-safety-section';
 import { AgentCustomerOverridesSection } from './agent-customer-overrides-section';
 import { AgentDigestPreviewSection } from './agent-digest-preview-section';
 import { AgentEscalationRulesSection } from './agent-escalation-rules-section';
@@ -35,7 +36,11 @@ function normalizeAgentConfig(config: AgentConfig): AgentConfig {
     ...config,
     behaviors: {
       ...config.behaviors,
-      digestHour: config.behaviors.digestHour ?? 7
+      digestHour: config.behaviors.digestHour ?? 7,
+      defaultPauseDays: config.behaviors.defaultPauseDays ?? 14,
+      overnightDraftManualOnly: config.behaviors.overnightDraftManualOnly ?? false,
+      allowLateFeeMentions: config.behaviors.allowLateFeeMentions ?? false,
+      allowLegalLanguage: config.behaviors.allowLegalLanguage ?? false
     }
   };
 }
@@ -342,6 +347,17 @@ export function AgentPage() {
                   </MotionStaggerItem>
                   <MotionStaggerItem index={4}>
                     <WorkspaceCard className='p-4 md:p-5'>
+                      <AgentRelationshipSafetySection
+                        behaviors={draft.behaviors}
+                        customers={customers}
+                        onChange={(behaviors) =>
+                          setDraft((prev) => (prev ? { ...prev, behaviors } : prev))
+                        }
+                      />
+                    </WorkspaceCard>
+                  </MotionStaggerItem>
+                  <MotionStaggerItem index={5}>
+                    <WorkspaceCard className='p-4 md:p-5'>
                       <AgentEscalationRulesSection
                         value={draft.escalationRules}
                         onChange={(escalationRules) =>
@@ -350,7 +366,7 @@ export function AgentPage() {
                       />
                     </WorkspaceCard>
                   </MotionStaggerItem>
-                  <MotionStaggerItem index={5}>
+                  <MotionStaggerItem index={6}>
                     <WorkspaceCard className='p-4 md:p-5'>
                       <AgentSignatureSection
                         value={draft.signature}
@@ -360,7 +376,7 @@ export function AgentPage() {
                       />
                     </WorkspaceCard>
                   </MotionStaggerItem>
-                  <MotionStaggerItem index={6}>
+                  <MotionStaggerItem index={7}>
                     <WorkspaceCard className='p-4 md:p-5'>
                       <AgentDigestPreviewSection
                         digest={draft.digestPreview}

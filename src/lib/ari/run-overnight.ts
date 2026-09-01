@@ -8,6 +8,7 @@ import type { Customer, Invoice } from '@/features/revcollect/types';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { applyAutoPromises } from './apply-auto-promises';
+import { applyRelationshipSignals } from './apply-relationship-signals';
 import { queueFollowUpDraft } from './queue-follow-up-draft';
 import { recordAriRun } from './record-ari-run';
 
@@ -23,6 +24,7 @@ export async function runOvernightAri(
   options?: { forceHour?: boolean }
 ): Promise<OvernightAriResult> {
   await applyAutoPromises(tenantId);
+  await applyRelationshipSignals(tenantId);
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
   const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);

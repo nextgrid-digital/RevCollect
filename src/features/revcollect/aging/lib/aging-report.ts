@@ -11,6 +11,7 @@ import type {
   Invoice
 } from '../../types';
 import { invoiceAmountDueCents, isOpenCanonicalInvoice } from '../../lib/invoice-open';
+import { relationshipBadgeLabel } from '../../lib/relationship-policy';
 
 export const AGING_REPORT_AS_OF_DATE = new Date().toISOString().slice(0, 10);
 
@@ -221,7 +222,11 @@ export function buildAgingCustomerRows(
       days60PlusCents: row.days60PlusCents,
       totalCents: row.totalCents
     };
-    return { ...base, risk: deriveCustomerRisk(base, customer) };
+    return {
+      ...base,
+      risk: deriveCustomerRisk(base, customer),
+      relationshipLabel: relationshipBadgeLabel(customer)
+    };
   });
 
   return sortCustomerRows(rows, filters.sort);

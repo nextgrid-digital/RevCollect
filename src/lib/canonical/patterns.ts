@@ -67,10 +67,12 @@ export function recomputePatternsForSnapshot(snapshot: CanonicalSnapshot): Canon
     const intelligence: CustomerIntelligence = {
       ...current,
       patterns,
-      relationshipState: current.relationshipState ?? 'normal'
+      relationshipState: current.relationshipState ?? 'normal',
+      relationshipPolicy: current.relationshipPolicy
     };
     intelligenceByCustomerId[customer.id] = intelligence;
     customer.relationshipState = intelligence.relationshipState;
+    customer.relationshipPolicy = intelligence.relationshipPolicy;
   }
 
   return { ...snapshot, intelligenceByCustomerId };

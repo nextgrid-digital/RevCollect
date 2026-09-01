@@ -5,6 +5,7 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { Customer, InboxMessage } from '../../types';
 import { formatPromisedDateLabel } from '../../lib/collection-decision';
+import { relationshipBadgeLabel } from '../../lib/relationship-policy';
 import {
   getInboxThreadActionStatus,
   getIntentLabel,
@@ -39,8 +40,20 @@ export function getInboxThreadListBadges(
   customer: Customer
 ): InboxThreadListBadges {
   const status = getInboxThreadActionStatus(message, customer);
-  const primary = getInboxThreadStatusDisplay(status, message, customer);
-  const secondary = getSecondaryOverdueChip(status, customer.daysOverdue);
+  const relationship = relationshipBadgeLabel(customer);
+  const primary = relationship
+    ? {
+        label: relationship,
+        variant: (relationship.startsWith('Suggest') || relationship === 'Resume review'
+          ? 'attention'
+          : relationship.startsWith('Blocked') || relationship === 'Do not contact'
+            ? 'overdue'
+            : 'monitoring') as InboxListPillVariant
+      }
+    : getInboxThreadStatusDisplay(status, message, customer);
+  const secondary = relationship
+    ? getInboxThreadStatusDisplay(status, message, customer)
+    : getSecondaryOverdueChip(status, customer.daysOverdue);
 
   return { primary, secondary, status };
 }

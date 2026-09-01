@@ -1,20 +1,22 @@
-import type { RelationshipState } from '@/features/revcollect/types';
+import type { Customer } from '@/features/revcollect/types';
+import {
+  followUpDecision,
+  type FollowUpOptions
+} from '@/features/revcollect/lib/relationship-policy';
 
-export function canQueuePaymentDemand(relationshipState: RelationshipState | undefined): boolean {
-  return (relationshipState ?? 'normal') === 'normal';
+export function canFollowUp(customer: Customer, options?: FollowUpOptions): boolean {
+  return followUpDecision(customer, options).allow;
 }
 
-export function ariSkipReason(relationshipState: RelationshipState | undefined): string | null {
-  switch (relationshipState ?? 'normal') {
-    case 'normal':
-      return null;
-    case 'sensitive':
-      return 'relationship_state is sensitive — no payment-demand drafts';
-    case 'paused':
-      return 'relationship_state is paused — ARI skipped';
-    default: {
-      const _exhaustive: never = relationshipState as never;
-      return `unknown relationship_state: ${String(_exhaustive)}`;
-    }
-  }
+export function canQueuePaymentDemand(customer: Customer): boolean {
+  const decision = followUpDecision(customer, { overnight: true });
+  return decision.allow && decision.draftKind === 'collection';
+}
+
+export function ariSkipReason(customer: Customer, options?: FollowUpOptions): string | null {
+  const decision = followUpDecision(customer, {
+    ...options,
+    overnight: options?.overnight ?? true
+  });
+  return decision.allow ? null : decision.reason;
 }

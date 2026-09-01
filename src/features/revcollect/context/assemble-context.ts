@@ -107,7 +107,10 @@ export async function assembleCustomerContext(
     `Signoff: ${intelligence.preferences.signoff ?? 'default'}`,
     `Never mention: ${(intelligence.preferences.neverMention ?? []).join(', ') || 'none'}`,
     '',
-    `Relationship state: ${intelligence.relationshipState}`
+    `Relationship state: ${intelligence.relationshipState}`,
+    intelligence.relationshipPolicy?.pendingSuggestion
+      ? `Pending relationship suggestion: ${intelligence.relationshipPolicy.pendingSuggestion.reason} — "${intelligence.relationshipPolicy.pendingSuggestion.quote}"`
+      : 'Pending relationship suggestion: none'
   ].join('\n');
 
   const facts: DraftFacts = {

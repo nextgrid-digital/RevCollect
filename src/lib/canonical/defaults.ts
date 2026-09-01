@@ -24,7 +24,11 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
     dailyDigest: true,
     autoDraftFollowUps: true,
     escalationAlerts: true,
-    digestHour: 7
+    digestHour: 7,
+    defaultPauseDays: 14,
+    overnightDraftManualOnly: false,
+    allowLateFeeMentions: false,
+    allowLegalLanguage: false
   },
   digestPreview: {
     dateLabel: '',
@@ -59,6 +63,11 @@ export function emptyIntelligence(): CustomerIntelligence {
     situations: [],
     preferences: {},
     relationshipState: 'normal',
+    relationshipPolicy: {
+      state: 'normal',
+      scope: 'customer',
+      doNotContact: []
+    },
     installmentHistory: []
   };
 }
@@ -84,6 +93,15 @@ export function defaultWorkspaceAgentConfig(base: AgentConfig = DEFAULT_AGENT_CO
   return {
     ...base,
     autoSendEnabled: false,
+    behaviors: {
+      ...DEFAULT_AGENT_CONFIG.behaviors,
+      ...base.behaviors,
+      digestHour: base.behaviors.digestHour ?? 7,
+      defaultPauseDays: base.behaviors.defaultPauseDays ?? 14,
+      overnightDraftManualOnly: base.behaviors.overnightDraftManualOnly ?? false,
+      allowLateFeeMentions: base.behaviors.allowLateFeeMentions ?? false,
+      allowLegalLanguage: base.behaviors.allowLegalLanguage ?? false
+    },
     digestPreview: base.digestPreview ?? {
       dateLabel: '',
       bullets: []

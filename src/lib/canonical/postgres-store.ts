@@ -1,4 +1,11 @@
-import type { AgentConfig, Customer, Invoice, ThreadEmail } from '@/features/revcollect/types';
+import type {
+  AgentConfig,
+  Customer,
+  Invoice,
+  RelationshipPolicy,
+  ThreadEmail
+} from '@/features/revcollect/types';
+import { normalizeRelationshipState } from '@/features/revcollect/lib/relationship-policy';
 import { buildSyntheticInboxFromInvoices } from '@/features/revcollect/api/xero-map';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { emptyIntelligence, emptySnapshot } from './defaults';
@@ -23,7 +30,8 @@ interface CustomerRow {
   balance_cents: number;
   days_overdue: number;
   promised_date?: string | null;
-  relationship_state: CustomerIntelligence['relationshipState'];
+  relationship_state: string;
+  relationship_policy?: RelationshipPolicy | Record<string, never> | null;
   intelligence: CustomerIntelligence | Record<string, never>;
 }
 
@@ -71,10 +79,18 @@ interface AriRow {
 
 function intelligenceFromRow(row: CustomerRow): CustomerIntelligence {
   const stored = row.intelligence ?? {};
+  const policy = (
+    row.relationship_policy && Object.keys(row.relationship_policy).length > 0
+      ? row.relationship_policy
+      : stored.relationshipPolicy
+  ) as RelationshipPolicy | undefined;
   return {
     ...emptyIntelligence(),
     ...stored,
-    relationshipState: row.relationship_state ?? stored.relationshipState ?? 'normal',
+    relationshipState: normalizeRelationshipState(
+      row.relationship_state ?? stored.relationshipState ?? 'normal'
+    ),
+    relationshipPolicy: policy,
     patterns: { ...emptyIntelligence().patterns, ...stored.patterns },
     situations: stored.situations ?? [],
     preferences: stored.preferences ?? {},
@@ -96,7 +112,8 @@ function mapCustomer(row: CustomerRow): Customer {
     daysOverdue: row.days_overdue,
     promisedDate: row.promised_date?.slice(0, 10) || undefined,
     classifiedReplyId: intelligence.classifiedReplyId,
-    relationshipState: intelligence.relationshipState
+    relationshipState: intelligence.relationshipState,
+    relationshipPolicy: intelligence.relationshipPolicy
   };
 }
 
@@ -241,6 +258,7 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           days_overdue: customer.daysOverdue,
           promised_date: customer.promisedDate?.slice(0, 10) ?? null,
           relationship_state: customer.relationshipState ?? intelligence.relationshipState,
+          relationship_policy: customer.relationshipPolicy ?? intelligence.relationshipPolicy ?? {},
           follow_up_state: (snapshot.sentEmails ?? []).some(
             (email) =>
               email.customerId === customer.id || email.threadId === `xero-customer-${customer.id}`
@@ -249,7 +267,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
             : 'idle',
           intelligence: {
             ...intelligence,
-            classifiedReplyId: customer.classifiedReplyId
+            classifiedReplyId: customer.classifiedReplyId,
+            relationshipState: customer.relationshipState ?? intelligence.relationshipState,
+            relationshipPolicy: customer.relationshipPolicy ?? intelligence.relationshipPolicy
           }
         };
       }),

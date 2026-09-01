@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentDraftMeta, CollectionStatus } from '../../types';
+import type { AgentDraftMeta, CollectionStatus, Customer } from '../../types';
 import { InboxAgentDraftPanel } from './inbox-agent-draft-panel';
 import { InboxFloatingComposer } from './inbox-floating-composer';
 
@@ -9,6 +9,7 @@ interface InboxThreadComposerProps {
   aiDraftBase: string;
   customerStatus: CollectionStatus;
   customerId: string;
+  customer?: Customer;
   autoFocus?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function InboxThreadComposer({
   aiDraftBase,
   customerStatus,
   customerId,
+  customer,
   autoFocus = false
 }: InboxThreadComposerProps) {
   return (
@@ -28,6 +30,7 @@ export function InboxThreadComposer({
           draft={aiDraftBase}
           customerStatus={customerStatus}
           customerId={customerId}
+          customer={customer}
           autoFocus={autoFocus}
         />
       )}

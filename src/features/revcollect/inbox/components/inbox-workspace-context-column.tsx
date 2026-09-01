@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { workspaceContextWidth } from '@/features/revcollect/lib/workspace-layout';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { InboxContextSidebar } from './inbox-context-sidebar';
-import { InboxOpenModeMenu } from './inbox-open-mode-menu';
 
 interface InboxWorkspaceContextColumnProps {
   messageId: string;
@@ -63,9 +62,6 @@ export function InboxWorkspaceContextColumn({
         workspaceContextWidth
       )}
     >
-      <div className='flex h-8 shrink-0 items-center justify-end pr-2'>
-        <InboxOpenModeMenu />
-      </div>
       <WorkspaceCard variant='context' className='min-h-0 w-full min-w-0 flex-1'>
         <InboxContextSidebar
           customer={customer}

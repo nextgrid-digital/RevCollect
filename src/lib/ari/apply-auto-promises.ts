@@ -9,6 +9,7 @@ import {
 } from '@/features/revcollect/lib/collection-decision';
 import { classifyReply, extractPromiseDate, replyLooksLikePromise } from './classify';
 import { parsePromisedDateFromText } from './parse-promise-date';
+import { replyLooksLikePaymentClaimed } from './apply-relationship-signals';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -58,6 +59,11 @@ export async function applyAutoPromises(tenantId: string, now = new Date()): Pro
 
     const text = stripQuotedReply(latest.body);
     if (!text) continue;
+    if (replyLooksLikePaymentClaimed(text)) {
+      customers[index] = { ...customer, classifiedReplyId: latest.id };
+      changed = true;
+      continue;
+    }
 
     const classified = replyLooksLikePromise(text)
       ? { intent: 'promise' as const }

@@ -1272,7 +1272,11 @@ export const agentConfig: AgentConfig = {
     dailyDigest: true,
     autoDraftFollowUps: true,
     escalationAlerts: true,
-    digestHour: 7
+    digestHour: 7,
+    defaultPauseDays: 14,
+    overnightDraftManualOnly: false,
+    allowLateFeeMentions: false,
+    allowLegalLanguage: false
   },
   digestPreview: {
     dateLabel: 'May 28, 2026',

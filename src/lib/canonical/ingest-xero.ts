@@ -16,6 +16,10 @@ import {
   parseXeroDate
 } from '@/features/revcollect/api/xero-map';
 import { restoreCollectionOverrides } from '@/features/revcollect/lib/collection-decision';
+import {
+  policyFromCustomer,
+  restoreRelationshipPolicies
+} from '@/features/revcollect/lib/relationship-policy';
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
 import { emptyIntelligence } from './defaults';
 import { recomputePatternsForSnapshot } from './patterns';
@@ -130,6 +134,7 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
   const store = await getCanonicalStore();
   const current = await store.read(tenantId);
   customers = restoreCollectionOverrides(customers, current.customers);
+  customers = restoreRelationshipPolicies(customers, current.customers);
   const inboxMessages = overlayInboxWithSentEmails(
     buildSyntheticInboxFromInvoices(invoices, customers),
     current.sentEmails ?? []
@@ -137,9 +142,14 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
   const previousPaymentIds = new Set(current.payments.map((payment) => payment.id));
   const intelligenceByCustomerId = { ...current.intelligenceByCustomerId };
   for (const customer of customers) {
-    intelligenceByCustomerId[customer.id] =
-      intelligenceByCustomerId[customer.id] ?? emptyIntelligence();
-    customer.relationshipState = intelligenceByCustomerId[customer.id].relationshipState;
+    const policy = policyFromCustomer(customer);
+    intelligenceByCustomerId[customer.id] = {
+      ...(intelligenceByCustomerId[customer.id] ?? emptyIntelligence()),
+      relationshipState: policy.state,
+      relationshipPolicy: policy
+    };
+    customer.relationshipState = policy.state;
+    customer.relationshipPolicy = policy;
   }
 
   let snapshot: CanonicalSnapshot = {

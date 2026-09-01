@@ -24,6 +24,8 @@ import { inboxCenterMaxWidth } from '../lib/inbox-layout';
 import { ConversationThread } from './conversation-thread';
 import { InboxThreadActionBar } from './inbox-thread-action-bar';
 import { InboxThreadComposer } from './inbox-thread-composer';
+import { InboxRelationshipBanner } from './inbox-relationship-banner';
+import { RelationshipPauseSheet } from '../../components/relationship-pause-sheet';
 
 interface InboxConversationPaneProps {
   customer: Customer;
@@ -176,11 +178,16 @@ export function InboxConversationPane({
           </div>
         </div>
         <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-3 md:px-6')}>
+          <div className='mb-3'>
+            <RelationshipPauseSheet customer={customer} />
+          </div>
+          <InboxRelationshipBanner customer={customer} />
           <InboxThreadComposer
             agentDraftMeta={agentDraftMeta}
             aiDraftBase={aiDraftBase ?? ''}
             customerStatus={customer.status}
             customerId={customer.id}
+            customer={customer}
           />
         </div>
       </div>

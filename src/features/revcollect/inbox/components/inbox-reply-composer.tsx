@@ -20,14 +20,15 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useAgentConfig, useSendInboxFollowUp } from '../../api/queries';
-import type { AgentConfig, CollectionStatus } from '../../types';
+import type { AgentConfig, CollectionStatus, Customer } from '../../types';
 import {
   COLLECTION_PLAYBOOKS,
   COLLECTION_TONES,
-  defaultPlaybookForStatus,
+  defaultPlaybookForCustomer,
   type CollectionPlaybook,
   type CollectionTone
 } from '../composer-options';
+import { followUpDecision } from '../../lib/relationship-policy';
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
@@ -147,6 +148,7 @@ export interface InboxReplyComposerProps {
   baseDraft: string;
   customerStatus: CollectionStatus;
   customerId?: string;
+  customer?: Customer;
   defaultTone?: AgentConfig['tone'];
   initialBody?: string;
   defaultAutoRun?: boolean;
@@ -162,6 +164,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       baseDraft,
       customerStatus,
       customerId,
+      customer,
       defaultTone,
       initialBody,
       defaultAutoRun = false,
@@ -179,11 +182,15 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     const sendFollowUp = useSendInboxFollowUp();
     const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
     const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
+    const resolvedPlaybook = defaultPlaybookForCustomer(customerStatus, {
+      paymentClaimed: customer
+        ? followUpDecision(customer).draftKind === 'payment_verification'
+        : false,
+      allowLegalLanguage: agentConfig?.behaviors.allowLegalLanguage
+    });
 
     const [tone, setTone] = useState<CollectionTone>(resolvedDefaultTone);
-    const [playbook, setPlaybook] = useState<CollectionPlaybook>(() =>
-      defaultPlaybookForStatus(customerStatus)
-    );
+    const [playbook, setPlaybook] = useState<CollectionPlaybook>(resolvedPlaybook);
     const [body, setBody] = useState(initialBody ?? '');
     const [autoRun, setAutoRun] = useState(defaultAutoRun);
     const [isDrafting, startDrafting] = useTransition();
@@ -238,7 +245,12 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
 
     useEffect(() => {
       const nextTone = resolvedDefaultTone;
-      const nextPlaybook = defaultPlaybookForStatus(customerStatus);
+      const nextPlaybook = defaultPlaybookForCustomer(customerStatus, {
+        paymentClaimed: customer
+          ? followUpDecision(customer).draftKind === 'payment_verification'
+          : false,
+        allowLegalLanguage: agentConfig?.behaviors.allowLegalLanguage
+      });
       setTone(nextTone);
       setPlaybook(nextPlaybook);
       setAutoRun(defaultAutoRun);
@@ -251,6 +263,8 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     }, [
       baseDraft,
       customerStatus,
+      customer,
+      agentConfig?.behaviors.allowLegalLanguage,
       resolvedDefaultTone,
       initialBody,
       defaultAutoRun,

@@ -70,8 +70,8 @@ export function WorkspacePageTitle({
           )}
         </div>
         <div className='ml-auto flex shrink-0 items-center gap-2 pr-2'>
-          {stackActionsBelow ? null : actions}
           <WorkspaceConnectionStatus />
+          {stackActionsBelow ? null : actions}
         </div>
       </div>
       {stackActionsBelow && actions ? <div className='w-full'>{actions}</div> : null}

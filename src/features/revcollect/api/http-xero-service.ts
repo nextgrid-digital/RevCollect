@@ -1,6 +1,11 @@
 import { parseJsonBody } from '@/lib/json/parse-json-body';
 import { sendInboxFollowUpRequest } from '../extract/record-inbox-send';
-import type { RevCollectService, SendInboxFollowUpInput, CollectionDecisionInput } from './service';
+import type {
+  RevCollectService,
+  SendInboxFollowUpInput,
+  CollectionDecisionInput,
+  RelationshipPolicyInput
+} from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -217,6 +222,10 @@ export class HttpXeroRevCollectService implements RevCollectService {
 
   recordCollectionDecision(input: CollectionDecisionInput) {
     return postJson<Customer>('recordCollectionDecision', input);
+  }
+
+  recordRelationshipPolicy(input: RelationshipPolicyInput) {
+    return postJson<Customer>('recordRelationshipPolicy', input);
   }
 
   async exportTenantData(_tenantId: TenantId): Promise<TenantDataExport> {

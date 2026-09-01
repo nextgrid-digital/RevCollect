@@ -39,7 +39,56 @@ export type TimelineEventType =
   | 'note'
   | 'promise';
 
-export type RelationshipState = 'normal' | 'sensitive' | 'paused';
+export type RelationshipState =
+  | 'normal'
+  | 'sensitive_event'
+  | 'active_dispute'
+  | 'payment_claimed'
+  | 'paused_until_date'
+  | 'manual_only'
+  | 'founder_only'
+  | 'do_not_contact'
+  | 'resume_review';
+
+export type RelationshipReason =
+  | 'bereavement'
+  | 'medical'
+  | 'family_emergency'
+  | 'cash_flow'
+  | 'dispute'
+  | 'payment_claimed'
+  | 'wrong_contact'
+  | 'vip_customer'
+  | 'manual';
+
+export type RelationshipScope = 'customer' | 'invoice' | 'contact';
+
+export type RelationshipPauseMode = 'no_follow_ups' | 'manual_only' | 'founder_only';
+
+export interface RelationshipSuggestion {
+  state: RelationshipState;
+  reason: RelationshipReason;
+  quote: string;
+  sourceMessageId?: string;
+  suggestedPauseDays: number;
+  proposedEmail?: string;
+}
+
+export interface RelationshipPolicy {
+  state: RelationshipState;
+  reason?: RelationshipReason;
+  scope: RelationshipScope;
+  invoiceId?: string;
+  contactEmail?: string;
+  pauseUntil?: string;
+  pauseMode?: RelationshipPauseMode;
+  sourceMessageId?: string;
+  sourceQuote?: string;
+  internalNote?: string;
+  doNotContact: string[];
+  preferredEmail?: string;
+  pendingSuggestion?: RelationshipSuggestion;
+}
 
 export interface Customer {
   id: string;
@@ -54,6 +103,7 @@ export interface Customer {
   promisedDate?: string;
   classifiedReplyId?: string;
   relationshipState?: RelationshipState;
+  relationshipPolicy?: RelationshipPolicy;
 }
 
 export type ReplyIntent = 'deflection' | 'promise' | 'dispute' | 'payment_confirmation' | 'other';
@@ -149,6 +199,10 @@ export interface AgentBehaviors {
   autoDraftFollowUps: boolean;
   escalationAlerts: boolean;
   digestHour: number;
+  defaultPauseDays: number;
+  overnightDraftManualOnly: boolean;
+  allowLateFeeMentions: boolean;
+  allowLegalLanguage: boolean;
 }
 
 export interface AgentDigestPreview {
@@ -271,4 +325,5 @@ export interface AgingCustomerBreakdownRow {
   days60PlusCents: number;
   totalCents: number;
   risk: AgingRiskLevel;
+  relationshipLabel?: string | null;
 }

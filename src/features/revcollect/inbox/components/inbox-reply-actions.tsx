@@ -13,6 +13,7 @@ import {
   formatPromisedDateLabel,
   parseIsoDate
 } from '../../lib/collection-decision';
+import { RelationshipPauseSheet } from '../../components/relationship-pause-sheet';
 
 interface InboxReplyActionsProps {
   customer: Customer;
@@ -74,25 +75,6 @@ export function InboxReplyActions({ customer, onChaseAgain, className }: InboxRe
       <Button
         type='button'
         size='sm'
-        variant={customer.status === 'in_dispute' ? 'default' : 'outline'}
-        className='rounded-full'
-        disabled={mutation.isPending}
-        isLoading={pendingAction === 'dispute'}
-        aria-label='Mark as dispute'
-        onClick={() =>
-          mutation.mutate({
-            customerId: customer.id,
-            action: 'dispute'
-          })
-        }
-      >
-        {pendingAction === 'dispute' ? null : <Icons.alertCircle className='size-3.5' />}
-        Dispute
-      </Button>
-
-      <Button
-        type='button'
-        size='sm'
         variant='outline'
         className='rounded-full'
         disabled={mutation.isPending}
@@ -113,6 +95,8 @@ export function InboxReplyActions({ customer, onChaseAgain, className }: InboxRe
         {pendingAction === 'chase_again' ? null : <Icons.send className='size-3.5' />}
         Chase again
       </Button>
+
+      <RelationshipPauseSheet customer={customer} />
     </div>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from '@/features/revcollect/lib/workspace-layout';
 import { MotionStagger, MotionStaggerItem } from '@/features/revcollect/motion/motion-primitives';
 import { CustomerAvatar } from '../../components/customer-avatar';
+import { RelationshipBadge } from '../../components/relationship-badge';
+import { RelationshipPauseSheet } from '../../components/relationship-pause-sheet';
 import {
   useCustomer,
   useCustomerInboxContext,
@@ -152,6 +154,9 @@ export function CustomersDetailPanel({
                           <p>
                             {customer.email} · {paymentTerms}
                           </p>
+                          <div className='mt-2'>
+                            <RelationshipBadge customer={customer} />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -175,6 +180,7 @@ export function CustomersDetailPanel({
                           {activityAside}
                         </SheetContent>
                       </Sheet>
+                      <RelationshipPauseSheet customer={customer} />
                       <Button asChild>
                         <Link href={followUpHref}>Follow up</Link>
                       </Button>

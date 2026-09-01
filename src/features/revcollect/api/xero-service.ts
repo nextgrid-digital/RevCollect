@@ -27,6 +27,8 @@ import {
   GmailNotConnectedError
 } from '@/lib/integrations/gmail-api';
 import { applyAutoPromises } from '@/lib/ari/apply-auto-promises';
+import { applyRelationshipSignals } from '@/lib/ari/apply-relationship-signals';
+import { templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -48,6 +50,14 @@ import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
 import { isOpenCanonicalInvoice } from '../lib/invoice-open';
 import { applyCollectionDecisionToCustomer } from '../lib/collection-decision';
 import type { CollectionDecisionInput } from '../lib/collection-decision';
+import {
+  applyRelationshipPolicyInput,
+  expireCustomerRelationship,
+  followUpDecision,
+  policyFromCustomer,
+  syncPolicyOntoCustomer
+} from '../lib/relationship-policy';
+import type { RelationshipPolicyInput } from '../lib/relationship-policy';
 import type { RevCollectService, SendInboxFollowUpInput, SendInboxFollowUpResult } from './service';
 import type {
   DataAccessEvent,
@@ -66,6 +76,23 @@ import {
   buildCustomerStatusSummary,
   buildSyntheticInboxFromInvoices
 } from './xero-map';
+
+function persistCustomerOnSnapshot(
+  snapshot: Awaited<ReturnType<Awaited<ReturnType<typeof getCanonicalStore>>['read']>>,
+  customer: Customer
+): void {
+  snapshot.customers = snapshot.customers.map((item) =>
+    item.id === customer.id ? customer : item
+  );
+  const intelligence = snapshot.intelligenceByCustomerId[customer.id] ?? emptyIntelligence();
+  const policy = policyFromCustomer(customer);
+  snapshot.intelligenceByCustomerId[customer.id] = {
+    ...intelligence,
+    relationshipState: policy.state,
+    relationshipPolicy: policy,
+    classifiedReplyId: customer.classifiedReplyId
+  };
+}
 
 function formatPreparedAt(iso: string): string {
   const date = new Date(iso);
@@ -114,7 +141,8 @@ async function refreshInboxFromGmail(tenantId: string): Promise<void> {
 
   try {
     const didPromise = await applyAutoPromises(tenantId);
-    if (didRehome || didSync || didPromise) clearArDataMemo(tenantId);
+    const didSignals = await applyRelationshipSignals(tenantId);
+    if (didRehome || didSync || didPromise || didSignals) clearArDataMemo(tenantId);
   } catch (error) {
     console.error('[ari] auto-promise failed:', error);
   }
@@ -131,13 +159,17 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
     }
   }
 
-  const customers = snapshot.customers.map((customer) => ({
-    ...customer,
-    relationshipState:
-      customer.relationshipState ??
-      snapshot.intelligenceByCustomerId[customer.id]?.relationshipState ??
-      emptyIntelligence().relationshipState
-  }));
+  const customers = snapshot.customers.map((customer) => {
+    const intelligence = snapshot.intelligenceByCustomerId[customer.id];
+    return expireCustomerRelationship({
+      ...customer,
+      relationshipState:
+        customer.relationshipState ??
+        intelligence?.relationshipState ??
+        emptyIntelligence().relationshipState,
+      relationshipPolicy: customer.relationshipPolicy ?? intelligence?.relationshipPolicy
+    });
+  });
   const sentEmails = rehomeSentEmails(snapshot.sentEmails ?? [], customers);
 
   after(() => {
@@ -227,6 +259,16 @@ export class XeroRevCollectService implements RevCollectService {
     const latestSent = threadEmails[threadEmails.length - 1];
     const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
     const timelineEvents = await this.getTimelineForCustomer(customer.id);
+    const decision = followUpDecision(customer);
+    const aiDraftBase =
+      decision.draftKind === 'payment_verification'
+        ? templatePaymentVerificationDraft({
+            customer,
+            invoices: openInvoices
+          })
+        : customer.status === 'in_dispute'
+          ? `Hi ${customer.name},\n\nThanks for flagging this. We have paused collection while we review the dispute${focusInvoice ? ` on ${focusInvoice.number}` : ''}. Please share any supporting detail so we can resolve it.\n\nThank you`
+          : `Hi ${customer.name},\n\nFollowing up on overdue invoice${focusInvoice ? ` ${focusInvoice.number}` : 's'}. Please let us know if you need anything to process payment.\n\nThank you`;
 
     return {
       message,
@@ -239,7 +281,7 @@ export class XeroRevCollectService implements RevCollectService {
       deepAnalysisText: undefined,
       latestEmail: latestSent,
       agentDraftMeta,
-      aiDraftBase: `Hi ${customer.name},\n\nFollowing up on overdue invoice${focusInvoice ? ` ${focusInvoice.number}` : 's'}. Please let us know if you need anything to process payment.\n\nThank you`,
+      aiDraftBase,
       lastAction: latestSent
         ? {
             title: 'Follow-up sent',
@@ -456,13 +498,48 @@ export class XeroRevCollectService implements RevCollectService {
       .filter((email) => email.author === 'customer' && email.customerId === customer.id)
       .toSorted((left, right) => left.sentAt.localeCompare(right.sentAt))
       .at(-1);
-    const updated = {
+    let updated: Customer = {
       ...applyCollectionDecisionToCustomer(customer, input),
       classifiedReplyId: latestReply?.id ?? customer.classifiedReplyId
     };
-    snapshot.customers = snapshot.customers.map((item) =>
-      item.id === updated.id ? updated : item
-    );
+    if (input.action === 'dispute') {
+      updated = syncPolicyOntoCustomer(updated, {
+        ...policyFromCustomer(updated),
+        state: 'active_dispute',
+        reason: 'dispute',
+        scope: input.invoiceId ? 'invoice' : 'customer',
+        invoiceId: input.invoiceId,
+        pendingSuggestion: undefined
+      });
+    } else if (
+      input.action === 'chase_again' &&
+      policyFromCustomer(customer).state === 'active_dispute'
+    ) {
+      updated = applyRelationshipPolicyInput(updated, {
+        customerId: updated.id,
+        action: 'resume'
+      });
+    }
+    persistCustomerOnSnapshot(snapshot, updated);
+    await store.write(tenantId, snapshot);
+    clearArDataMemo(tenantId);
+    return structuredClone(updated);
+  }
+
+  async recordRelationshipPolicy(input: RelationshipPolicyInput) {
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const customer = snapshot.customers.find((item) => item.id === input.customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+    const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
+    const updated = applyRelationshipPolicyInput(customer, {
+      ...input,
+      pauseDays: input.pauseDays ?? config.behaviors.defaultPauseDays
+    });
+    persistCustomerOnSnapshot(snapshot, updated);
     await store.write(tenantId, snapshot);
     clearArDataMemo(tenantId);
     return structuredClone(updated);
@@ -475,9 +552,14 @@ export class XeroRevCollectService implements RevCollectService {
     if (!customer) {
       throw new Error('Customer not found');
     }
-    const to = customer.email.trim();
+    const policy = policyFromCustomer(customer);
+    const to = (policy.preferredEmail ?? customer.email).trim();
     if (!to || !to.includes('@')) {
       throw new Error('This customer has no email address in Xero');
+    }
+    const blocked = new Set(policy.doNotContact.map((email) => email.trim().toLowerCase()));
+    if (policy.state === 'do_not_contact' || blocked.has(to.toLowerCase())) {
+      throw new Error('This contact is on the do-not-contact list');
     }
 
     const threadId = input.messageId ?? `xero-customer-${customer.id}`;

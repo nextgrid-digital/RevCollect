@@ -20,6 +20,7 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import type { CollectionDecisionInput } from '../lib/collection-decision';
+import type { RelationshipPolicyInput } from '../lib/relationship-policy';
 import type {
   CustomerStatusSummary,
   DataAccessEvent,
@@ -30,6 +31,7 @@ import type {
 } from './types';
 
 export type { CollectionDecisionAction, CollectionDecisionInput } from '../lib/collection-decision';
+export type { RelationshipPolicyInput } from '../lib/relationship-policy';
 
 export interface SendInboxFollowUpInput {
   customerId: string;
@@ -84,6 +86,7 @@ export interface RevCollectService {
   ): Promise<WorkspaceGeneralSettings>;
   sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult>;
   recordCollectionDecision(input: CollectionDecisionInput): Promise<Customer>;
+  recordRelationshipPolicy(input: RelationshipPolicyInput): Promise<Customer>;
 
   exportTenantData(tenantId: TenantId): Promise<TenantDataExport>;
   requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult>;

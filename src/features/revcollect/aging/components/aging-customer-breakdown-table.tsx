@@ -136,7 +136,16 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
         accessorKey: 'risk',
         enableSorting: false,
         header: 'Risk',
-        cell: ({ row }) => <AgingRiskBadge risk={row.original.risk} />
+        cell: ({ row }) => (
+          <div className='flex flex-col items-start gap-1'>
+            <AgingRiskBadge risk={row.original.risk} />
+            {row.original.relationshipLabel ? (
+              <span className='text-muted-foreground text-[10px] font-medium'>
+                {row.original.relationshipLabel}
+              </span>
+            ) : null}
+          </div>
+        )
       },
       {
         id: 'nextStep',

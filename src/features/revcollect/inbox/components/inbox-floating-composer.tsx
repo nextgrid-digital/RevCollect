@@ -1,12 +1,13 @@
 'use client';
 
-import type { AgentConfig, CollectionStatus } from '../../types';
+import type { AgentConfig, CollectionStatus, Customer } from '../../types';
 import { InboxReplyComposer } from './inbox-reply-composer';
 
 interface InboxFloatingComposerProps {
   draft: string;
   customerStatus: CollectionStatus;
   customerId: string;
+  customer?: Customer;
   defaultTone?: AgentConfig['tone'];
   autoFocus?: boolean;
 }
@@ -15,6 +16,7 @@ export function InboxFloatingComposer({
   draft,
   customerStatus,
   customerId,
+  customer,
   defaultTone,
   autoFocus = false
 }: InboxFloatingComposerProps) {
@@ -24,6 +26,7 @@ export function InboxFloatingComposer({
         baseDraft={draft}
         customerStatus={customerStatus}
         customerId={customerId}
+        customer={customer}
         defaultTone={defaultTone}
         autoFocus={autoFocus}
       />

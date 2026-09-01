@@ -1,7 +1,7 @@
 import { complete, parseJsonObject } from '@/lib/ai/complete';
 import { emptyIntelligence } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
-import type { CustomerSituation, RelationshipState } from '@/lib/canonical/types';
+import type { CustomerSituation } from '@/lib/canonical/types';
 
 export type ExtractEventKind = 'reply' | 'payment' | 'draft_edit';
 
@@ -18,7 +18,6 @@ interface ExtractedPayload {
   evidence: string;
   confidence: number;
   expiresDays: number;
-  relationshipState?: RelationshipState;
 }
 
 const EXTRACT_SCHEMA = {
@@ -29,8 +28,7 @@ const EXTRACT_SCHEMA = {
     detail: { type: 'string' },
     evidence: { type: 'string' },
     confidence: { type: 'number' },
-    expiresDays: { type: 'number' },
-    relationshipState: { type: 'string', enum: ['normal', 'sensitive', 'paused'] }
+    expiresDays: { type: 'number' }
   }
 };
 
@@ -64,8 +62,7 @@ function heuristicExtract(kind: ExtractEventKind, text: string): ExtractedPayloa
       flag: 'legal_hold',
       evidence: text.slice(0, 180),
       confidence: 0.8,
-      expiresDays: 30,
-      relationshipState: 'paused'
+      expiresDays: 30
     };
   }
   if (/dispute|discrepancy|incorrect/.test(lower)) {
@@ -73,8 +70,7 @@ function heuristicExtract(kind: ExtractEventKind, text: string): ExtractedPayloa
       flag: 'dispute',
       evidence: text.slice(0, 180),
       confidence: 0.7,
-      expiresDays: 21,
-      relationshipState: 'sensitive'
+      expiresDays: 21
     };
   }
   if (/promise|will pay|by friday|next week/.test(lower)) {
@@ -129,14 +125,10 @@ export async function extractSituation(
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
   const current = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
-  const relationshipState = payload.relationshipState ?? current.relationshipState;
   snapshot.intelligenceByCustomerId[customerId] = {
     ...current,
-    relationshipState,
     situations: [...current.situations.filter((item) => item.status === 'active'), situation]
   };
-  const customer = snapshot.customers.find((item) => item.id === customerId);
-  if (customer) customer.relationshipState = relationshipState;
   await store.write(tenantId, snapshot);
   return situation;
 }

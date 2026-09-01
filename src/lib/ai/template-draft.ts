@@ -44,3 +44,24 @@ export function templateFollowUpDraft(input: {
     close
   ].join('\n');
 }
+
+export function templatePaymentVerificationDraft(input: {
+  customer: Customer;
+  invoices: Invoice[];
+  greeting?: string;
+  signoff?: string;
+}): string {
+  const { customer, invoices, greeting, signoff } = input;
+  const hello = greeting?.trim() || `Hi ${customer.name}`;
+  const close = signoff?.trim() || 'Thank you';
+  const invoiceList = invoices.map((invoice) => invoice.number).join(', ');
+
+  return [
+    `${hello},`,
+    '',
+    'Thank you — we saw your note that payment was sent.',
+    `To match it against ${invoiceList || 'the open invoice(s)'}, please share a payment reference or remittance advice when you can.`,
+    '',
+    close
+  ].join('\n');
+}

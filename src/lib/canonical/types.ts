@@ -4,11 +4,21 @@ import type {
   Customer,
   InboxMessage,
   Invoice,
+  RelationshipPolicy,
   ThreadEmail,
   WorkspaceGeneralSettings
 } from '@/features/revcollect/types';
 
-export type RelationshipState = 'normal' | 'sensitive' | 'paused';
+export type RelationshipState =
+  | 'normal'
+  | 'sensitive_event'
+  | 'active_dispute'
+  | 'payment_claimed'
+  | 'paused_until_date'
+  | 'manual_only'
+  | 'founder_only'
+  | 'do_not_contact'
+  | 'resume_review';
 export type SituationStatus = 'active' | 'retired';
 export type PatternTrend = 'improving' | 'stable' | 'worsening';
 
@@ -49,6 +59,7 @@ export interface CustomerIntelligence {
   situations: CustomerSituation[];
   preferences: CustomerPreferences;
   relationshipState: RelationshipState;
+  relationshipPolicy?: RelationshipPolicy;
   installmentHistory: InstallmentHistoryEntry[];
   classifiedReplyId?: string;
 }

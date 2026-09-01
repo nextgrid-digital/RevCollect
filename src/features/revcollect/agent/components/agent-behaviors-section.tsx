@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import type { AgentBehaviors } from '../../types';
 import { SettingsSection } from '../../settings/components/settings-section';
 
-type AgentBehaviorToggleKey = Exclude<keyof AgentBehaviors, 'digestHour'>;
+type AgentBehaviorToggleKey = Exclude<keyof AgentBehaviors, 'digestHour' | 'defaultPauseDays'>;
 
 function formatDigestHour(hour: number): string {
   const period = hour >= 12 ? 'PM' : 'AM';

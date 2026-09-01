@@ -38,6 +38,10 @@ import {
   applyCollectionDecisionToCustomer,
   type CollectionDecisionInput
 } from '../lib/collection-decision';
+import {
+  applyRelationshipPolicyInput,
+  type RelationshipPolicyInput
+} from '../lib/relationship-policy';
 import type { RevCollectService, SendInboxFollowUpInput } from './service';
 import type {
   DataAccessEvent,
@@ -221,6 +225,19 @@ export class MockRevCollectService implements RevCollectService {
       throw new Error('Customer not found');
     }
     const updated = applyCollectionDecisionToCustomer(current, input);
+    const index = customers.findIndex((item) => item.id === input.customerId);
+    if (index >= 0) {
+      customers[index] = updated;
+    }
+    return structuredClone(updated);
+  }
+
+  async recordRelationshipPolicy(input: RelationshipPolicyInput) {
+    const current = customers.find((item) => item.id === input.customerId);
+    if (!current) {
+      throw new Error('Customer not found');
+    }
+    const updated = applyRelationshipPolicyInput(current, input);
     const index = customers.findIndex((item) => item.id === input.customerId);
     if (index >= 0) {
       customers[index] = updated;

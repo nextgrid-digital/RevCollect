@@ -3,7 +3,11 @@ import type { CollectionStatus } from '../types';
 
 export type CollectionTone = 'professional' | 'friendly' | 'firm';
 
-export type CollectionPlaybook = 'standard' | 'final_notice';
+export type CollectionPlaybook =
+  | 'standard'
+  | 'final_notice'
+  | 'payment_verification'
+  | 'dispute_hold';
 
 export const COLLECTION_TONES = [
   {
@@ -36,11 +40,31 @@ export const COLLECTION_PLAYBOOKS = [
     id: 'final_notice' as const,
     name: 'Final notice',
     version: 'Escalation'
+  },
+  {
+    id: 'payment_verification' as const,
+    name: 'Payment check',
+    version: 'Thank you + reference'
+  },
+  {
+    id: 'dispute_hold' as const,
+    name: 'Dispute review',
+    version: 'No chase language'
   }
 ];
 
 export function defaultPlaybookForStatus(status: CollectionStatus): CollectionPlaybook {
-  if (status === 'overdue') return 'final_notice';
+  if (status === 'in_dispute') return 'dispute_hold';
+  return 'standard';
+}
+
+export function defaultPlaybookForCustomer(
+  status: CollectionStatus,
+  options?: { paymentClaimed?: boolean; allowLegalLanguage?: boolean }
+): CollectionPlaybook {
+  if (options?.paymentClaimed) return 'payment_verification';
+  if (status === 'in_dispute') return 'dispute_hold';
+  if (status === 'overdue' && options?.allowLegalLanguage) return 'final_notice';
   return 'standard';
 }
 

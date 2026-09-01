@@ -14,7 +14,12 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
-import type { RevCollectService, SendInboxFollowUpInput, CollectionDecisionInput } from './service';
+import type {
+  RevCollectService,
+  SendInboxFollowUpInput,
+  CollectionDecisionInput,
+  RelationshipPolicyInput
+} from './service';
 import type { DataAccessEvent, TenantId } from './types';
 import type { InboxSendError } from '../extract/record-inbox-send';
 
@@ -557,6 +562,50 @@ export function useRecordCollectionDecision() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Could not update this thread');
+    }
+  });
+}
+
+export function useRecordRelationshipPolicy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RelationshipPolicyInput) =>
+      getRevCollectService().recordRelationshipPolicy(input),
+    onSuccess: (_customer, input) => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      switch (input.action) {
+        case 'pause':
+          toast.success('Follow-ups paused');
+          return;
+        case 'resume':
+          toast.success('Collections resumed');
+          return;
+        case 'extend':
+          toast.success('Pause extended');
+          return;
+        case 'keep_paused':
+          toast.success('Kept paused');
+          return;
+        case 'dismiss_suggestion':
+          toast.success('Suggestion dismissed');
+          return;
+        case 'confirm_suggestion':
+          toast.success('Saved');
+          return;
+        case 'set_mode':
+          toast.success('Relationship mode updated');
+          return;
+        case 'update_contact':
+          toast.success('Contact updated');
+          return;
+        default: {
+          const _exhaustive: never = input.action;
+          return _exhaustive;
+        }
+      }
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not update relationship');
     }
   });
 }
