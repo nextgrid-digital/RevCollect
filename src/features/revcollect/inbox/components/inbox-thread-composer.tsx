@@ -19,16 +19,18 @@ export function InboxThreadComposer({
   customerId,
   autoFocus = false
 }: InboxThreadComposerProps) {
-  if (agentDraftMeta) {
-    return <InboxAgentDraftPanel draftMeta={agentDraftMeta} customerId={customerId} />;
-  }
-
   return (
-    <InboxFloatingComposer
-      draft={aiDraftBase}
-      customerStatus={customerStatus}
-      customerId={customerId}
-      autoFocus={autoFocus}
-    />
+    <div id='inbox-thread-composer'>
+      {agentDraftMeta ? (
+        <InboxAgentDraftPanel draftMeta={agentDraftMeta} customerId={customerId} />
+      ) : (
+        <InboxFloatingComposer
+          draft={aiDraftBase}
+          customerStatus={customerStatus}
+          customerId={customerId}
+          autoFocus={autoFocus}
+        />
+      )}
+    </div>
   );
 }

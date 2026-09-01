@@ -3,7 +3,8 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import type { Customer, InboxMessage, ReplyIntent } from '../../types';
+import type { Customer, InboxMessage } from '../../types';
+import { formatPromisedDateLabel } from '../../lib/collection-decision';
 import {
   getInboxThreadActionStatus,
   getIntentLabel,
@@ -38,11 +39,7 @@ export function getInboxThreadListBadges(
   customer: Customer
 ): InboxThreadListBadges {
   const status = getInboxThreadActionStatus(message, customer);
-  const primary = getInboxThreadStatusDisplay(
-    status,
-    message.replyIntent,
-    message.replyIntentLabel
-  );
+  const primary = getInboxThreadStatusDisplay(status, message, customer);
   const secondary = getSecondaryOverdueChip(status, customer.daysOverdue);
 
   return { primary, secondary, status };
@@ -50,8 +47,8 @@ export function getInboxThreadListBadges(
 
 function getInboxThreadStatusDisplay(
   status: InboxThreadActionStatus,
-  replyIntent: ReplyIntent | undefined,
-  replyIntentLabel: string | undefined
+  message: InboxMessage,
+  customer: Customer
 ): InboxListPillItem | null {
   switch (status) {
     case 'ai_draft_ready':
@@ -67,7 +64,21 @@ function getInboxThreadStatusDisplay(
         icon: Icons.inbox
       };
     case 'monitoring': {
-      const intentLabel = getIntentLabel(replyIntent, replyIntentLabel);
+      if (customer.status === 'promised') {
+        return {
+          label: customer.promisedDate
+            ? `Promised · ${formatPromisedDateLabel(customer.promisedDate)}`
+            : 'Promised',
+          variant: 'monitoring'
+        };
+      }
+      if (customer.status === 'in_dispute') {
+        return {
+          label: 'In dispute',
+          variant: 'monitoring'
+        };
+      }
+      const intentLabel = getIntentLabel(message.replyIntent, message.replyIntentLabel);
       return {
         label: intentLabel ? `Monitoring · ${intentLabel}` : 'Monitoring',
         variant: 'monitoring'

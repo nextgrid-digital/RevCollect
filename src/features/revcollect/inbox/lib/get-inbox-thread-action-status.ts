@@ -38,8 +38,12 @@ export function getIntentLabel(
 
 export function getInboxThreadActionStatus(
   message: InboxMessage,
-  _customer: Customer
+  customer: Customer
 ): InboxThreadActionStatus {
+  if (customer.status === 'promised' || customer.status === 'in_dispute') {
+    return 'monitoring';
+  }
+
   if (message.agentDraftReady) {
     return 'ai_draft_ready';
   }

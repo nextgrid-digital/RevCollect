@@ -15,6 +15,7 @@ import {
   mapXeroInvoices,
   parseXeroDate
 } from '@/features/revcollect/api/xero-map';
+import { restoreCollectionOverrides } from '@/features/revcollect/lib/collection-decision';
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
 import { emptyIntelligence } from './defaults';
 import { recomputePatternsForSnapshot } from './patterns';
@@ -117,7 +118,7 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
   } = await fetchXeroAccountsReceivable(tenantId);
 
   const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
-  const customers: Customer[] = mapXeroCustomers(contacts, invoices);
+  let customers: Customer[] = mapXeroCustomers(contacts, invoices);
   const fromRegister = paymentsFromXeroPayments(rawPayments, invoices);
   const basePayments =
     fromRegister.length > 0 ? fromRegister : fallbackPaymentsFromInvoices(rawInvoices);
@@ -128,6 +129,7 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
 
   const store = await getCanonicalStore();
   const current = await store.read(tenantId);
+  customers = restoreCollectionOverrides(customers, current.customers);
   const inboxMessages = overlayInboxWithSentEmails(
     buildSyntheticInboxFromInvoices(invoices, customers),
     current.sentEmails ?? []

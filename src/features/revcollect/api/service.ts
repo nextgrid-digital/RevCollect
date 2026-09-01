@@ -19,6 +19,7 @@ import type {
   TimelineEvent,
   WorkspaceGeneralSettings
 } from '../types';
+import type { CollectionDecisionInput } from '../lib/collection-decision';
 import type {
   CustomerStatusSummary,
   DataAccessEvent,
@@ -27,6 +28,8 @@ import type {
   TenantDataExport,
   TenantId
 } from './types';
+
+export type { CollectionDecisionAction, CollectionDecisionInput } from '../lib/collection-decision';
 
 export interface SendInboxFollowUpInput {
   customerId: string;
@@ -80,6 +83,7 @@ export interface RevCollectService {
     settings: WorkspaceGeneralSettings
   ): Promise<WorkspaceGeneralSettings>;
   sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult>;
+  recordCollectionDecision(input: CollectionDecisionInput): Promise<Customer>;
 
   exportTenantData(tenantId: TenantId): Promise<TenantDataExport>;
   requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult>;

@@ -39,6 +39,8 @@ import type {
 } from '../types';
 import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
 import { isOpenCanonicalInvoice } from '../lib/invoice-open';
+import { applyCollectionDecisionToCustomer } from '../lib/collection-decision';
+import type { CollectionDecisionInput } from '../lib/collection-decision';
 import type { RevCollectService, SendInboxFollowUpInput, SendInboxFollowUpResult } from './service';
 import type {
   DataAccessEvent,
@@ -407,6 +409,24 @@ export class XeroRevCollectService implements RevCollectService {
     snapshot.workspaceSettings = structuredClone(settings);
     await store.write(tenantId, snapshot);
     return structuredClone(settings);
+  }
+
+  async recordCollectionDecision(input: CollectionDecisionInput) {
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const customer = snapshot.customers.find((item) => item.id === input.customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    const updated = applyCollectionDecisionToCustomer(customer, input);
+    snapshot.customers = snapshot.customers.map((item) =>
+      item.id === updated.id ? updated : item
+    );
+    await store.write(tenantId, snapshot);
+    clearArDataMemo(tenantId);
+    return structuredClone(updated);
   }
 
   async sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult> {

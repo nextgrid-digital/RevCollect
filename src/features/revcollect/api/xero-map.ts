@@ -23,6 +23,7 @@ import type {
   InboxMessage,
   Invoice
 } from '../types';
+import { deriveCustomerStatus } from '../lib/collection-decision';
 import { getDaysOverdueFromDueDate } from '../utils';
 import type { CustomerStatusSummary } from './types';
 
@@ -243,12 +244,6 @@ export function mapXeroCustomers(contacts: XeroContact[], invoices: Invoice[]): 
   }
 
   return customers.toSorted((a, b) => b.balanceCents - a.balanceCents);
-}
-
-function deriveCustomerStatus(balanceCents: number, daysOverdue: number): CollectionStatus {
-  if (balanceCents <= 0) return 'current';
-  if (daysOverdue > 0) return 'overdue';
-  return 'due_soon';
 }
 
 export function buildAgingBucketsFromInvoices(invoices: Invoice[]): AgingBucketSummary[] {

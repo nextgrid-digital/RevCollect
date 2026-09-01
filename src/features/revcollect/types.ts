@@ -51,6 +51,7 @@ export interface Customer {
   status: CollectionStatus;
   balanceCents: number;
   daysOverdue: number;
+  promisedDate?: string;
   relationshipState?: RelationshipState;
 }
 

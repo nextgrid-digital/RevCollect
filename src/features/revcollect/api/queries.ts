@@ -14,7 +14,7 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
-import type { RevCollectService, SendInboxFollowUpInput } from './service';
+import type { RevCollectService, SendInboxFollowUpInput, CollectionDecisionInput } from './service';
 import type { DataAccessEvent, TenantId } from './types';
 import type { InboxSendError } from '../extract/record-inbox-send';
 
@@ -526,6 +526,35 @@ export function useSendInboxFollowUp() {
         return;
       }
       toast.error(sendError.message || 'Could not send follow-up');
+    }
+  });
+}
+
+export function useRecordCollectionDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CollectionDecisionInput) =>
+      getRevCollectService().recordCollectionDecision(input),
+    onSuccess: (_customer, input) => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      switch (input.action) {
+        case 'promised':
+          toast.success('Marked as promised');
+          return;
+        case 'dispute':
+          toast.success('Marked as dispute');
+          return;
+        case 'chase_again':
+          toast.success('Ready to chase again');
+          return;
+        default: {
+          const _exhaustive: never = input.action;
+          return _exhaustive;
+        }
+      }
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not update this thread');
     }
   });
 }

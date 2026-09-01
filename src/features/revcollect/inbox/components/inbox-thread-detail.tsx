@@ -9,6 +9,7 @@ import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
 import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
 import { InboxContextSidebar } from './inbox-context-sidebar';
 import { InboxThreadComposer } from './inbox-thread-composer';
+import { InboxReplyActions } from './inbox-reply-actions';
 import { InboxThreadAttachmentProvider } from './inbox-thread-attachment-context';
 import { InboxThreadToolbar } from './inbox-thread-toolbar';
 import { ConversationThread } from './conversation-thread';
@@ -283,6 +284,13 @@ export function InboxThreadDetail({
                 </div>
               </div>
               <div className={cn(inboxCenterMaxWidth, 'bg-background shrink-0 px-4 pt-3 pb-2')}>
+                {threadEmails.at(-1)?.author === 'customer' && customer.balanceCents > 0 ? (
+                  <InboxReplyActions
+                    customer={customer}
+                    onChaseAgain={focusInboxComposer}
+                    className='mb-3'
+                  />
+                ) : null}
                 <InboxThreadComposer
                   agentDraftMeta={selection.agentDraftMeta}
                   aiDraftBase={selection.aiDraftBase}

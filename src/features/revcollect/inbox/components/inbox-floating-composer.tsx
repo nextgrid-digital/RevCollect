@@ -19,7 +19,7 @@ export function InboxFloatingComposer({
   autoFocus = false
 }: InboxFloatingComposerProps) {
   return (
-    <div id='inbox-thread-composer'>
+    <div id='inbox-thread-composer-fields'>
       <InboxReplyComposer
         baseDraft={draft}
         customerStatus={customerStatus}

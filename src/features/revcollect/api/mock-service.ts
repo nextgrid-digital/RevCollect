@@ -34,6 +34,10 @@ import type {
   AriRunRecord,
   WorkspaceGeneralSettings
 } from '../types';
+import {
+  applyCollectionDecisionToCustomer,
+  type CollectionDecisionInput
+} from '../lib/collection-decision';
 import type { RevCollectService, SendInboxFollowUpInput } from './service';
 import type {
   DataAccessEvent,
@@ -209,6 +213,19 @@ export class MockRevCollectService implements RevCollectService {
 
   async sendInboxFollowUp(_input: SendInboxFollowUpInput) {
     return { ok: true as const };
+  }
+
+  async recordCollectionDecision(input: CollectionDecisionInput) {
+    const current = customers.find((item) => item.id === input.customerId);
+    if (!current) {
+      throw new Error('Customer not found');
+    }
+    const updated = applyCollectionDecisionToCustomer(current, input);
+    const index = customers.findIndex((item) => item.id === input.customerId);
+    if (index >= 0) {
+      customers[index] = updated;
+    }
+    return structuredClone(updated);
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {

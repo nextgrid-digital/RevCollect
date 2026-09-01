@@ -9,6 +9,7 @@ import { getCanonicalStore } from '@/lib/canonical/store';
 import type { AgentDraftRecord } from '@/lib/canonical/types';
 import type { AgentDraftTone } from '@/features/revcollect/types';
 import { isOpenCanonicalInvoice } from '@/features/revcollect/lib/invoice-open';
+import { collectionFollowUpSkipReason } from '@/features/revcollect/lib/collection-decision';
 
 export async function queueFollowUpDraft(input: {
   tenantId: string;
@@ -20,6 +21,9 @@ export async function queueFollowUpDraft(input: {
   const snapshot = await store.read(tenantId);
   const customer = snapshot.customers.find((item) => item.id === customerId);
   if (!customer) return { draft: null, skipped: 'customer_not_found' };
+
+  const collectionSkip = collectionFollowUpSkipReason(customer);
+  if (collectionSkip) return { draft: null, skipped: collectionSkip };
 
   const intelligence = snapshot.intelligenceByCustomerId[customerId] ?? emptyIntelligence();
   const skip = ariSkipReason(intelligence.relationshipState);

@@ -22,6 +22,7 @@ interface CustomerRow {
   status: Customer['status'];
   balance_cents: number;
   days_overdue: number;
+  promised_date?: string | null;
   relationship_state: CustomerIntelligence['relationshipState'];
   intelligence: CustomerIntelligence | Record<string, never>;
 }
@@ -93,6 +94,7 @@ function mapCustomer(row: CustomerRow): Customer {
     status: row.status,
     balanceCents: row.balance_cents,
     daysOverdue: row.days_overdue,
+    promisedDate: row.promised_date?.slice(0, 10) || undefined,
     relationshipState: intelligence.relationshipState
   };
 }
@@ -236,6 +238,7 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           status: customer.status,
           balance_cents: customer.balanceCents,
           days_overdue: customer.daysOverdue,
+          promised_date: customer.promisedDate?.slice(0, 10) ?? null,
           relationship_state: customer.relationshipState ?? intelligence.relationshipState,
           follow_up_state: (snapshot.sentEmails ?? []).some(
             (email) =>
