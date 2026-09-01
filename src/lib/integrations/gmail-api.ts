@@ -1,4 +1,5 @@
 import type { ThreadEmail } from '@/features/revcollect/types';
+import { stripQuotedReply } from '@/lib/email/strip-quoted-reply';
 import {
   getGoogleOAuthConfig,
   isGoogleInvalidGrantError,
@@ -278,7 +279,9 @@ function mapGmailMessage(
   const connected = connectedEmail.trim().toLowerCase();
   const author = fromEmails.includes(connected) ? 'agent' : 'customer';
   const internalDate = message.internalDate ? Number(message.internalDate) : Date.now();
-  const body = extractPlainText(message.payload).trim() || message.snippet?.trim() || '';
+  const body = stripQuotedReply(
+    extractPlainText(message.payload).trim() || message.snippet?.trim() || ''
+  );
   return {
     id: message.id,
     gmailThreadId: message.threadId,

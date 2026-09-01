@@ -4,11 +4,13 @@ import type {
   ThreadEmail,
   TimelineEvent
 } from '@/features/revcollect/types';
+import { stripQuotedReply } from '@/lib/email/strip-quoted-reply';
 import { getCanonicalStore } from './store';
 import type { CanonicalSnapshot } from './types';
 
 function previewFromBody(body: string): string {
-  const line = body.split('\n').find((part) => part.trim() && part.trim() !== '---') ?? body;
+  const visible = stripQuotedReply(body);
+  const line = visible.split('\n').find((part) => part.trim() && part.trim() !== '---') ?? visible;
   return line.trim().slice(0, 140);
 }
 
@@ -74,19 +76,41 @@ export function rehomeSentEmails(sentEmails: ThreadEmail[], customers: Customer[
   });
 }
 
+function normalizeAgentBody(body: string): string {
+  return stripQuotedReply(body)
+    .split(/\n---\s*\n/)[0]
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+export function dedupeThreadEmails(emails: ThreadEmail[]): ThreadEmail[] {
+  const seenAgentBodies = new Set<string>();
+  const result: ThreadEmail[] = [];
+  for (const email of emails.toSorted((left, right) => left.sentAt.localeCompare(right.sentAt))) {
+    if (email.author === 'agent') {
+      const key = normalizeAgentBody(email.body);
+      if (key && seenAgentBodies.has(key)) continue;
+      if (key) seenAgentBodies.add(key);
+    }
+    result.push(email);
+  }
+  return result;
+}
+
 export function sentEmailsForThread(
   sentEmails: ThreadEmail[],
   threadId: string,
   customerId: string
 ): ThreadEmail[] {
-  return sentEmails
-    .filter(
+  return dedupeThreadEmails(
+    sentEmails.filter(
       (email) =>
         email.threadId === threadId ||
         email.customerId === customerId ||
         email.threadId === `xero-customer-${customerId}`
     )
-    .toSorted((left, right) => left.sentAt.localeCompare(right.sentAt));
+  );
 }
 
 export function overlayInboxWithSentEmails(

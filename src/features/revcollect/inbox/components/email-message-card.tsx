@@ -3,6 +3,7 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
+import { stripQuotedReply } from '@/lib/email/strip-quoted-reply';
 import { cn } from '@/lib/utils';
 import type { EmailAttachment, ThreadEmail } from '../../types';
 
@@ -85,7 +86,7 @@ export function EmailMessageCard({
               : 'bg-primary/10 rounded-2xl rounded-tr-md px-3.5 py-2.5 dark:bg-primary/15'
           )}
         >
-          {email.body}
+          {stripQuotedReply(email.body)}
 
           {email.attachments?.length ? (
             <div className='mt-2.5 flex w-full flex-wrap gap-2'>
