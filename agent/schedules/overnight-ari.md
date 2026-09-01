@@ -4,6 +4,8 @@ cron: "0 * * * *"
 
 Run overnight ARI for this workspace.
 
+Production schedule: Vercel Cron `GET /api/cron/ari` hourly (`vercel.json`), authorized with `CRON_SECRET`. The job respects `digestHour` (UTC) and never sends email.
+
 1. Call `get_agent_config`. If auto-draft is off or the agent is inactive, `record_ari_run` with an explanation and stop.
 2. If `digestHour` does not match the current hour, stop without writing a run.
 3. Call `list_open_receivables` and, for each overdue customer with relationship_state `normal`, call `get_customer_context` then `queue_follow_up_draft`.

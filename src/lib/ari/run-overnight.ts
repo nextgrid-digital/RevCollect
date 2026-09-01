@@ -26,7 +26,7 @@ export async function runOvernightAri(
   const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
   const digestHour = config.behaviors.digestHour;
   const currentHour = new Date().getUTCHours();
-  if (!options?.forceHour && config.behaviors.dailyDigest && currentHour !== digestHour) {
+  if (!options?.forceHour && currentHour !== digestHour) {
     return { tenantId, drafted: 0, skipped: 0, bullets: [] };
   }
 

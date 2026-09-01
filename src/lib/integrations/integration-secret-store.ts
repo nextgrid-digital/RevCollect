@@ -144,7 +144,22 @@ export async function copyIntegrationSecret(
   await writeIntegrationSecret(provider, toTenantKey, source);
 }
 
-export async function listProviderTenantKeys(provider: IntegrationProvider): Promise<string[]> {
+async function listFromSupabase(provider: IntegrationProvider): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('integration_secrets')
+    .select('tenant_key')
+    .eq('provider', provider);
+
+  if (error) {
+    console.error(`[integrations] list ${provider} tenant keys failed:`, error.message);
+    return [];
+  }
+
+  return [...new Set((data ?? []).map((row) => row.tenant_key).filter(Boolean))];
+}
+
+async function listFromFile(provider: IntegrationProvider): Promise<string[]> {
   const prefix = `${provider}-`;
   try {
     const names = await readdir(STORE_DIR);
@@ -157,4 +172,11 @@ export async function listProviderTenantKeys(provider: IntegrationProvider): Pro
     }
     throw error;
   }
+}
+
+export async function listProviderTenantKeys(provider: IntegrationProvider): Promise<string[]> {
+  if (hasSupabaseAdminEnv()) {
+    return listFromSupabase(provider);
+  }
+  return listFromFile(provider);
 }

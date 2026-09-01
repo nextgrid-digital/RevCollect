@@ -17,6 +17,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/audit' ||
     pathname.startsWith('/audit/') ||
     pathname.startsWith('/api/audit/') ||
+    pathname.startsWith('/api/cron/') ||
     pathname === '/favicon.ico' ||
     pathname === '/icon.svg' ||
     pathname === '/icon.png' ||
