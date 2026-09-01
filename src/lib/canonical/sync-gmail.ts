@@ -8,7 +8,7 @@ import {
   searchGmailFromAddress
 } from '@/lib/integrations/gmail-api';
 import { getGmailConnection } from '@/lib/integrations/gmail-connection-store';
-import { overlayInboxWithSentEmails } from './sent-emails';
+import { overlayInboxWithSentEmails, rehomeSentEmails } from './sent-emails';
 import { getCanonicalStore } from './store';
 
 const GMAIL_SYNC_TTL_MS = 45_000;
@@ -65,6 +65,8 @@ function emailsNeedWrite(existing: ThreadEmail[], incoming: ThreadEmail[]): bool
     const previous = byId.get(email.id);
     if (!previous) return true;
     if (previous.author !== email.author) return true;
+    if (previous.customerId !== email.customerId) return true;
+    if (previous.threadId !== email.threadId) return true;
     if (!previous.gmailThreadId && email.gmailThreadId) return true;
   }
   return false;
@@ -79,8 +81,15 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
 
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
-  const existing = snapshot.sentEmails ?? [];
-  const incoming: ThreadEmail[] = [];
+  const customers = snapshot.customers as Customer[];
+  const existingRaw = snapshot.sentEmails ?? [];
+  const existing = rehomeSentEmails(existingRaw, customers);
+  const incoming: ThreadEmail[] = [...existing];
+  if (emailsNeedWrite(existingRaw, existing)) {
+    snapshot.sentEmails = existing;
+    snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, existing);
+    await store.write(tenantId, snapshot);
+  }
   const knownAgentIds = new Set(
     existing.filter((email) => email.author === 'agent').map((email) => email.id)
   );
@@ -132,7 +141,6 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   }
 
   const customersWithThread = new Set([...threadOwners.values()].map((owner) => owner.customerId));
-  const customers = snapshot.customers as Customer[];
   for (const customer of customers) {
     if (customersWithThread.has(customer.id)) continue;
     if (!isUsableCustomerEmail(customer.email, connectedEmail)) continue;
@@ -175,6 +183,8 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
     const seenThreadIds = new Set<string>();
 
     for (const subject of subjects) {
+      const probe = rehomeSentEmails([{ ...agentEmails[0], subject }], customers)[0];
+      if (probe?.customerId !== customer.id) continue;
       const query = gmailSubjectQuery(subject);
       if (!query) continue;
       const messages = await searchGmailByQuery(tenantId, query);
@@ -227,9 +237,9 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   }
 
   if (incoming.length === 0) return false;
-  if (!emailsNeedWrite(existing, incoming)) return false;
+  if (!emailsNeedWrite(existingRaw, incoming)) return false;
 
-  snapshot.sentEmails = mergeThreadEmails(existing, incoming);
+  snapshot.sentEmails = rehomeSentEmails(mergeThreadEmails(existingRaw, incoming), customers);
   snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, snapshot.sentEmails);
   await store.write(tenantId, snapshot);
   return true;

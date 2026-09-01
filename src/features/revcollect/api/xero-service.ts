@@ -13,7 +13,9 @@ import { ensureXeroIngest, scheduleBackgroundXeroIngest } from '@/lib/canonical/
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
   overlayInboxWithSentEmails,
+  persistRehomedSentEmails,
   persistSentFollowUp,
+  rehomeSentEmails,
   sentEmailsForThread,
   timelineEventsFromSentEmails
 } from '@/lib/canonical/sent-emails';
@@ -99,8 +101,9 @@ function clearArDataMemo(tenantId: string): void {
 
 async function refreshInboxFromGmail(tenantId: string): Promise<void> {
   try {
+    const didRehome = await persistRehomedSentEmails(tenantId);
     const didSync = await syncGmailThreads(tenantId);
-    if (didSync) clearArDataMemo(tenantId);
+    if (didRehome || didSync) clearArDataMemo(tenantId);
   } catch (error) {
     if (error instanceof GmailNotConnectedError) return;
     console.error('[gmail] inbox sync failed:', error);
@@ -125,6 +128,7 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
       snapshot.intelligenceByCustomerId[customer.id]?.relationshipState ??
       emptyIntelligence().relationshipState
   }));
+  const sentEmails = rehomeSentEmails(snapshot.sentEmails ?? [], customers);
 
   after(() => {
     void scheduleBackgroundXeroIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
@@ -142,11 +146,11 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
     inboxMessages: overlayDrafts(
       overlayInboxWithSentEmails(
         buildSyntheticInboxFromInvoices(snapshot.invoices, customers),
-        snapshot.sentEmails ?? []
+        sentEmails
       ),
       snapshot.drafts
     ),
-    sentEmails: snapshot.sentEmails ?? []
+    sentEmails
   };
 }
 
