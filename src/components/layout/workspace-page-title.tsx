@@ -69,7 +69,7 @@ export function WorkspacePageTitle({
             <h1 className='text-foreground truncate text-sm font-semibold'>{title}</h1>
           )}
         </div>
-        <div className='ml-auto flex shrink-0 items-center gap-2'>
+        <div className='ml-auto flex shrink-0 items-center gap-2 pr-2'>
           {stackActionsBelow ? null : actions}
           <WorkspaceConnectionStatus />
         </div>

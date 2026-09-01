@@ -63,7 +63,7 @@ export function InboxWorkspaceContextColumn({
         workspaceContextWidth
       )}
     >
-      <div className='flex h-8 shrink-0 items-center justify-end'>
+      <div className='flex h-8 shrink-0 items-center justify-end pr-2'>
         <InboxOpenModeMenu />
       </div>
       <WorkspaceCard variant='context' className='min-h-0 w-full min-w-0 flex-1'>
