@@ -1,23 +1,58 @@
 #!/usr/bin/env bash
 # RevCollect — Cloud Agent install phase.
-# Idempotent, runs after the repo is checked out. Refreshes dependencies and
-# writes a local dev .env.local (mock business data + local Supabase auth).
+# Idempotent. Provisions system tooling (Bun, Docker + fuse-overlayfs, Supabase
+# CLI), installs JS dependencies, and writes a local dev .env.local. Safe to run
+# repeatedly and on any Debian/Ubuntu base image.
 set -euo pipefail
 
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-cd /workspace
+# --- Bun --------------------------------------------------------------------
+if ! command -v bun >/dev/null 2>&1; then
+  echo "Installing Bun..."
+  curl -fsSL https://bun.sh/install | bash
+fi
 
-# Install JS dependencies with the committed lockfile.
+# --- Docker + fuse-overlayfs ------------------------------------------------
+# Local Supabase runs in Docker. Nested VMs can't use the overlayfs snapshotter,
+# so Docker is configured to use the classic fuse-overlayfs storage driver.
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Installing Docker..."
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sudo sh /tmp/get-docker.sh
+fi
+
+if ! command -v fuse-overlayfs >/dev/null 2>&1; then
+  echo "Installing fuse-overlayfs..."
+  sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::=--force-confold fuse-overlayfs
+fi
+
+sudo mkdir -p /etc/docker
+if [ ! -f /etc/docker/daemon.json ]; then
+  echo '{ "features": { "containerd-snapshotter": false }, "storage-driver": "fuse-overlayfs" }' \
+    | sudo tee /etc/docker/daemon.json >/dev/null
+fi
+
+# --- Supabase CLI -----------------------------------------------------------
+if ! command -v supabase >/dev/null 2>&1; then
+  echo "Installing Supabase CLI..."
+  ARCH="$(dpkg --print-architecture)"
+  VER="$(curl -s https://api.github.com/repos/supabase/cli/releases/latest | grep -oP '"tag_name":\s*"v\K[^"]+')"
+  curl -fsSL -o /tmp/supabase.deb \
+    "https://github.com/supabase/cli/releases/download/v${VER}/supabase_${VER}_linux_${ARCH}.deb"
+  sudo dpkg -i /tmp/supabase.deb
+fi
+
+# --- JS dependencies --------------------------------------------------------
+cd /workspace
 bun install --frozen-lockfile
 
-# Local development environment file (git-ignored). Only create it if absent so
-# a developer-provided .env.local is never overwritten.
-#
+# --- Local dev environment file (git-ignored) -------------------------------
+# Created only if absent so a developer-provided .env.local is never clobbered.
 # The Supabase keys below are the well-known, deterministic keys that
-# `supabase start` always issues for a local stack (signed with the default
-# local JWT secret) — they are not secrets and are safe to hard-code here.
+# `supabase start` always issues locally — they are not secrets.
 if [ ! -f .env.local ]; then
   cat > .env.local <<'EOF'
 NEXT_PUBLIC_APP_URL=http://localhost:3000
