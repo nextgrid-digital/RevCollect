@@ -104,13 +104,55 @@ export function syncPolicyOntoCustomer(customer: Customer, policy: RelationshipP
   };
 }
 
+export const PAYMENT_CLAIM_VERIFY_DAYS = 7;
+
 export function expireRelationshipPolicy(
   policy: RelationshipPolicy,
   now = new Date()
 ): RelationshipPolicy {
+  if (policy.state === 'payment_claimed' && !policy.pauseUntil) {
+    return { ...policy, pauseUntil: addDaysIsoDate(-1, now) };
+  }
   if (policy.state !== 'paused_until_date' || !policy.pauseUntil) return policy;
   if (policy.pauseUntil >= todayIsoDate(now)) return policy;
   return { ...policy, state: 'resume_review' };
+}
+
+export function isPaymentClaimStale(policy: RelationshipPolicy, now = new Date()): boolean {
+  if (policy.state !== 'payment_claimed') return false;
+  const until = policy.pauseUntil ?? addDaysIsoDate(-1, now);
+  return until < todayIsoDate(now);
+}
+
+export function applyPaymentClaimed(
+  customer: Customer,
+  input?: { quote?: string; sourceMessageId?: string },
+  now = new Date()
+): Customer {
+  const current = policyFromCustomer(customer);
+  return syncPolicyOntoCustomer(customer, {
+    ...current,
+    state: 'payment_claimed',
+    reason: 'payment_claimed',
+    pauseUntil: addDaysIsoDate(PAYMENT_CLAIM_VERIFY_DAYS, now),
+    sourceQuote: input?.quote ?? current.sourceQuote,
+    sourceMessageId: input?.sourceMessageId ?? current.sourceMessageId,
+    pendingSuggestion: undefined
+  });
+}
+
+export function reconcilePaymentClaimedCustomer(
+  customer: Customer,
+  options?: { receivedPayment?: boolean }
+): Customer {
+  const policy = policyFromCustomer(customer);
+  if (policy.state !== 'payment_claimed') return customer;
+  if (customer.balanceCents > 0 && !options?.receivedPayment) return customer;
+  return syncPolicyOntoCustomer(customer, {
+    ...emptyRelationshipPolicy(),
+    doNotContact: policy.doNotContact,
+    preferredEmail: policy.preferredEmail
+  });
 }
 
 export function expireCustomerRelationship(customer: Customer, now = new Date()): Customer {
@@ -168,9 +210,10 @@ export function followUpDecision(customer: Customer, options?: FollowUpOptions):
   }
 
   if (policy.state === 'payment_claimed') {
+    const stale = isPaymentClaimStale(policy);
     return {
-      allow: !overnight,
-      reason: overnight ? 'payment_claimed' : null,
+      allow: !overnight || stale,
+      reason: overnight && !stale ? 'payment_claimed' : null,
       draftKind: 'payment_verification'
     };
   }
@@ -243,6 +286,13 @@ export function applyRelationshipPolicyInput(
     case 'extend': {
       const pauseUntil =
         input.pauseUntil?.slice(0, 10) ?? addDaysIsoDate(input.pauseDays ?? 14, now);
+      if (current.state === 'payment_claimed') {
+        return syncPolicyOntoCustomer(customer, {
+          ...current,
+          pauseUntil,
+          pendingSuggestion: undefined
+        });
+      }
       return syncPolicyOntoCustomer(customer, {
         ...current,
         state: 'paused_until_date',
@@ -266,14 +316,14 @@ export function applyRelationshipPolicyInput(
       const suggestion = current.pendingSuggestion;
       if (!suggestion) return customer;
       if (suggestion.state === 'payment_claimed') {
-        return syncPolicyOntoCustomer(customer, {
-          ...current,
-          state: 'payment_claimed',
-          reason: 'payment_claimed',
-          sourceQuote: suggestion.quote,
-          sourceMessageId: suggestion.sourceMessageId,
-          pendingSuggestion: undefined
-        });
+        return applyPaymentClaimed(
+          customer,
+          {
+            quote: suggestion.quote,
+            sourceMessageId: suggestion.sourceMessageId
+          },
+          now
+        );
       }
       if (suggestion.state === 'active_dispute') {
         return syncPolicyOntoCustomer(
@@ -386,7 +436,7 @@ export function relationshipBadgeLabel(customer: Customer): string | null {
     case 'active_dispute':
       return 'Blocked: dispute';
     case 'payment_claimed':
-      return 'Payment to reconcile';
+      return isPaymentClaimStale(policy) ? 'Still unpaid — verify' : 'Payment to reconcile';
     case 'paused_until_date':
       return pauseReasonLabel(policy.reason);
     case 'manual_only':

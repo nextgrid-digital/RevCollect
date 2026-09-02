@@ -18,6 +18,7 @@ import {
 import { restoreCollectionOverrides } from '@/features/revcollect/lib/collection-decision';
 import {
   policyFromCustomer,
+  reconcilePaymentClaimedCustomer,
   restoreRelationshipPolicies
 } from '@/features/revcollect/lib/relationship-policy';
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
@@ -135,11 +136,21 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
   const current = await store.read(tenantId);
   customers = restoreCollectionOverrides(customers, current.customers);
   customers = restoreRelationshipPolicies(customers, current.customers);
+  const previousPaymentIds = new Set(current.payments.map((payment) => payment.id));
+  const receivedPaymentIds = new Set(
+    payments
+      .filter((payment) => !previousPaymentIds.has(payment.id))
+      .map((payment) => payment.customerId)
+  );
+  customers = customers.map((customer) =>
+    reconcilePaymentClaimedCustomer(customer, {
+      receivedPayment: receivedPaymentIds.has(customer.id)
+    })
+  );
   const inboxMessages = overlayInboxWithSentEmails(
     buildSyntheticInboxFromInvoices(invoices, customers),
     current.sentEmails ?? []
   );
-  const previousPaymentIds = new Set(current.payments.map((payment) => payment.id));
   const intelligenceByCustomerId = { ...current.intelligenceByCustomerId };
   for (const customer of customers) {
     const policy = policyFromCustomer(customer);

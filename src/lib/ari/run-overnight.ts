@@ -5,6 +5,10 @@ import {
   isBrokenPromise
 } from '@/features/revcollect/lib/collection-decision';
 import type { Customer, Invoice } from '@/features/revcollect/types';
+import {
+  isPaymentClaimStale,
+  policyFromCustomer
+} from '@/features/revcollect/lib/relationship-policy';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { applyAutoPromises } from './apply-auto-promises';
@@ -54,7 +58,16 @@ export async function runOvernightAri(
           !brokenPromises.some((item) => item.id === customer.id)
       )
     : [];
-  const targets = [...brokenPromises, ...overdueCustomers].slice(0, 25);
+  const stalePaymentClaims = autoDraftFollowUps
+    ? snapshot.customers.filter(
+        (customer) =>
+          customer.balanceCents > 0 &&
+          isPaymentClaimStale(policyFromCustomer(customer)) &&
+          !brokenPromises.some((item) => item.id === customer.id) &&
+          !overdueCustomers.some((item) => item.id === customer.id)
+      )
+    : [];
+  const targets = [...brokenPromises, ...overdueCustomers, ...stalePaymentClaims].slice(0, 25);
 
   let drafted = 0;
   let skipped = 0;
@@ -90,6 +103,9 @@ export async function runOvernightAri(
 function overnightDraftBullet(customer: Customer, invoices: Invoice[], broken: boolean): string {
   if (broken && customer.promisedDate) {
     return `${customer.company} promised ${formatPromisedDateLabel(customer.promisedDate)} and hasn't paid — draft queued for review`;
+  }
+  if (isPaymentClaimStale(policyFromCustomer(customer))) {
+    return `${customer.company} said they paid, but the balance is still open — verify draft queued`;
   }
 
   const oldest = invoices

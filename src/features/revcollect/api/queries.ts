@@ -581,7 +581,7 @@ export function useRecordRelationshipPolicy() {
           toast.success('Collections resumed');
           return;
         case 'extend':
-          toast.success('Pause extended');
+          toast.success('Waiting a bit longer');
           return;
         case 'keep_paused':
           toast.success('Kept paused');

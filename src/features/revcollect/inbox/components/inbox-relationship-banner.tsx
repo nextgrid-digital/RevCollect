@@ -3,7 +3,12 @@
 import { Button } from '@/components/ui/button';
 import { useRecordRelationshipPolicy } from '../../api/queries';
 import type { Customer } from '../../types';
-import { expireRelationshipPolicy, policyFromCustomer } from '../../lib/relationship-policy';
+import {
+  expireRelationshipPolicy,
+  isPaymentClaimStale,
+  PAYMENT_CLAIM_VERIFY_DAYS,
+  policyFromCustomer
+} from '../../lib/relationship-policy';
 
 interface InboxRelationshipBannerProps {
   customer: Customer;
@@ -56,6 +61,51 @@ export function InboxRelationshipBanner({ customer }: InboxRelationshipBannerPro
             Keep paused
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (policy.state === 'payment_claimed') {
+    const stale = isPaymentClaimStale(policy);
+    return (
+      <div className='border-border bg-muted/40 mb-3 rounded-xl border px-3 py-3'>
+        <p className='text-sm font-medium'>
+          {stale ? 'Still unpaid — verify' : 'Payment to reconcile'}
+        </p>
+        <p className='text-muted-foreground mt-1 text-xs'>
+          {stale
+            ? 'They said payment was sent, but it has not shown up in Xero. Ask for a reference, or keep waiting.'
+            : 'Overnight chase is paused until this payment is matched in Xero.'}
+        </p>
+        {stale ? (
+          <div className='mt-3 flex flex-wrap gap-2'>
+            <Button
+              type='button'
+              size='sm'
+              className='rounded-full'
+              isLoading={mutation.isPending && mutation.variables?.action === 'resume'}
+              onClick={() => mutation.mutate({ customerId: customer.id, action: 'resume' })}
+            >
+              Resume collections
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='rounded-full'
+              isLoading={mutation.isPending && mutation.variables?.action === 'extend'}
+              onClick={() =>
+                mutation.mutate({
+                  customerId: customer.id,
+                  action: 'extend',
+                  pauseDays: PAYMENT_CLAIM_VERIFY_DAYS
+                })
+              }
+            >
+              Wait {PAYMENT_CLAIM_VERIFY_DAYS} more days
+            </Button>
+          </div>
+        ) : null}
       </div>
     );
   }

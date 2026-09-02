@@ -18,7 +18,11 @@ import {
   collectionFollowUpSkipReason,
   isBrokenPromise
 } from '@/features/revcollect/lib/collection-decision';
-import { followUpDecision } from '@/features/revcollect/lib/relationship-policy';
+import {
+  followUpDecision,
+  isPaymentClaimStale,
+  policyFromCustomer
+} from '@/features/revcollect/lib/relationship-policy';
 
 export async function queueFollowUpDraft(input: {
   tenantId: string;
@@ -53,13 +57,15 @@ export async function queueFollowUpDraft(input: {
     .filter(isOpenCanonicalInvoice);
   const brokenPromise = followBrokenPromise && isBrokenPromise(customer);
   const assembled = await assembleCustomerContext(tenantId, customerId);
+  const staleClaim = isPaymentClaimStale(policyFromCustomer(customer));
   const template =
     decision.draftKind === 'payment_verification'
       ? templatePaymentVerificationDraft({
           customer,
           invoices,
           greeting: intelligence.preferences.greeting,
-          signoff: intelligence.preferences.signoff
+          signoff: intelligence.preferences.signoff,
+          unmatched: staleClaim
         })
       : templateFollowUpDraft({
           customer,
@@ -76,7 +82,9 @@ export async function queueFollowUpDraft(input: {
       assembled?.promptBlock ?? '',
       '',
       decision.draftKind === 'payment_verification'
-        ? `They said payment was already sent. Write a short ${tone} thank-you that asks for a payment reference. Do not say the invoice is overdue or chase payment.`
+        ? staleClaim
+          ? `They said payment was sent, but the balance is still open. Write a short ${tone} note asking for a remittance or payment reference. Do not say the invoice is overdue or use chase language.`
+          : `They said payment was already sent. Write a short ${tone} thank-you that asks for a payment reference. Do not say the invoice is overdue or chase payment.`
         : brokenPromise && customer.promisedDate
           ? `They promised to pay by ${customer.promisedDate} and have not. Write a short ${tone} follow-up.`
           : `Write a short ${tone} collections follow-up email.`,
@@ -106,7 +114,9 @@ export async function queueFollowUpDraft(input: {
     customerId,
     title:
       decision.draftKind === 'payment_verification'
-        ? `Payment to reconcile · ${customer.company}`
+        ? staleClaim
+          ? `Still unpaid — verify · ${customer.company}`
+          : `Payment to reconcile · ${customer.company}`
         : brokenPromise
           ? `Promise missed · ${customer.company}`
           : `Follow-up · ${customer.company}`,

@@ -50,11 +50,23 @@ export function templatePaymentVerificationDraft(input: {
   invoices: Invoice[];
   greeting?: string;
   signoff?: string;
+  unmatched?: boolean;
 }): string {
-  const { customer, invoices, greeting, signoff } = input;
+  const { customer, invoices, greeting, signoff, unmatched = false } = input;
   const hello = greeting?.trim() || `Hi ${customer.name}`;
   const close = signoff?.trim() || 'Thank you';
   const invoiceList = invoices.map((invoice) => invoice.number).join(', ');
+
+  if (unmatched) {
+    return [
+      `${hello},`,
+      '',
+      'Thank you again for noting that payment was sent. We have not yet matched it to the open balance.',
+      `Could you share a payment reference or remittance for ${invoiceList || 'the open invoice(s)'} so we can apply it?`,
+      '',
+      close
+    ].join('\n');
+  }
 
   return [
     `${hello},`,

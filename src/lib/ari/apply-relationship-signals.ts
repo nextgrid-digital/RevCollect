@@ -4,10 +4,10 @@ import { emptyIntelligence } from '@/lib/canonical/defaults';
 import type { CustomerIntelligence } from '@/lib/canonical/types';
 import type { Customer, RelationshipSuggestion, ThreadEmail } from '@/features/revcollect/types';
 import {
+  applyPaymentClaimed,
   expireCustomerRelationship,
   policyFromCustomer,
   suggestedPauseDaysForReason,
-  syncPolicyOntoCustomer,
   withPendingSuggestion
 } from '@/features/revcollect/lib/relationship-policy';
 
@@ -170,13 +170,9 @@ export async function applyRelationshipSignals(tenantId: string): Promise<boolea
 
     const next =
       suggestion.reason === 'payment_claimed'
-        ? syncPolicyOntoCustomer(customer, {
-            ...policy,
-            state: 'payment_claimed',
-            reason: 'payment_claimed',
-            sourceQuote: suggestion.quote,
-            sourceMessageId: latest.id,
-            pendingSuggestion: undefined
+        ? applyPaymentClaimed(customer, {
+            quote: suggestion.quote,
+            sourceMessageId: latest.id
           })
         : withPendingSuggestion(customer, suggestion);
 
