@@ -10,6 +10,7 @@ import { cookies } from 'next/headers';
 import NextTopLoader from 'nextjs-toploader';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
@@ -66,6 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </ThemeProvider>
         </NuqsAdapter>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
