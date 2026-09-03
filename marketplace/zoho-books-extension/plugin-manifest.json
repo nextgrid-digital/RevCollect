@@ -1,0 +1,5 @@
+{
+  "name": "RevCollect AR",
+  "description": "Installs RevCollect. Connect your Zoho Books organisation, then send collections mail from Gmail.",
+  "redirect_url": "/onboarding/connect-zoho"
+}

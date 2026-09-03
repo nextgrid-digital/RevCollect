@@ -1,4 +1,4 @@
-import type { Customer, Invoice } from '@/features/revcollect/types';
+import type { Invoice } from '@/features/revcollect/types';
 import {
   clearXeroArCache,
   fetchXeroAccountsReceivable,
@@ -9,23 +9,13 @@ import {
 } from '@/lib/integrations/xero-api';
 import { getXeroConnection } from '@/lib/integrations/xero-connection-store';
 import {
-  buildSyntheticInboxFromInvoices,
   mapXeroCreditNotes,
   mapXeroCustomers,
   mapXeroInvoices,
   parseXeroDate
 } from '@/features/revcollect/api/xero-map';
-import { restoreCollectionOverrides } from '@/features/revcollect/lib/collection-decision';
-import {
-  policyFromCustomer,
-  reconcilePaymentClaimedCustomer,
-  restoreRelationshipPolicies
-} from '@/features/revcollect/lib/relationship-policy';
-import { extractSituation } from '@/features/revcollect/extract/extract-situation';
-import { emptyIntelligence } from './defaults';
-import { recomputePatternsForSnapshot } from './patterns';
+import { applyOpenArSnapshot } from './apply-open-ar';
 import { getCanonicalStore } from './store';
-import { overlayInboxWithSentEmails } from './sent-emails';
 import { INGEST_STALE_MS, type CanonicalPayment, type CanonicalSnapshot } from './types';
 
 function toCents(amount: number | undefined): number {
@@ -123,7 +113,7 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
   } = await fetchXeroAccountsReceivable(tenantId);
 
   const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
-  let customers: Customer[] = mapXeroCustomers(contacts, invoices);
+  const customers = mapXeroCustomers(contacts, invoices);
   const fromRegister = paymentsFromXeroPayments(rawPayments, invoices);
   const basePayments =
     fromRegister.length > 0 ? fromRegister : fallbackPaymentsFromInvoices(rawInvoices);
@@ -132,69 +122,7 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
     ...unappliedBankReceives(bankReceives, basePayments)
   ];
 
-  const store = await getCanonicalStore();
-  const current = await store.read(tenantId);
-  customers = restoreCollectionOverrides(customers, current.customers);
-  customers = restoreRelationshipPolicies(customers, current.customers);
-  const previousPaymentIds = new Set(current.payments.map((payment) => payment.id));
-  const receivedPaymentIds = new Set(
-    payments
-      .filter((payment) => !previousPaymentIds.has(payment.id))
-      .map((payment) => payment.customerId)
-  );
-  customers = customers.map((customer) =>
-    reconcilePaymentClaimedCustomer(customer, {
-      receivedPayment: receivedPaymentIds.has(customer.id)
-    })
-  );
-  const inboxMessages = overlayInboxWithSentEmails(
-    buildSyntheticInboxFromInvoices(invoices, customers),
-    current.sentEmails ?? []
-  );
-  const intelligenceByCustomerId = { ...current.intelligenceByCustomerId };
-  for (const customer of customers) {
-    const policy = policyFromCustomer(customer);
-    intelligenceByCustomerId[customer.id] = {
-      ...(intelligenceByCustomerId[customer.id] ?? emptyIntelligence()),
-      relationshipState: policy.state,
-      relationshipPolicy: policy
-    };
-    customer.relationshipState = policy.state;
-    customer.relationshipPolicy = policy;
-  }
-
-  let snapshot: CanonicalSnapshot = {
-    ...current,
-    customers,
-    invoices,
-    payments,
-    inboxMessages,
-    intelligenceByCustomerId,
-    ingestedAt: new Date().toISOString()
-  };
-  snapshot = recomputePatternsForSnapshot(snapshot);
-  await store.write(tenantId, snapshot);
-
-  for (const payment of payments) {
-    if (previousPaymentIds.has(payment.id)) continue;
-    try {
-      await extractSituation({
-        tenantId,
-        customerId: payment.customerId,
-        kind: 'payment',
-        text: `Payment of ${payment.amountCents} cents received on ${payment.paidAt} for invoice ${payment.invoiceId ?? 'unknown'}.`
-      });
-    } catch (error) {
-      console.error('[ingest-xero] extractSituation failed:', error);
-    }
-  }
-
-  try {
-    return await (await getCanonicalStore()).read(tenantId);
-  } catch (error) {
-    console.error('[ingest-xero] snapshot re-read failed:', error);
-    return snapshot;
-  }
+  return applyOpenArSnapshot(tenantId, { customers, invoices, payments });
 }
 
 export async function ensureXeroIngest(

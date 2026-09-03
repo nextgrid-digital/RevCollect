@@ -35,11 +35,20 @@ export function getXeroOAuthConfig(): XeroOAuthConfig | null {
   return { clientId, clientSecret, redirectUri };
 }
 
-export function buildXeroAuthUrl(config: XeroOAuthConfig, state: string): string {
+export function getXeroSignupRedirectUri(_config: XeroOAuthConfig): string {
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+  return (process.env.XERO_SIGNUP_REDIRECT_URI ?? `${appUrl}/api/auth/xero/callback`).trim();
+}
+
+export function buildXeroAuthUrl(
+  config: XeroOAuthConfig,
+  state: string,
+  redirectUri = config.redirectUri
+): string {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: config.clientId,
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
     scope: XERO_OAUTH_SCOPES.join(' '),
     state
   });
@@ -63,12 +72,13 @@ function getBasicAuthHeader(config: XeroOAuthConfig): string {
 
 export async function exchangeXeroAuthCode(
   config: XeroOAuthConfig,
-  code: string
+  code: string,
+  redirectUri = config.redirectUri
 ): Promise<XeroTokenResponse> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    redirect_uri: config.redirectUri
+    redirect_uri: redirectUri
   });
 
   const response = await fetch(XERO_TOKEN_URL, {

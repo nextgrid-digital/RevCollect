@@ -13,7 +13,10 @@ import {
   defaultWorkspaceAgentConfig,
   emptyIntelligence
 } from '@/lib/canonical/defaults';
-import { ensureXeroIngest, scheduleBackgroundXeroIngest } from '@/lib/canonical/ingest-xero';
+import {
+  ensureAccountingIngest,
+  scheduleBackgroundAccountingIngest
+} from '@/lib/canonical/ingest-accounting';
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
   overlayInboxWithSentEmails,
@@ -158,7 +161,7 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
   const empty = snapshot.customers.length === 0 && snapshot.invoices.length === 0;
   if (empty) {
     try {
-      snapshot = await ensureXeroIngest(tenantId);
+      snapshot = await ensureAccountingIngest(tenantId);
     } catch (error) {
       console.error('[xero-service] first Xero ingest failed:', error);
     }
@@ -178,7 +181,7 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
   const sentEmails = rehomeSentEmails(snapshot.sentEmails ?? [], customers);
 
   after(() => {
-    void scheduleBackgroundXeroIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
+    void scheduleBackgroundAccountingIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
       if (didIngest) clearArDataMemo(tenantId);
     });
     void scheduleBackgroundGmailSync(tenantId).then((didSync) => {

@@ -1,7 +1,9 @@
+import { MOCK_TENANT_ID } from '@/features/revcollect/api/types';
 import type { EncryptedPayload } from './token-crypto';
 import { decryptSecret, encryptSecret } from './token-crypto';
 import {
   deleteIntegrationSecret,
+  listProviderTenantKeys,
   readIntegrationSecret,
   writeIntegrationSecret
 } from './integration-secret-store';
@@ -94,6 +96,24 @@ export async function updateXeroRefreshToken(
     ...connection,
     refreshToken: encryptSecret(refreshToken)
   });
+}
+
+export async function findTenantKeyByXeroTenantIds(
+  xeroTenantIds: string[]
+): Promise<{ tenantKey: string; xeroTenantId: string } | null> {
+  const wanted = new Set(xeroTenantIds.filter(Boolean));
+  if (wanted.size === 0) return null;
+
+  const keys = await listProviderTenantKeys('xero');
+  for (const key of keys) {
+    if (key === MOCK_TENANT_ID) continue;
+    const connection = await getXeroConnection(key);
+    const storedId = connection?.tenantId;
+    if (storedId && wanted.has(storedId)) {
+      return { tenantKey: key, xeroTenantId: storedId };
+    }
+  }
+  return null;
 }
 
 export async function deleteXeroConnection(appTenantId: string): Promise<void> {

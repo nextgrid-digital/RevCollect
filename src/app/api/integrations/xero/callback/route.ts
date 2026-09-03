@@ -13,6 +13,7 @@ import {
   getXeroOAuthConfig
 } from '@/lib/integrations/xero-oauth';
 import { ingestXeroAr } from '@/lib/canonical/ingest-xero';
+import { disconnectOtherBooks } from '@/lib/integrations/disconnect-integration';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 
 const OAUTH_STATE_COOKIE = 'xero_oauth_state';
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tenantId = await getIntegrationTenantId();
+    await disconnectOtherBooks(tenantId, 'xero');
     await saveXeroConnection(tenantId, {
       xeroTenantId: organisation.tenantId,
       organisationName: organisation.tenantName,

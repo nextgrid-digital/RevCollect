@@ -34,6 +34,11 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   no_xero_organisation: 'No Xero organisation was returned. Check your Xero account and try again.',
   xero_connect_failed: 'Could not connect Xero. Check your Xero credentials and try again.',
   gmail_connect_failed: 'Could not connect Gmail. Check your Google credentials and try again.',
+  missing_intuit_credentials:
+    'QuickBooks OAuth is not configured. Add INTUIT_CLIENT_ID and INTUIT_CLIENT_SECRET.',
+  missing_zoho_credentials:
+    'Zoho OAuth is not configured. Add ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.',
+  no_zoho_organisation: 'No Zoho organisation was returned. Check your Zoho account and try again.',
   access_denied: 'Connection was cancelled.'
 };
 
@@ -48,6 +53,18 @@ const integrations = [
     key: 'xero' as const,
     href: '/onboarding/connect-xero',
     connectPath: '/api/integrations/xero/connect?returnTo=/settings/integrations',
+    icon: Icons.billing
+  },
+  {
+    key: 'quickbooks' as const,
+    href: '/onboarding/connect-quickbooks',
+    connectPath: '/api/integrations/quickbooks/connect?returnTo=/settings/integrations',
+    icon: Icons.billing
+  },
+  {
+    key: 'zoho' as const,
+    href: '/onboarding/connect-zoho',
+    connectPath: '/api/integrations/zoho/connect?returnTo=/settings/integrations',
     icon: Icons.billing
   },
   {
@@ -122,7 +139,7 @@ export function SettingsIntegrationsView() {
               <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                 <div className='space-y-1'>
                   <p className='text-muted-foreground text-sm'>{item.detail}</p>
-                  {key === 'xero' && item.connected ? (
+                  {(key === 'xero' || key === 'quickbooks' || key === 'zoho') && item.connected ? (
                     <p className='text-muted-foreground text-xs'>
                       {item.lastSyncAt
                         ? `Last synced ${formatLastSyncLabel(item.lastSyncAt)}`
@@ -133,21 +150,27 @@ export function SettingsIntegrationsView() {
                 <div className='flex flex-wrap gap-2'>
                   {!item.connected ? (
                     <Button asChild size='sm' variant='outline'>
-                      <Link href={href}>Connect</Link>
+                      <Link href={href}>{key === 'xero' ? 'Connect with Xero' : 'Connect'}</Link>
                     </Button>
                   ) : null}
-                  {(key === 'xero' || key === 'gmail') && connectPath ? (
+                  {(key === 'xero' || key === 'gmail' || key === 'quickbooks' || key === 'zoho') &&
+                  connectPath ? (
                     <Button asChild size='sm' variant='outline'>
-                      <Link href={connectPath}>Reconnect</Link>
+                      <Link href={connectPath}>
+                        {key === 'xero' ? 'Reconnect with Xero' : 'Reconnect'}
+                      </Link>
                     </Button>
                   ) : null}
-                  {key === 'xero' && item.connected ? <XeroResyncButton /> : null}
+                  {(key === 'xero' || key === 'quickbooks' || key === 'zoho') && item.connected ? (
+                    <XeroResyncButton />
+                  ) : null}
                   {key === 'xero' && item.connected ? (
                     <Button asChild size='sm' variant='outline'>
                       <Link href='/onboarding/import-invoices'>Import PDFs</Link>
                     </Button>
                   ) : null}
-                  {item.connected && (key === 'xero' || key === 'gmail') ? (
+                  {item.connected &&
+                  (key === 'xero' || key === 'gmail' || key === 'quickbooks' || key === 'zoho') ? (
                     <IntegrationDisconnectButton provider={key} label={item.label} />
                   ) : null}
                 </div>

@@ -30,6 +30,8 @@ async function migrateLegacyWorkspace(userId: string): Promise<void> {
   await Promise.all([
     copyIntegrationSecret('xero', MOCK_TENANT_ID, userId),
     copyIntegrationSecret('gmail', MOCK_TENANT_ID, userId),
+    copyIntegrationSecret('quickbooks', MOCK_TENANT_ID, userId),
+    copyIntegrationSecret('zoho', MOCK_TENANT_ID, userId),
     copyCanonicalFile(MOCK_TENANT_ID, userId).catch((error) => {
       console.error('[integrations/tenant] copyCanonicalFile failed:', error);
     })

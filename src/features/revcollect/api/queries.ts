@@ -345,7 +345,7 @@ export function useIntegrationStatus() {
   return useQuery(integrationStatusQueryOptions());
 }
 
-export type IntegrationProviderKey = 'xero' | 'gmail';
+export type IntegrationProviderKey = 'xero' | 'gmail' | 'quickbooks' | 'zoho';
 
 export interface XeroResyncResult {
   lastSyncAt: string | null;
@@ -364,6 +364,27 @@ function disconnectPath(provider: IntegrationProviderKey): string {
       return '/api/integrations/xero/disconnect';
     case 'gmail':
       return '/api/integrations/gmail/disconnect';
+    case 'quickbooks':
+      return '/api/integrations/quickbooks/disconnect';
+    case 'zoho':
+      return '/api/integrations/zoho/disconnect';
+    default: {
+      const _exhaustive: never = provider;
+      return _exhaustive;
+    }
+  }
+}
+
+function disconnectToast(provider: IntegrationProviderKey): string {
+  switch (provider) {
+    case 'xero':
+      return 'Xero disconnected';
+    case 'gmail':
+      return 'Gmail disconnected';
+    case 'quickbooks':
+      return 'QuickBooks disconnected';
+    case 'zoho':
+      return 'Zoho Books disconnected';
     default: {
       const _exhaustive: never = provider;
       return _exhaustive;
@@ -383,7 +404,7 @@ export function useDisconnectIntegration() {
     onSuccess: (_data, provider) => {
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
-      toast.success(provider === 'xero' ? 'Xero disconnected' : 'Gmail disconnected');
+      toast.success(disconnectToast(provider));
     },
     onError: () => {
       toast.error('Could not disconnect');
@@ -419,10 +440,10 @@ export function useResyncXero() {
       const resyncError = error as XeroResyncError;
       if (resyncError.status === 409) {
         void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
-        toast.error('Xero session expired. Reconnect Xero.');
+        toast.error('Accounting session expired. Reconnect in Settings → Integrations.');
         return;
       }
-      toast.error(resyncError.message || 'Could not resync Xero');
+      toast.error(resyncError.message || 'Could not resync accounting');
     }
   });
 }

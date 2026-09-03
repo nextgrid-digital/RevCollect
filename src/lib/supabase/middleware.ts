@@ -23,7 +23,14 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/icon.png' ||
     pathname === '/apple-icon.png' ||
     pathname === '/apple-icon' ||
-    pathname.startsWith('/eve/')
+    pathname.startsWith('/eve/') ||
+    pathname.startsWith('/api/auth/') ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
+    pathname === '/security' ||
+    pathname === '/sub-processors' ||
+    pathname === '/launch' ||
+    pathname.startsWith('/disconnect/')
   );
 }
 

@@ -13,7 +13,11 @@ export function WorkspaceConnectionStatus() {
 
   if (!isHydrated || !integrationStatus) return null;
 
-  const lastSyncAt = integrationStatus.xero.lastSyncAt ?? null;
+  const lastSyncAt =
+    integrationStatus.xero.lastSyncAt ??
+    integrationStatus.quickbooks.lastSyncAt ??
+    integrationStatus.zoho.lastSyncAt ??
+    null;
   const lastSyncLabel = lastSyncAt ? `Synced ${formatLastSyncLabel(lastSyncAt)}` : 'Never synced';
 
   return (
@@ -24,7 +28,7 @@ export function WorkspaceConnectionStatus() {
       title={
         lastSyncAt
           ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
-          : 'Xero has not synced yet'
+          : 'Accounting has not synced yet'
       }
     >
       <span

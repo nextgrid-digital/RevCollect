@@ -1,3 +1,4 @@
+import type { BooksProvider } from './books-provider';
 import { getGmailRefreshToken, deleteGmailConnection } from './gmail-connection-store';
 import { revokeGoogleToken } from './google-oauth';
 import {
@@ -8,6 +9,12 @@ import {
 } from './xero-oauth';
 import { getXeroAccessContext } from './xero-api';
 import { deleteXeroConnection, getXeroRefreshToken } from './xero-connection-store';
+import {
+  deleteQuickBooksConnection,
+  getQuickBooksRefreshToken
+} from './quickbooks-connection-store';
+import { getQuickBooksOAuthConfig, revokeQuickBooksRefreshToken } from './quickbooks-oauth';
+import { deleteZohoConnection } from './zoho-connection-store';
 
 export async function disconnectXero(tenantId: string): Promise<void> {
   try {
@@ -27,6 +34,29 @@ export async function disconnectXero(tenantId: string): Promise<void> {
   }
 
   await deleteXeroConnection(tenantId);
+}
+
+export async function disconnectQuickBooks(tenantId: string): Promise<void> {
+  try {
+    const token = await getQuickBooksRefreshToken(tenantId);
+    const config = getQuickBooksOAuthConfig();
+    if (config && token) {
+      await revokeQuickBooksRefreshToken(config, token);
+    }
+  } catch (error) {
+    console.error('[quickbooks/disconnect] revoke failed:', error);
+  }
+  await deleteQuickBooksConnection(tenantId);
+}
+
+export async function disconnectZoho(tenantId: string): Promise<void> {
+  await deleteZohoConnection(tenantId);
+}
+
+export async function disconnectOtherBooks(tenantId: string, keep: BooksProvider): Promise<void> {
+  if (keep !== 'xero') await disconnectXero(tenantId);
+  if (keep !== 'quickbooks') await disconnectQuickBooks(tenantId);
+  if (keep !== 'zoho') await disconnectZoho(tenantId);
 }
 
 export async function disconnectGmail(tenantId: string): Promise<void> {

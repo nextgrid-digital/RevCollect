@@ -105,6 +105,87 @@ export function isOpenReceivableInvoice(invoice: XeroInvoice): boolean {
   return amountDue > 0.0001;
 }
 
+export function mapLedgerInvoice(input: {
+  id: string;
+  customerId: string;
+  number: string;
+  amountCents: number;
+  amountDueCents: number;
+  paidCents: number;
+  dueDate: string;
+  issueDate?: string;
+  paidAt?: string;
+  ledgerStatus?: string;
+}): Invoice {
+  const daysOverdue = input.amountDueCents > 0 ? getDaysOverdueFromDueDate(input.dueDate) : 0;
+  return {
+    id: input.id,
+    customerId: input.customerId,
+    number: input.number,
+    amountCents: input.amountCents,
+    amountDueCents: input.amountDueCents,
+    paidCents: input.paidCents,
+    paidAt: input.paidAt,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+    status: mapInvoiceStatus(input.ledgerStatus, daysOverdue, input.amountDueCents),
+    agingBucket: toAgingBucket(daysOverdue),
+    xeroStatus: input.ledgerStatus
+  };
+}
+
+export function mapLedgerCustomers(
+  contacts: Array<{ id: string; name: string; email: string; company?: string }>,
+  invoices: Invoice[]
+): Customer[] {
+  const invoicesByCustomer = new Map<string, Invoice[]>();
+  for (const invoice of invoices) {
+    const list = invoicesByCustomer.get(invoice.customerId) ?? [];
+    list.push(invoice);
+    invoicesByCustomer.set(invoice.customerId, list);
+  }
+
+  const customers: Customer[] = [];
+  const seen = new Set<string>();
+  for (const contact of contacts) {
+    const customerInvoices = invoicesByCustomer.get(contact.id) ?? [];
+    if (customerInvoices.length === 0) continue;
+    const balanceCents = customerBalanceCents(customerInvoices);
+    const daysOverdue = customerInvoices
+      .filter(isOpenCanonicalInvoice)
+      .reduce((max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)), 0);
+    seen.add(contact.id);
+    customers.push({
+      id: contact.id,
+      name: contact.name,
+      email: contact.email || 'no-email@ledger.local',
+      company: contact.company ?? contact.name,
+      status: deriveCustomerStatus(balanceCents, daysOverdue),
+      balanceCents,
+      daysOverdue
+    });
+  }
+
+  for (const [customerId, customerInvoices] of invoicesByCustomer) {
+    if (seen.has(customerId)) continue;
+    const balanceCents = customerBalanceCents(customerInvoices);
+    const daysOverdue = customerInvoices
+      .filter(isOpenCanonicalInvoice)
+      .reduce((max, invoice) => Math.max(max, getDaysOverdueFromDueDate(invoice.dueDate)), 0);
+    customers.push({
+      id: customerId,
+      name: 'Customer',
+      email: 'no-email@ledger.local',
+      company: 'Customer',
+      status: deriveCustomerStatus(balanceCents, daysOverdue),
+      balanceCents,
+      daysOverdue
+    });
+  }
+
+  return customers.toSorted((a, b) => b.balanceCents - a.balanceCents);
+}
+
 export function mapXeroInvoice(invoice: XeroInvoice): Invoice | null {
   const customerId = invoice.Contact?.ContactID;
   if (!customerId || !invoice.InvoiceID) return null;

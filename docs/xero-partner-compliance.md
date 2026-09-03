@@ -38,9 +38,10 @@ Xero OAuth → Sync job → Postgres (structured fields + encrypted email bodies
 
 ## Documentation for Xero reviewers
 
-- Privacy policy: https://revcollect.app/privacy-policy
-- Security practices: https://revcollect.app/security
-- Sub-processors: https://revcollect.app/sub-processors
+- Privacy policy: https://app.revcollect.ai/privacy
+- Security practices: https://app.revcollect.ai/security
+- Sub-processors: https://app.revcollect.ai/sub-processors
+- Terms: https://app.revcollect.ai/terms
 - Internal: [ai-inference-policy.md](./ai-inference-policy.md)
 
 ## Partner application checklist

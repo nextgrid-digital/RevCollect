@@ -2,7 +2,9 @@ import { createAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
-export type IntegrationProvider = 'xero' | 'gmail';
+import type { IntegrationProvider } from './integration-provider';
+
+export type { IntegrationProvider };
 
 const STORE_DIR = path.join(process.cwd(), '.data', 'integrations');
 

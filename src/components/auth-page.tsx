@@ -20,7 +20,13 @@ type AuthMode = 'signIn' | 'signUp';
 const ERROR_MESSAGES: Record<string, string> = {
   missing_supabase_env:
     'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.',
-  auth_callback_failed: 'Could not complete sign-in. Please try again.'
+  auth_callback_failed: 'Could not complete sign-in. Please try again.',
+  missing_xero_credentials: 'Xero sign-in is not configured.',
+  missing_xero_email: 'Xero did not return an email. Check OpenID scopes on the Xero app.',
+  missing_intuit_credentials: 'Intuit sign-in is not configured.',
+  missing_intuit_email: 'Intuit did not return an email. Enable OpenID email on the app.',
+  missing_zoho_credentials: 'Zoho sign-in is not configured.',
+  missing_zoho_email: 'Zoho did not return an email for this account.'
 };
 
 function RevCollectMark({ className }: { className?: string }) {
@@ -297,6 +303,39 @@ export function AuthPage() {
             <GoogleIcon data-icon='inline-start' />
             Continue with Google
           </Button>
+          <Button
+            type='button'
+            className='w-full'
+            variant='outline'
+            disabled={isPending || isGooglePending}
+            onClick={() => {
+              window.location.assign('/api/auth/xero/start');
+            }}
+          >
+            Continue with Xero
+          </Button>
+          <Button
+            type='button'
+            className='w-full'
+            variant='outline'
+            disabled={isPending || isGooglePending}
+            onClick={() => {
+              window.location.assign('/api/auth/intuit/start');
+            }}
+          >
+            Sign in with Intuit
+          </Button>
+          <Button
+            type='button'
+            className='w-full'
+            variant='outline'
+            disabled={isPending || isGooglePending}
+            onClick={() => {
+              window.location.assign('/api/auth/zoho/start');
+            }}
+          >
+            Continue with Zoho
+          </Button>
 
           <AuthDivider>OR</AuthDivider>
 
@@ -351,11 +390,11 @@ export function AuthPage() {
 
           <p className='text-muted-foreground mt-4 text-sm'>
             By continuing, you agree to our{' '}
-            <a className='hover:text-primary underline underline-offset-4' href='#'>
+            <a className='hover:text-primary underline underline-offset-4' href='/terms'>
               Terms of Service
             </a>{' '}
             and{' '}
-            <a className='hover:text-primary underline underline-offset-4' href='#'>
+            <a className='hover:text-primary underline underline-offset-4' href='/privacy'>
               Privacy Policy
             </a>
             .
