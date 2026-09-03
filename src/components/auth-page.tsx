@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react';
 import { AuthDivider } from '@/components/auth-divider';
 import { FloatingPaths } from '@/components/floating-paths';
 import { GoogleIcon } from '@/components/icons/google-icon';
+import { IntuitIcon } from '@/components/icons/intuit-icon';
+import { XeroIcon } from '@/components/icons/xero-icon';
+import { ZohoIcon } from '@/components/icons/zoho-icon';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
@@ -312,6 +315,7 @@ export function AuthPage() {
               window.location.assign('/api/auth/xero/start');
             }}
           >
+            <XeroIcon data-icon='inline-start' />
             Continue with Xero
           </Button>
           <Button
@@ -323,6 +327,7 @@ export function AuthPage() {
               window.location.assign('/api/auth/intuit/start');
             }}
           >
+            <IntuitIcon data-icon='inline-start' />
             Sign in with Intuit
           </Button>
           <Button
@@ -334,6 +339,7 @@ export function AuthPage() {
               window.location.assign('/api/auth/zoho/start');
             }}
           >
+            <ZohoIcon data-icon='inline-start' />
             Continue with Zoho
           </Button>
 
