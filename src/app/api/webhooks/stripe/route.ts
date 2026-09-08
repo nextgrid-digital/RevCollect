@@ -17,12 +17,19 @@ export async function POST(request: NextRequest) {
 
   const payload = await request.text();
 
+  let event;
   try {
-    const event = getStripe().webhooks.constructEvent(payload, signature, secret);
+    event = getStripe().webhooks.constructEvent(payload, signature, secret);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid signature';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  try {
     await handleStripeEvent(event);
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Webhook failed';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

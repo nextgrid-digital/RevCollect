@@ -4,7 +4,7 @@ import type {
   WorkspaceGeneralSettings
 } from '@/features/revcollect/types';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '@/features/revcollect/settings/lib/workspace-settings-defaults';
-import { AGENT_PRICE_MONTHLY_CENTS, ESTIMATED_AI_COST_MONTHLY_CENTS } from '@/lib/billing/pricing';
+import { AGENT_PRICE_MONTHLY_CENTS } from '@/lib/billing/pricing';
 import type { CanonicalSnapshot, CustomerIntelligence, CustomerPatterns } from './types';
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -43,8 +43,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
 
 export const DEFAULT_ADDON_STATUS: AgentAddonStatus = {
   subscribed: false,
-  priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-  estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS
+  priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS
 };
 
 export function emptyPatterns(): CustomerPatterns {

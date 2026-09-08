@@ -14,9 +14,14 @@ export function BillingAccessBanner() {
   }
 
   if (data.canWrite === false) {
+    const hasCustomer = Boolean(data.stripeCustomerId) && !data.baseSubscribed;
     return (
       <div className='bg-muted text-foreground flex items-center justify-between gap-3 border-b px-4 py-2 text-sm'>
-        <p>Trial ended. The workspace is read-only until you subscribe at $49/month.</p>
+        <p>
+          {hasCustomer
+            ? 'Subscribe to restore full access. The workspace is read-only until you subscribe at $49/month.'
+            : 'Trial ended. The workspace is read-only until you subscribe at $49/month.'}
+        </p>
         <Button asChild size='sm'>
           <Link href='/settings/billing'>Subscribe</Link>
         </Button>

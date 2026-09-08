@@ -4,12 +4,7 @@ import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { getAuthUser } from '@/lib/supabase/get-auth-user';
 import type { AgentAddonStatus } from '@/features/revcollect/types';
 import { emailForUserId, isCompedEmail } from './comped';
-import {
-  AGENT_PRICE_MONTHLY_CENTS,
-  BASE_PRICE_MONTHLY_CENTS,
-  ESTIMATED_AI_COST_MONTHLY_CENTS,
-  TRIAL_DAYS
-} from './pricing';
+import { AGENT_PRICE_MONTHLY_CENTS, BASE_PRICE_MONTHLY_CENTS, TRIAL_DAYS } from './pricing';
 
 export class ReadOnlyError extends Error {
   readonly code = 'read_only' as const;
@@ -104,7 +99,6 @@ export function addonStatusFromEntitlements(entitlements: WorkspaceEntitlements)
   return {
     subscribed: entitlements.canRunAgent,
     priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-    estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
     stripeCustomerId: entitlements.stripeCustomerId,
     hasBase: entitlements.hasBase,
     inTrial: entitlements.inTrial,
@@ -113,6 +107,7 @@ export function addonStatusFromEntitlements(entitlements: WorkspaceEntitlements)
     canWrite: entitlements.canWrite,
     canRunAgent: entitlements.canRunAgent,
     basePriceMonthlyCents: BASE_PRICE_MONTHLY_CENTS,
+    baseSubscribed: entitlements.baseSubscribed,
     comped: entitlements.comped
   };
 }

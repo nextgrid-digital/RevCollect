@@ -66,12 +66,6 @@ const integrations = [
     href: '/onboarding/connect-zoho',
     connectPath: '/api/integrations/zoho/connect?returnTo=/settings/integrations',
     icon: Icons.billing
-  },
-  {
-    key: 'stripe' as const,
-    href: '/settings/billing?addon=agent',
-    connectPath: null,
-    icon: Icons.billing
   }
 ];
 

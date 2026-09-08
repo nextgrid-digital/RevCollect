@@ -15,13 +15,9 @@ const INCLUDED = [
 
 interface AgentAddonPaywallProps {
   priceMonthlyCents: number;
-  estimatedAiCostMonthlyCents: number;
 }
 
-export function AgentAddonPaywall({
-  priceMonthlyCents,
-  estimatedAiCostMonthlyCents
-}: AgentAddonPaywallProps) {
+export function AgentAddonPaywall({ priceMonthlyCents }: AgentAddonPaywallProps) {
   const subscribeAddon = useSubscribeAgentAddon();
 
   return (
@@ -31,9 +27,6 @@ export function AgentAddonPaywall({
           <div>
             <p className='text-base font-semibold'>
               Add-on · {formatCurrencyWhole(priceMonthlyCents)}/month
-            </p>
-            <p className='text-muted-foreground mt-1 text-xs'>
-              Typical AI usage ~{formatCurrencyWhole(estimatedAiCostMonthlyCents)}/mo
             </p>
           </div>
 

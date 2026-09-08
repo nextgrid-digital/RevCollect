@@ -3,11 +3,7 @@ import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import type { AgentAddonSubscribeResult } from '@/features/revcollect/types';
 import { getWorkspaceEntitlements } from './entitlements';
-import {
-  AGENT_PRICE_MONTHLY_CENTS,
-  ESTIMATED_AI_COST_MONTHLY_CENTS,
-  type CheckoutKind
-} from './pricing';
+import { AGENT_PRICE_MONTHLY_CENTS, type CheckoutKind } from './pricing';
 import {
   getAgentAddonPriceId,
   getAppUrl,
@@ -45,7 +41,6 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
     return {
       subscribed: true,
       priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-      estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
       stripeCustomerId: entitlements.stripeCustomerId,
       hasBase: true,
       inTrial: false,
@@ -56,15 +51,14 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
   }
 
   let resolvedKind: CheckoutKind = kind;
-  if (resolvedKind === 'agent' && !entitlements.hasBase && !entitlements.inTrial) {
+  if (resolvedKind === 'agent' && !entitlements.baseSubscribed) {
     resolvedKind = 'base_and_agent';
   }
 
-  if (resolvedKind === 'base' && entitlements.hasBase && !entitlements.inTrial) {
+  if (resolvedKind === 'base' && entitlements.baseSubscribed) {
     return {
       subscribed: entitlements.canRunAgent,
       priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-      estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
       stripeCustomerId: entitlements.stripeCustomerId,
       hasBase: entitlements.hasBase,
       inTrial: entitlements.inTrial,
@@ -73,11 +67,10 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
     };
   }
 
-  if (resolvedKind === 'agent' && entitlements.canRunAgent && !entitlements.inTrial) {
+  if (resolvedKind === 'agent' && entitlements.canRunAgent && entitlements.baseSubscribed) {
     return {
       subscribed: true,
       priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-      estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
       stripeCustomerId: entitlements.stripeCustomerId,
       hasBase: entitlements.hasBase,
       canRunAgent: true
@@ -133,7 +126,6 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
   return {
     subscribed: entitlements.canRunAgent,
     priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
-    estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
     stripeCustomerId: customerId,
     checkoutUrl: session.url,
     hasBase: entitlements.hasBase,
@@ -145,7 +137,7 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
 
 export async function startAgentAddonCheckout(): Promise<AgentAddonSubscribeResult> {
   const entitlements = await getWorkspaceEntitlements();
-  if (entitlements.hasBase || entitlements.inTrial) {
+  if (entitlements.baseSubscribed) {
     return startCheckout('agent');
   }
   return startCheckout('base_and_agent');

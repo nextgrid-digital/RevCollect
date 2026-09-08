@@ -15,7 +15,8 @@ function shouldPersistQuery(query: {
   return (
     query.state.status === 'success' &&
     query.queryKey[0] === 'revcollect' &&
-    query.queryKey[1] !== 'inbox'
+    query.queryKey[1] !== 'inbox' &&
+    query.queryKey[1] !== 'agent'
   );
 }
 

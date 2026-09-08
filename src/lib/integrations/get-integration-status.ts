@@ -11,8 +11,7 @@ export const DISCONNECTED_INTEGRATION_STATUS = {
   gmail: { connected: false, label: 'Gmail', detail: 'Not connected' },
   xero: { connected: false, label: 'Xero', detail: 'Not connected' },
   quickbooks: { connected: false, label: 'QuickBooks', detail: 'Not connected' },
-  zoho: { connected: false, label: 'Zoho Books', detail: 'Not connected' },
-  stripe: { connected: false, label: 'Stripe', detail: 'Not connected' }
+  zoho: { connected: false, label: 'Zoho Books', detail: 'Not connected' }
 } as const satisfies IntegrationStatus;
 
 async function getBooksLastSyncAt(tenantId: string): Promise<string | null> {
@@ -85,7 +84,6 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
           detail: zohoConnection.organisationName,
           lastSyncAt
         }
-      : DISCONNECTED_INTEGRATION_STATUS.zoho,
-    stripe: DISCONNECTED_INTEGRATION_STATUS.stripe
+      : DISCONNECTED_INTEGRATION_STATUS.zoho
   };
 }

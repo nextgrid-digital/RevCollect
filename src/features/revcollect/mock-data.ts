@@ -1296,16 +1296,14 @@ export const agentConfig: AgentConfig = {
 
 export const agentAddonStatus: AgentAddonStatus = {
   subscribed: false,
-  priceMonthlyCents: 3900,
-  estimatedAiCostMonthlyCents: 400
+  priceMonthlyCents: 3900
 };
 
 export const integrationStatus: IntegrationStatus = {
   gmail: { connected: false, label: 'Gmail', detail: 'Not connected' },
   xero: { connected: false, label: 'Xero', detail: 'Not connected' },
   quickbooks: { connected: false, label: 'QuickBooks', detail: 'Not connected' },
-  zoho: { connected: false, label: 'Zoho Books', detail: 'Not connected' },
-  stripe: { connected: true, label: 'Stripe', detail: 'Payments syncing' }
+  zoho: { connected: false, label: 'Zoho Books', detail: 'Not connected' }
 };
 
 const AGING_BUCKET_LABELS: Record<AgingBucket, string> = {

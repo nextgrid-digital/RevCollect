@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,11 @@ export function SettingsBillingView() {
   const checkout = useStartCheckout();
   const billingPortal = useBillingPortal();
   const confirmCheckout = useConfirmCheckoutSession();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(true);
+  }, []);
 
   useEffect(() => {
     if (!highlightAgent || !addonCardRef.current) return;
@@ -39,12 +44,16 @@ export function SettingsBillingView() {
     confirmCheckout.mutate(sessionId);
   }, [checkoutState, confirmCheckout, sessionId]);
 
-  const inTrial = Boolean(billing?.inTrial);
-  const comped = Boolean(billing?.comped);
-  const canWrite = billing?.canWrite !== false;
-  const hasAgent = Boolean(billing?.canRunAgent);
-  const hasBasePaid = Boolean(billing?.hasBase) && !inTrial && !comped;
-  const hasCustomer = Boolean(billing?.stripeCustomerId);
+  if (!ready || !billing) {
+    return <p className='text-muted-foreground text-sm'>Loading billing…</p>;
+  }
+
+  const inTrial = Boolean(billing.inTrial);
+  const comped = Boolean(billing.comped);
+  const canWrite = billing.canWrite !== false;
+  const hasAgent = Boolean(billing.canRunAgent);
+  const hasCustomer = Boolean(billing.stripeCustomerId);
+  const hasBasePaid = Boolean(billing.baseSubscribed);
   const baseLabel = formatCurrencyWhole(billing?.basePriceMonthlyCents ?? 4900);
   const agentLabel = formatCurrencyWhole(billing?.priceMonthlyCents ?? 3900);
   const bundleLabel = formatCurrencyWhole(
@@ -56,19 +65,23 @@ export function SettingsBillingView() {
   if (comped) {
     planValue = 'Internal';
     planDescription = 'Lifetime access for this admin login';
-  } else if (inTrial) {
-    planValue = 'Trial';
-    planDescription = `${billing?.daysLeft ?? 0} days left · no card required`;
   } else if (hasBasePaid) {
     planValue = 'RevCollect';
-    planDescription = `${baseLabel}/month · ${PRICING_INVOICE_TIER_NOTE}`;
+    planDescription = inTrial
+      ? `Subscribed · ${billing.daysLeft ?? 0} days of trial remaining`
+      : `${baseLabel}/month · ${PRICING_INVOICE_TIER_NOTE}`;
+  } else if (inTrial) {
+    planValue = 'Trial';
+    planDescription = `${billing.daysLeft ?? 0} days left · no card required`;
   }
 
   let agentValue = 'Off';
-  if (comped || inTrial) {
+  if (comped) {
     agentValue = 'Included';
-  } else if (hasAgent) {
+  } else if (hasAgent && hasBasePaid && !inTrial) {
     agentValue = 'Active';
+  } else if (hasAgent) {
+    agentValue = 'Included';
   }
 
   return (
@@ -88,7 +101,9 @@ export function SettingsBillingView() {
                 ? 'Checkout cancelled'
                 : comped
                   ? 'Included on this internal workspace'
-                  : `${agentLabel}/month after trial`}
+                  : hasBasePaid
+                    ? 'Card on file'
+                    : `${agentLabel}/month after trial`}
             </p>
           }
         />
@@ -113,7 +128,7 @@ export function SettingsBillingView() {
             <div className='flex flex-wrap items-center gap-2'>
               <h3 className='text-sm font-semibold'>RevCollect</h3>
               {comped ? <Badge variant='secondary'>Lifetime</Badge> : null}
-              {inTrial ? <Badge variant='secondary'>Free month</Badge> : null}
+              {inTrial && !hasBasePaid ? <Badge variant='secondary'>Free month</Badge> : null}
               {hasBasePaid ? <Badge variant='secondary'>Subscribed</Badge> : null}
               {!canWrite ? <Badge variant='outline'>Read-only</Badge> : null}
             </div>
@@ -123,7 +138,13 @@ export function SettingsBillingView() {
             <p className='text-muted-foreground text-xs'>
               {comped
                 ? 'admin@revcollect.ai is not billed and is not read-only.'
-                : `${baseLabel}/month after the first month`}
+                : hasBasePaid
+                  ? inTrial
+                    ? `You're subscribed. Remaining trial days are included.`
+                    : `${baseLabel}/month`
+                  : !canWrite
+                    ? 'Subscribe again to send, sync, and collect.'
+                    : `${baseLabel}/month after the first month`}
             </p>
           </div>
           <div className='flex shrink-0 flex-wrap gap-2'>
@@ -180,28 +201,34 @@ export function SettingsBillingView() {
                   ? ' Included for this admin workspace.'
                   : ` Included in the free month; ${agentLabel}/month after.`}
               </p>
-              <p className='text-muted-foreground text-xs'>
-                Typical AI usage ~{formatCurrencyWhole(billing?.estimatedAiCostMonthlyCents ?? 400)}
-                /mo
-              </p>
             </div>
             <div className='flex shrink-0 flex-wrap gap-2'>
-              {comped ? null : hasAgent && !inTrial ? (
-                <Button
-                  type='button'
-                  variant='outline'
-                  isLoading={billingPortal.isPending}
-                  onClick={() => billingPortal.mutate()}
-                >
-                  Manage billing
-                </Button>
+              {comped ? null : hasBasePaid ? (
+                hasAgent || inTrial ? (
+                  <Button
+                    type='button'
+                    variant='outline'
+                    isLoading={billingPortal.isPending}
+                    onClick={() => billingPortal.mutate()}
+                  >
+                    Manage billing
+                  </Button>
+                ) : (
+                  <Button
+                    type='button'
+                    onClick={() => checkout.mutate('agent')}
+                    isLoading={checkout.isPending}
+                  >
+                    Add Agent {agentLabel}
+                  </Button>
+                )
               ) : (
                 <Button
                   type='button'
-                  onClick={() => checkout.mutate(hasBasePaid ? 'agent' : 'base_and_agent')}
+                  onClick={() => checkout.mutate('base_and_agent')}
                   isLoading={checkout.isPending}
                 >
-                  {hasBasePaid ? `Add Agent ${agentLabel}` : `Subscribe with Agent ${bundleLabel}`}
+                  Subscribe with Agent {bundleLabel}
                 </Button>
               )}
             </div>

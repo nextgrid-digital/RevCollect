@@ -26,7 +26,7 @@ import { useFilteredNavGroups } from '@/hooks/use-nav';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { Icons } from '../icons';
@@ -48,7 +48,6 @@ function initialsFromName(name: string): string {
 
 export default function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { isMobile, setOpenMobile, state } = useSidebar();
   const initials = initialsFromName(user.name);
   const filteredGroups = useFilteredNavGroups(navGroups);
@@ -61,18 +60,17 @@ export default function AppSidebar({ user }: AppSidebarProps) {
   async function handleLogout() {
     setIsLoggingOut(true);
     try {
+      await fetch('/api/auth/sign-out', {
+        method: 'POST',
+        credentials: 'include',
+        signal: AbortSignal.timeout(8000)
+      });
       const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      toast.success('Signed out');
-      router.replace('/');
-      router.refresh();
+      await supabase.auth.signOut({ scope: 'local' });
     } catch {
       toast.error('Could not sign out');
     } finally {
-      setIsLoggingOut(false);
+      window.location.assign('/');
     }
   }
 
@@ -171,8 +169,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={isLoggingOut}
-                  onSelect={(event) => {
-                    event.preventDefault();
+                  onSelect={() => {
                     void handleLogout();
                   }}
                 >

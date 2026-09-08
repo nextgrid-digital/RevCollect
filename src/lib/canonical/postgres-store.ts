@@ -458,7 +458,7 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     .update(billingUpdate)
     .eq('id', tenantId);
   if (billingError) {
-    console.error('[canonical] skipped stripe billing update:', billingError.message);
+    throw new Error(`[canonical] stripe billing update failed: ${billingError.message}`);
   }
 
   if (snapshot.agentConfig) {

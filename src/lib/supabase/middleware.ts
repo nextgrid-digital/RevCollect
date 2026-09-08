@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { AUTH_CLAIMS_TIMEOUT_MS, withTimeout } from '@/lib/auth-timeout';
+import { AUTH_CLAIMS_TIMEOUT_MS, TimeoutError, withTimeout } from '@/lib/auth-timeout';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 
 // Read env with static property access so Next can inline them into the proxy bundle
@@ -86,17 +86,16 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     .some((cookie) => cookie.name.includes('-auth-token'));
 
   let hasClaims = false;
+  let claimsTimedOut = false;
   try {
-    const { data, error } = await withTimeout(supabase.auth.getClaims(), AUTH_CLAIMS_TIMEOUT_MS);
+    const { data } = await withTimeout(supabase.auth.getClaims(), AUTH_CLAIMS_TIMEOUT_MS);
     hasClaims = Boolean(data?.claims);
-    if (!hasClaims && error && hasAuthCookie) {
-      hasClaims = true;
-    }
-  } catch {
+  } catch (error) {
+    claimsTimedOut = error instanceof TimeoutError;
     hasClaims = false;
   }
 
-  const isLoggedIn = hasClaims || hasAuthCookie;
+  const isLoggedIn = hasClaims || (claimsTimedOut && hasAuthCookie);
   const { pathname } = request.nextUrl;
 
   if (!isLoggedIn && !isPublicPath(pathname)) {

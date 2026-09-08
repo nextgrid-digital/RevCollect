@@ -398,7 +398,7 @@ export function useConfirmCheckoutSession() {
       }
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.agentAddon() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
       toast.success('Subscription updated');
     },
     onError: (error) => {

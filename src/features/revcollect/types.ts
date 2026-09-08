@@ -220,7 +220,6 @@ export interface AriRunRecord {
 export interface AgentAddonStatus {
   subscribed: boolean;
   priceMonthlyCents: number;
-  estimatedAiCostMonthlyCents: number;
   stripeCustomerId?: string | null;
   hasBase?: boolean;
   inTrial?: boolean;
@@ -229,6 +228,7 @@ export interface AgentAddonStatus {
   canWrite?: boolean;
   canRunAgent?: boolean;
   basePriceMonthlyCents?: number;
+  baseSubscribed?: boolean;
   comped?: boolean;
 }
 
@@ -288,7 +288,6 @@ export interface IntegrationStatus {
   xero: IntegrationConnection;
   quickbooks: IntegrationConnection;
   zoho: IntegrationConnection;
-  stripe: IntegrationConnection;
 }
 
 export interface AgingBucketSummary {

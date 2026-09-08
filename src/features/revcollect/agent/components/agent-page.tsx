@@ -250,10 +250,7 @@ export function AgentPage() {
       <WorkspaceCanvas className='flex-col'>
         <WorkspacePageTitle title='Agent' className='h-8 shrink-0' />
         <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
-          <AgentAddonPaywall
-            priceMonthlyCents={addonStatus.priceMonthlyCents}
-            estimatedAiCostMonthlyCents={addonStatus.estimatedAiCostMonthlyCents}
-          />
+          <AgentAddonPaywall priceMonthlyCents={addonStatus.priceMonthlyCents} />
         </div>
       </WorkspaceCanvas>
     );
