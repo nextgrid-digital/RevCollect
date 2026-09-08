@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getCanonicalStore } from '@/lib/canonical/store';
-import { DEFAULT_ADDON_STATUS } from '@/lib/canonical/defaults';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { getAuthUser } from '@/lib/supabase/get-auth-user';
 import type { AgentAddonStatus } from '@/features/revcollect/types';
+import { emailForUserId, isCompedEmail } from './comped';
 import {
   AGENT_PRICE_MONTHLY_CENTS,
   BASE_PRICE_MONTHLY_CENTS,
@@ -41,6 +42,7 @@ export interface WorkspaceEntitlements {
   stripeCustomerId: string | null;
   baseSubscribed: boolean;
   agentSubscribed: boolean;
+  comped: boolean;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -54,8 +56,25 @@ export function entitlementsFromSnapshot(input: {
   baseSubscribed: boolean;
   agentSubscribed: boolean;
   stripeCustomerId: string | null;
+  comped?: boolean;
   now?: Date;
 }): WorkspaceEntitlements {
+  if (input.comped) {
+    return {
+      inTrial: false,
+      trialEndsAt: null,
+      daysLeft: 0,
+      hasBase: true,
+      hasAgent: true,
+      canWrite: true,
+      canRunAgent: true,
+      stripeCustomerId: input.stripeCustomerId,
+      baseSubscribed: true,
+      agentSubscribed: true,
+      comped: true
+    };
+  }
+
   const now = input.now ?? new Date();
   const trialStartedAt = input.trialStartedAt;
   const trialEndsAt = trialStartedAt ? addDays(trialStartedAt, TRIAL_DAYS) : null;
@@ -76,7 +95,8 @@ export function entitlementsFromSnapshot(input: {
     canRunAgent: hasAgent,
     stripeCustomerId: input.stripeCustomerId,
     baseSubscribed: input.baseSubscribed,
-    agentSubscribed: input.agentSubscribed
+    agentSubscribed: input.agentSubscribed,
+    comped: false
   };
 }
 
@@ -92,12 +112,14 @@ export function addonStatusFromEntitlements(entitlements: WorkspaceEntitlements)
     daysLeft: entitlements.daysLeft,
     canWrite: entitlements.canWrite,
     canRunAgent: entitlements.canRunAgent,
-    basePriceMonthlyCents: BASE_PRICE_MONTHLY_CENTS
+    basePriceMonthlyCents: BASE_PRICE_MONTHLY_CENTS,
+    comped: entitlements.comped
   };
 }
 
 export async function getWorkspaceEntitlementsForTenant(
-  tenantId: string
+  tenantId: string,
+  options?: { email?: string | null }
 ): Promise<WorkspaceEntitlements> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
@@ -108,17 +130,20 @@ export async function getWorkspaceEntitlementsForTenant(
     await store.write(tenantId, snapshot);
   }
 
+  const email = options?.email ?? (await emailForUserId(tenantId));
+
   return entitlementsFromSnapshot({
     trialStartedAt,
     baseSubscribed: Boolean(snapshot.baseSubscribed),
     agentSubscribed: Boolean(snapshot.agentAddonStatus?.subscribed),
-    stripeCustomerId: snapshot.stripeCustomerId
+    stripeCustomerId: snapshot.stripeCustomerId,
+    comped: isCompedEmail(email)
   });
 }
 
 export async function getWorkspaceEntitlements(): Promise<WorkspaceEntitlements> {
-  const tenantId = await getIntegrationTenantId();
-  return getWorkspaceEntitlementsForTenant(tenantId);
+  const [tenantId, user] = await Promise.all([getIntegrationTenantId(), getAuthUser()]);
+  return getWorkspaceEntitlementsForTenant(tenantId, { email: user.email });
 }
 
 export async function getAgentAddonBillingStatus(): Promise<AgentAddonStatus> {

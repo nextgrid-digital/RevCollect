@@ -41,6 +41,20 @@ export async function startCheckout(kind: CheckoutKind): Promise<AgentAddonSubsc
   }
 
   const entitlements = await getWorkspaceEntitlements();
+  if (entitlements.comped) {
+    return {
+      subscribed: true,
+      priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
+      estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS,
+      stripeCustomerId: entitlements.stripeCustomerId,
+      hasBase: true,
+      inTrial: false,
+      canWrite: true,
+      canRunAgent: true,
+      comped: true
+    };
+  }
+
   let resolvedKind: CheckoutKind = kind;
   if (resolvedKind === 'agent' && !entitlements.hasBase && !entitlements.inTrial) {
     resolvedKind = 'base_and_agent';

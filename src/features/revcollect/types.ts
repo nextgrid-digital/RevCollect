@@ -229,6 +229,7 @@ export interface AgentAddonStatus {
   canWrite?: boolean;
   canRunAgent?: boolean;
   basePriceMonthlyCents?: number;
+  comped?: boolean;
 }
 
 export interface AgentAddonSubscribeResult extends AgentAddonStatus {

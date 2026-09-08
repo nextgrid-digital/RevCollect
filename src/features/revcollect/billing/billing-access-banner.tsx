@@ -9,7 +9,7 @@ export function BillingAccessBanner() {
   const pathname = usePathname();
   const { data } = useAgentAddonStatus();
 
-  if (!data || pathname.startsWith('/settings')) {
+  if (!data || pathname.startsWith('/settings') || data.comped) {
     return null;
   }
 

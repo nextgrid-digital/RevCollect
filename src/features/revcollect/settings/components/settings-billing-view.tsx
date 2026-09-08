@@ -40,9 +40,10 @@ export function SettingsBillingView() {
   }, [checkoutState, confirmCheckout, sessionId]);
 
   const inTrial = Boolean(billing?.inTrial);
+  const comped = Boolean(billing?.comped);
   const canWrite = billing?.canWrite !== false;
   const hasAgent = Boolean(billing?.canRunAgent);
-  const hasBasePaid = Boolean(billing?.hasBase) && !inTrial;
+  const hasBasePaid = Boolean(billing?.hasBase) && !inTrial && !comped;
   const hasCustomer = Boolean(billing?.stripeCustomerId);
   const baseLabel = formatCurrencyWhole(billing?.basePriceMonthlyCents ?? 4900);
   const agentLabel = formatCurrencyWhole(billing?.priceMonthlyCents ?? 3900);
@@ -52,7 +53,10 @@ export function SettingsBillingView() {
 
   let planValue = 'Read-only';
   let planDescription = 'Subscribe to send, sync, and collect.';
-  if (inTrial) {
+  if (comped) {
+    planValue = 'Internal';
+    planDescription = 'Lifetime access for this admin login';
+  } else if (inTrial) {
     planValue = 'Trial';
     planDescription = `${billing?.daysLeft ?? 0} days left · no card required`;
   } else if (hasBasePaid) {
@@ -61,7 +65,7 @@ export function SettingsBillingView() {
   }
 
   let agentValue = 'Off';
-  if (inTrial) {
+  if (comped || inTrial) {
     agentValue = 'Included';
   } else if (hasAgent) {
     agentValue = 'Active';
@@ -82,16 +86,22 @@ export function SettingsBillingView() {
             <p className='text-muted-foreground text-xs'>
               {checkoutState === 'cancel'
                 ? 'Checkout cancelled'
-                : `${agentLabel}/month after trial`}
+                : comped
+                  ? 'Included on this internal workspace'
+                  : `${agentLabel}/month after trial`}
             </p>
           }
         />
         <MetricBlock
           label='Payment'
-          value={hasCustomer ? 'Stripe' : 'Not set'}
+          value={comped ? 'Not required' : hasCustomer ? 'Stripe' : 'Not set'}
           description={
             <p className='text-muted-foreground text-xs'>
-              {hasCustomer ? 'Manage cards in the Stripe portal' : 'Added when you subscribe'}
+              {comped
+                ? 'This login is not billed'
+                : hasCustomer
+                  ? 'Manage cards in the Stripe portal'
+                  : 'Added when you subscribe'}
             </p>
           }
         />
@@ -102,6 +112,7 @@ export function SettingsBillingView() {
           <div className='min-w-0 space-y-1'>
             <div className='flex flex-wrap items-center gap-2'>
               <h3 className='text-sm font-semibold'>RevCollect</h3>
+              {comped ? <Badge variant='secondary'>Lifetime</Badge> : null}
               {inTrial ? <Badge variant='secondary'>Free month</Badge> : null}
               {hasBasePaid ? <Badge variant='secondary'>Subscribed</Badge> : null}
               {!canWrite ? <Badge variant='outline'>Read-only</Badge> : null}
@@ -109,10 +120,14 @@ export function SettingsBillingView() {
             <p className='text-muted-foreground text-sm leading-relaxed'>
               Inbox, aging, books sync, and collections follow-up. {PRICING_INVOICE_TIER_NOTE}.
             </p>
-            <p className='text-muted-foreground text-xs'>{baseLabel}/month after the first month</p>
+            <p className='text-muted-foreground text-xs'>
+              {comped
+                ? 'admin@revcollect.ai is not billed and is not read-only.'
+                : `${baseLabel}/month after the first month`}
+            </p>
           </div>
           <div className='flex shrink-0 flex-wrap gap-2'>
-            {hasBasePaid ? (
+            {comped ? null : hasBasePaid ? (
               <Button
                 type='button'
                 variant='outline'
@@ -160,8 +175,10 @@ export function SettingsBillingView() {
                 {hasAgent ? <Badge variant='secondary'>Included</Badge> : null}
               </div>
               <p className='text-muted-foreground text-sm leading-relaxed'>
-                AI-drafted follow-ups, daily digest, and promise tracking. Included in the free
-                month; {agentLabel}/month after.
+                AI-drafted follow-ups, daily digest, and promise tracking.
+                {comped
+                  ? ' Included for this admin workspace.'
+                  : ` Included in the free month; ${agentLabel}/month after.`}
               </p>
               <p className='text-muted-foreground text-xs'>
                 Typical AI usage ~{formatCurrencyWhole(billing?.estimatedAiCostMonthlyCents ?? 400)}
@@ -169,7 +186,7 @@ export function SettingsBillingView() {
               </p>
             </div>
             <div className='flex shrink-0 flex-wrap gap-2'>
-              {hasAgent && !inTrial ? (
+              {comped ? null : hasAgent && !inTrial ? (
                 <Button
                   type='button'
                   variant='outline'
@@ -210,7 +227,9 @@ export function SettingsBillingView() {
           </div>
         ) : (
           <p className='text-muted-foreground text-sm'>
-            First month is free with no card. A card is added when you subscribe after trial.
+            {comped
+              ? 'No card is required for this internal login.'
+              : 'First month is free with no card. A card is added when you subscribe after trial.'}
           </p>
         )}
       </SettingsSection>
