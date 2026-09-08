@@ -11,6 +11,7 @@ import {
 } from '@/features/revcollect/lib/relationship-policy';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
 import { getCanonicalStore } from '@/lib/canonical/store';
+import { getWorkspaceEntitlementsForTenant } from '@/lib/billing/entitlements';
 import { applyAutoPromises } from './apply-auto-promises';
 import { applyRelationshipSignals } from './apply-relationship-signals';
 import { queueFollowUpDraft } from './queue-follow-up-draft';
@@ -27,6 +28,15 @@ export async function runOvernightAri(
   tenantId: string,
   options?: { forceHour?: boolean }
 ): Promise<OvernightAriResult> {
+  const entitlements = await getWorkspaceEntitlementsForTenant(tenantId);
+  if (!entitlements.canRunAgent) {
+    return {
+      tenantId,
+      drafted: 0,
+      skipped: 0,
+      bullets: ['Collections Agent is not included on this plan.']
+    };
+  }
   await applyAutoPromises(tenantId);
   await applyRelationshipSignals(tenantId);
   const store = await getCanonicalStore();

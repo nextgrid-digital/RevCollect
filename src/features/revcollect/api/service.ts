@@ -1,6 +1,7 @@
 import type {
   AgentActivationResult,
   AgentAddonStatus,
+  AgentAddonSubscribeResult,
   AgentConfig,
   AgentDraftMeta,
   AgingBucket,
@@ -77,7 +78,7 @@ export interface RevCollectService {
   updateAgentConfig(config: AgentConfig): Promise<AgentConfig>;
   getLatestAriRun(): Promise<AriRunRecord | null>;
   getAgentAddonStatus(): Promise<AgentAddonStatus>;
-  subscribeAgentAddon(): Promise<AgentAddonStatus>;
+  subscribeAgentAddon(): Promise<AgentAddonSubscribeResult>;
   activateAgent(): Promise<AgentActivationResult>;
   getIntegrationStatus(): Promise<IntegrationStatus>;
 

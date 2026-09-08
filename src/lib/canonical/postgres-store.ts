@@ -1,14 +1,15 @@
 import type {
+  AgentAddonStatus,
   AgentConfig,
   Customer,
   Invoice,
   RelationshipPolicy,
   ThreadEmail
 } from '@/features/revcollect/types';
+import { DEFAULT_ADDON_STATUS, emptyIntelligence, emptySnapshot } from './defaults';
 import { normalizeRelationshipState } from '@/features/revcollect/lib/relationship-policy';
 import { buildSyntheticInboxFromInvoices } from '@/features/revcollect/api/xero-map';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { emptyIntelligence, emptySnapshot } from './defaults';
 import { toPaymentRows } from './postgres-payments';
 import type {
   AgentDraftRecord,
@@ -75,6 +76,29 @@ interface AriRow {
   ran_at: string;
   hour_label: string;
   bullets: string[];
+}
+
+interface TenantRow {
+  last_synced_at?: string | null;
+  sent_emails?: ThreadEmail[];
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  agent_addon_subscribed?: boolean | null;
+  base_subscribed?: boolean | null;
+  trial_started_at?: string | null;
+  subscription_status?: string | null;
+}
+
+function addonStatusFromTenant(row: TenantRow | null): AgentAddonStatus | null {
+  if (!row) return null;
+  const subscribed = Boolean(row.agent_addon_subscribed);
+  const customerId = row.stripe_customer_id ?? null;
+  if (!subscribed && !customerId && !row.base_subscribed && !row.trial_started_at) return null;
+  return {
+    ...DEFAULT_ADDON_STATUS,
+    subscribed,
+    stripeCustomerId: customerId
+  };
 }
 
 function intelligenceFromRow(row: CustomerRow): CustomerIntelligence {
@@ -226,12 +250,27 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
         })),
     ingestedAt: tenantRes.error
       ? null
-      : ((tenantRes.data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null),
+      : ((tenantRes.data as TenantRow | null)?.last_synced_at ?? null),
     sentEmails: tenantRes.error
       ? []
-      : Array.isArray((tenantRes.data as { sent_emails?: ThreadEmail[] } | null)?.sent_emails)
-        ? (tenantRes.data as { sent_emails: ThreadEmail[] }).sent_emails
-        : []
+      : Array.isArray((tenantRes.data as TenantRow | null)?.sent_emails)
+        ? ((tenantRes.data as TenantRow).sent_emails ?? [])
+        : [],
+    stripeCustomerId: tenantRes.error
+      ? null
+      : ((tenantRes.data as TenantRow | null)?.stripe_customer_id ?? null),
+    stripeSubscriptionId: tenantRes.error
+      ? null
+      : ((tenantRes.data as TenantRow | null)?.stripe_subscription_id ?? null),
+    trialStartedAt: tenantRes.error
+      ? null
+      : ((tenantRes.data as TenantRow | null)?.trial_started_at ?? null),
+    baseSubscribed: tenantRes.error
+      ? false
+      : Boolean((tenantRes.data as TenantRow | null)?.base_subscribed),
+    agentAddonStatus: tenantRes.error
+      ? null
+      : addonStatusFromTenant(tenantRes.data as TenantRow | null)
   };
 }
 
@@ -393,6 +432,33 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     if (error) {
       console.error('[canonical] skipped sent_emails update:', error.message);
     }
+  }
+
+  const billingUpdate: Record<string, unknown> = { updated_at: now };
+  if (snapshot.stripeCustomerId !== undefined) {
+    billingUpdate.stripe_customer_id = snapshot.stripeCustomerId;
+  }
+  if (snapshot.stripeSubscriptionId !== undefined) {
+    billingUpdate.stripe_subscription_id = snapshot.stripeSubscriptionId;
+  }
+  if (snapshot.trialStartedAt) {
+    billingUpdate.trial_started_at = snapshot.trialStartedAt;
+  }
+  billingUpdate.base_subscribed = Boolean(snapshot.baseSubscribed);
+  if (snapshot.agentAddonStatus) {
+    billingUpdate.agent_addon_subscribed = snapshot.agentAddonStatus.subscribed;
+    billingUpdate.subscription_status = snapshot.baseSubscribed
+      ? 'active'
+      : snapshot.agentAddonStatus.subscribed
+        ? 'active'
+        : 'cancelled';
+  }
+  const { error: billingError } = await supabase
+    .from('tenants')
+    .update(billingUpdate)
+    .eq('id', tenantId);
+  if (billingError) {
+    console.error('[canonical] skipped stripe billing update:', billingError.message);
   }
 
   if (snapshot.agentConfig) {

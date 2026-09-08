@@ -4,6 +4,7 @@ import type {
   WorkspaceGeneralSettings
 } from '@/features/revcollect/types';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '@/features/revcollect/settings/lib/workspace-settings-defaults';
+import { AGENT_PRICE_MONTHLY_CENTS, ESTIMATED_AI_COST_MONTHLY_CENTS } from '@/lib/billing/pricing';
 import type { CanonicalSnapshot, CustomerIntelligence, CustomerPatterns } from './types';
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -42,8 +43,8 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
 
 export const DEFAULT_ADDON_STATUS: AgentAddonStatus = {
   subscribed: false,
-  priceMonthlyCents: 3900,
-  estimatedAiCostMonthlyCents: 400
+  priceMonthlyCents: AGENT_PRICE_MONTHLY_CENTS,
+  estimatedAiCostMonthlyCents: ESTIMATED_AI_COST_MONTHLY_CENTS
 };
 
 export function emptyPatterns(): CustomerPatterns {
@@ -85,6 +86,10 @@ export function emptySnapshot(): CanonicalSnapshot {
     ariRuns: [],
     workspaceSettings: null,
     agentAddonStatus: null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    trialStartedAt: null,
+    baseSubscribed: false,
     ingestedAt: null
   };
 }

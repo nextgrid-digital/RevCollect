@@ -4,6 +4,7 @@ import { extractSituation } from '@/features/revcollect/extract/extract-situatio
 import { applyPreferencesFromEdit } from '@/features/revcollect/extract/preferences-from-edit';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { GmailNotConnectedError } from '@/lib/integrations/gmail-api';
+import { billingErrorResponse } from '@/lib/billing/entitlements';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { clearXeroArCache } from '@/lib/integrations/xero-api';
 import type {
@@ -215,6 +216,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
     }
   } catch (error) {
+    const billingResponse = billingErrorResponse(error);
+    if (billingResponse) return billingResponse;
     if (error instanceof GmailNotConnectedError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
     }

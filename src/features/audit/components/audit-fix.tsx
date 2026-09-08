@@ -48,7 +48,7 @@ export function AuditFix({ narrative }: AuditFixProps) {
           agent saw in your history; the trial is what it does about it.
         </ReportProse>
         <p className='font-audit-sans text-audit-ink text-[14px] font-medium'>
-          Start the 7-day agent trial · free ·{' '}
+          Start the 30-day free trial · no card ·{' '}
           <a
             href='https://revcollect.ai'
             className='underline decoration-[var(--audit-ink)] underline-offset-2'

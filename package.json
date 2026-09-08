@@ -92,6 +92,7 @@
     "shiki": "^4.1.0",
     "sonner": "^1.7.4",
     "sort-by": "^1.2.0",
+    "stripe": "^22.6.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "tailwindcss-animate": "^1.0.7",
@@ -101,9 +102,6 @@
     "xlsx": "^0.18.5",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
-  },
-  "engines": {
-    "node": "22.x"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.9.0",
@@ -127,5 +125,8 @@
     "!(scripts)/**/*.{js,jsx,tsx,ts,css,less,scss,sass}": [
       "oxfmt --write"
     ]
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

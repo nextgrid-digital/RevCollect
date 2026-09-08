@@ -4,6 +4,7 @@ import { extractDraftsFromSpreadsheet } from '@/features/revcollect/invoice-impo
 import { extractDraftsFromWord } from '@/features/revcollect/invoice-import/extract-from-word';
 import { randomUUID } from 'crypto';
 import type { InvoiceImportDraft } from '@/features/revcollect/invoice-import/types';
+import { assertCanWrite, billingErrorResponse } from '@/lib/billing/entitlements';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +23,7 @@ function extOf(name: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    await assertCanWrite();
     const form = await request.formData();
     const files = form
       .getAll('files')
@@ -71,6 +73,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ drafts });
   } catch (error) {
+    const billingResponse = billingErrorResponse(error);
+    if (billingResponse) return billingResponse;
     const message = error instanceof Error ? error.message : 'Failed to extract invoices';
     return NextResponse.json({ error: message }, { status: 500 });
   }

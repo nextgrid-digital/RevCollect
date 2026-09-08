@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createXeroInvoicesFromDrafts } from '@/features/revcollect/invoice-import/create-xero-invoices';
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { assertCanWrite, billingErrorResponse } from '@/lib/billing/entitlements';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -97,6 +98,7 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    await assertCanWrite();
     const body = bodySchema.parse(await request.json());
     const selected = body.drafts.filter((draft) => draft.selected);
     if (selected.length === 0) {
@@ -107,6 +109,8 @@ export async function POST(request: NextRequest) {
     const createdCount = results.filter((result) => result.ok).length;
     return NextResponse.json({ results, createdCount });
   } catch (error) {
+    const billingResponse = billingErrorResponse(error);
+    if (billingResponse) return billingResponse;
     if (error instanceof XeroNotConnectedError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }

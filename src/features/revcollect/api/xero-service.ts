@@ -7,8 +7,13 @@ import {
 } from '@/lib/integrations/xero-api';
 import { getIntegrationStatus as getLiveIntegrationStatus } from '@/lib/integrations/get-integration-status';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { startAgentAddonCheckout } from '@/lib/billing/checkout';
 import {
-  DEFAULT_ADDON_STATUS,
+  assertCanRunAgent,
+  assertCanWrite,
+  getAgentAddonBillingStatus
+} from '@/lib/billing/entitlements';
+import {
   DEFAULT_AGENT_CONFIG,
   defaultWorkspaceAgentConfig,
   emptyIntelligence
@@ -442,35 +447,21 @@ export class XeroRevCollectService implements RevCollectService {
     return readLatestAriRun(tenantId);
   }
 
-  async getAgentAddonStatus() {
-    const tenantId = await getIntegrationTenantId();
-    const snapshot = await (await getCanonicalStore()).read(tenantId);
-    return { ...(snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS) };
+  getAgentAddonStatus() {
+    return getAgentAddonBillingStatus();
   }
 
-  async subscribeAgentAddon() {
-    const tenantId = await getIntegrationTenantId();
-    const store = await getCanonicalStore();
-    const snapshot = await store.read(tenantId);
-    snapshot.agentAddonStatus = {
-      ...(snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS),
-      subscribed: true
-    };
-    await store.write(tenantId, snapshot);
-    return { ...snapshot.agentAddonStatus };
+  subscribeAgentAddon() {
+    return startAgentAddonCheckout();
   }
 
   async activateAgent(): Promise<AgentActivationResult> {
+    await assertCanRunAgent();
     const tenantId = await getIntegrationTenantId();
     const store = await getCanonicalStore();
     const snapshot = await store.read(tenantId);
-    const addon = snapshot.agentAddonStatus ?? DEFAULT_ADDON_STATUS;
-    if (!addon.subscribed) {
-      return { active: false, needsBilling: true };
-    }
     const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
     snapshot.agentConfig = { ...config, isActive: true };
-    snapshot.agentAddonStatus = addon;
     await store.write(tenantId, snapshot);
     return { active: true };
   }
@@ -495,6 +486,7 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async recordCollectionDecision(input: CollectionDecisionInput) {
+    await assertCanWrite();
     const tenantId = await getIntegrationTenantId();
     const store = await getCanonicalStore();
     const snapshot = await store.read(tenantId);
@@ -536,6 +528,7 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async recordRelationshipPolicy(input: RelationshipPolicyInput) {
+    await assertCanWrite();
     const tenantId = await getIntegrationTenantId();
     const store = await getCanonicalStore();
     const snapshot = await store.read(tenantId);
@@ -555,6 +548,7 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult> {
+    await assertCanWrite();
     const tenantId = await getIntegrationTenantId();
     const { customers, invoices, inboxMessages } = await loadArData();
     const customer = customers.find((item) => item.id === input.customerId);

@@ -69,7 +69,7 @@ const integrations = [
   },
   {
     key: 'stripe' as const,
-    href: '/settings/billing',
+    href: '/settings/billing?addon=agent',
     connectPath: null,
     icon: Icons.billing
   }

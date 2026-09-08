@@ -221,6 +221,18 @@ export interface AgentAddonStatus {
   subscribed: boolean;
   priceMonthlyCents: number;
   estimatedAiCostMonthlyCents: number;
+  stripeCustomerId?: string | null;
+  hasBase?: boolean;
+  inTrial?: boolean;
+  trialEndsAt?: string | null;
+  daysLeft?: number;
+  canWrite?: boolean;
+  canRunAgent?: boolean;
+  basePriceMonthlyCents?: number;
+}
+
+export interface AgentAddonSubscribeResult extends AgentAddonStatus {
+  checkoutUrl?: string;
 }
 
 export interface AgentActivationResult {

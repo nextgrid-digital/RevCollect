@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type {
+  AgentAddonSubscribeResult,
   AgentConfig,
   AgingBucket,
   AgingReportFilters,
@@ -22,6 +23,7 @@ import type {
 } from './service';
 import type { DataAccessEvent, TenantId } from './types';
 import type { InboxSendError } from '../extract/record-inbox-send';
+import type { CheckoutKind } from '@/lib/billing/pricing';
 
 export const revcollectKeys = {
   all: ['revcollect'] as const,
@@ -315,16 +317,92 @@ export function useUpdateAgentConfig() {
   });
 }
 
+export function useStartCheckout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (kind: CheckoutKind) => {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind })
+      });
+      const payload = (await response.json()) as AgentAddonSubscribeResult & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Could not start checkout');
+      }
+      return payload;
+    },
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+      queryClient.setQueryData(revcollectKeys.agentAddon(), data);
+      toast.success('Subscription is already active');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not start checkout');
+    }
+  });
+}
+
 export function useSubscribeAgentAddon() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => getRevCollectService().subscribeAgentAddon(),
     onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
       queryClient.setQueryData(revcollectKeys.agentAddon(), data);
-      toast.success('Collections Agent add-on subscribed');
+      toast.success(data.subscribed ? 'Collections Agent add-on is active' : 'Checkout opened');
     },
-    onError: () => {
-      toast.error('Could not subscribe to add-on');
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not subscribe to add-on');
+    }
+  });
+}
+
+export function useBillingPortal() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/billing/portal', { method: 'POST' });
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error ?? 'Could not open billing portal');
+      }
+      return payload.url;
+    },
+    onSuccess: (url) => {
+      window.location.assign(url);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not open billing portal');
+    }
+  });
+}
+
+export function useConfirmCheckoutSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const response = await fetch('/api/billing/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Could not confirm checkout');
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.agentAddon() });
+      toast.success('Subscription updated');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not confirm checkout');
     }
   });
 }
@@ -538,6 +616,17 @@ export function useSendInboxFollowUp() {
     },
     onError: (error) => {
       const sendError = error as InboxSendError;
+      if (sendError.status === 402) {
+        toast.error('Subscribe to send follow-ups', {
+          action: {
+            label: 'Billing',
+            onClick: () => {
+              window.location.assign('/settings/billing');
+            }
+          }
+        });
+        return;
+      }
       if (
         sendError.status === 409 ||
         sendError.code === 'gmail_expired' ||

@@ -128,8 +128,8 @@ export const AUDIT_FAQ = [
 
 export const AUDIT_FOOTER_CTA = {
   headline: 'The report told you where the money sits. The agent goes and gets it.',
-  body: 'RevCollect reads every reply, tracks every promise to its date, and drafts every follow-up with the invoices attached, for your one-tap approval. The first overnight run on your real book is free for 7 days.',
-  button: 'Start the free agent trial',
+  body: 'RevCollect reads every reply, tracks every promise to its date, and drafts every follow-up with the invoices attached, for your one-tap approval. The first month is free, with no credit card. Then $49/month, plus $39 if you keep the agent.',
+  button: 'Start the free month',
   href: 'https://revcollect.ai',
   smallPrint:
     '15-minute setup from QuickBooks or Xero. Every send approved by you. Your data never trains AI.'

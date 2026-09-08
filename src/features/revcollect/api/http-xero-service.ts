@@ -17,6 +17,7 @@ import { MOCK_TENANT_ID } from './types';
 import type {
   AgentActivationResult,
   AgentAddonStatus,
+  AgentAddonSubscribeResult,
   AgentConfig,
   AgingBucket,
   AgingBucketSummary,
@@ -195,7 +196,7 @@ export class HttpXeroRevCollectService implements RevCollectService {
   }
 
   subscribeAgentAddon() {
-    return postJson<AgentAddonStatus>('subscribeAgentAddon');
+    return postJson<AgentAddonSubscribeResult>('subscribeAgentAddon');
   }
 
   activateAgent() {

@@ -3,6 +3,7 @@ import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { getConnectedBooksProvider, ingestConnectedBooks } from '@/lib/canonical/ingest-accounting';
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { assertCanWrite, billingErrorResponse } from '@/lib/billing/entitlements';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -34,6 +35,7 @@ export async function POST() {
   }
 
   try {
+    await assertCanWrite();
     const snapshot = await ingestConnectedBooks(tenantId);
     return NextResponse.json({
       lastSyncAt: snapshot.ingestedAt,
@@ -41,6 +43,8 @@ export async function POST() {
       invoiceCount: snapshot.invoices.length
     });
   } catch (error) {
+    const billingResponse = billingErrorResponse(error);
+    if (billingResponse) return billingResponse;
     if (error instanceof XeroNotConnectedError) {
       if (error.code === 'xero_expired') {
         return expiredResponse();

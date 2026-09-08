@@ -102,6 +102,10 @@ export interface CanonicalSnapshot {
   ariRuns: AriRunRecord[];
   workspaceSettings: WorkspaceGeneralSettings | null;
   agentAddonStatus: AgentAddonStatus | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  trialStartedAt: string | null;
+  baseSubscribed: boolean;
   ingestedAt: string | null;
 }
 
