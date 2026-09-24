@@ -114,6 +114,20 @@ export async function refreshZohoAccessToken(
   };
 }
 
+export async function revokeZohoRefreshToken(
+  config: ZohoOAuthConfig,
+  refreshToken: string
+): Promise<void> {
+  const response = await fetch(`${config.accountsUrl}/oauth/v2/token/revoke`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ token: refreshToken })
+  });
+  if (!response.ok && response.status !== 400) {
+    throw new Error(`Zoho token revoke failed: ${response.status} ${await response.text()}`);
+  }
+}
+
 export function isZohoInvalidGrantError(error: unknown): boolean {
   return error instanceof Error && error.name === 'ZohoInvalidGrantError';
 }

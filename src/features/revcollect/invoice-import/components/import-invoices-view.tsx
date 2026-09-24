@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { revcollectKeys, useIntegrationStatus } from '@/features/revcollect/api/queries';
+import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
 import type {
   InvoiceImportCreateResult,
   InvoiceImportDraft
@@ -28,6 +29,7 @@ export function ImportInvoicesView() {
   const [isCreating, startCreate] = useTransition();
 
   const xeroConnected = integrationStatus?.xero.connected ?? false;
+  const connectedBooks = integrationStatus ? connectedBooksFromStatus(integrationStatus) : null;
 
   function updateDraft(id: string, patch: Partial<InvoiceImportDraft>) {
     setDrafts((current) =>
@@ -158,7 +160,15 @@ export function ImportInvoicesView() {
           </div>
 
           {statusPending ? (
-            <p className='text-muted-foreground text-sm'>Checking Xero connection…</p>
+            <p className='text-muted-foreground text-sm'>Checking accounting connection…</p>
+          ) : connectedBooks && connectedBooks !== 'xero' ? (
+            <div className='border-border bg-muted/40 space-y-3 rounded-lg border p-4'>
+              <p className='text-sm font-medium'>Import to books is Xero-only for now</p>
+              <p className='text-muted-foreground text-sm'>
+                You can still attach existing invoice PDFs from{' '}
+                {connectedBooks === 'zoho' ? 'Zoho Books' : 'QuickBooks'} when you send mail.
+              </p>
+            </div>
           ) : !xeroConnected ? (
             <div className='border-border bg-muted/40 space-y-3 rounded-lg border p-4'>
               <p className='text-sm font-medium'>Connect Xero first</p>

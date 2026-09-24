@@ -6,7 +6,7 @@ import {
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const PERSIST_KEY = 'revcollect-query-cache-v2';
+const PERSIST_KEY = 'revcollect-query-cache-v3';
 
 function shouldPersistQuery(query: {
   queryKey: readonly unknown[];
@@ -16,7 +16,8 @@ function shouldPersistQuery(query: {
     query.state.status === 'success' &&
     query.queryKey[0] === 'revcollect' &&
     query.queryKey[1] !== 'inbox' &&
-    query.queryKey[1] !== 'agent'
+    query.queryKey[1] !== 'agent' &&
+    query.queryKey[1] !== 'integrations'
   );
 }
 
@@ -46,6 +47,7 @@ function restorePersistedQueries(queryClient: QueryClient): void {
     }
     hydrate(queryClient, persisted.clientState);
     void queryClient.invalidateQueries({ queryKey: ['revcollect', 'inbox'] });
+    void queryClient.invalidateQueries({ queryKey: ['revcollect', 'integrations'] });
   } catch {
     window.localStorage.removeItem(PERSIST_KEY);
   }

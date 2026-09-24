@@ -66,9 +66,8 @@ export function IntegrationDisconnectButton({
             disabled={disconnect.isPending}
             onClick={(event) => {
               event.preventDefault();
-              disconnect.mutate(provider, {
-                onSuccess: () => setOpen(false)
-              });
+              setOpen(false);
+              disconnect.mutate(provider);
             }}
           >
             Disconnect

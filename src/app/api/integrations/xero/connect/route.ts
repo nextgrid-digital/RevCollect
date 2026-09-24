@@ -10,6 +10,11 @@ import {
   sanitizeOAuthReturnPath,
   XERO_OAUTH_RETURN_COOKIE
 } from '@/lib/integrations/oauth-return';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import {
+  assertCanStartBooksConnect,
+  BOOKS_ALREADY_CONNECTED
+} from '@/lib/integrations/books-exclusivity';
 import { buildXeroAuthUrl, getXeroOAuthConfig } from '@/lib/integrations/xero-oauth';
 
 const OAUTH_STATE_COOKIE = 'xero_oauth_state';
@@ -33,6 +38,12 @@ export async function GET(request: NextRequest) {
 
   if (!canPersistIntegrations()) {
     return errorRedirect(getIntegrationStorageErrorCode(), returnTo);
+  }
+
+  const tenantId = await getIntegrationTenantId();
+  const allowed = await assertCanStartBooksConnect(tenantId, 'xero');
+  if (!allowed.ok) {
+    return errorRedirect(BOOKS_ALREADY_CONNECTED, returnTo);
   }
 
   const state = randomBytes(24).toString('hex');

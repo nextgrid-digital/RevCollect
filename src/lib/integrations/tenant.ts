@@ -25,8 +25,11 @@ export async function getIntegrationTenantId(): Promise<string> {
   return preferred[0] ?? keys[0] ?? MOCK_TENANT_ID;
 }
 
+const migratedLegacyWorkspaces = new Set<string>();
+
 async function migrateLegacyWorkspace(userId: string): Promise<void> {
   if (userId === MOCK_TENANT_ID) return;
+  if (migratedLegacyWorkspaces.has(userId)) return;
   await Promise.all([
     copyIntegrationSecret('xero', MOCK_TENANT_ID, userId),
     copyIntegrationSecret('gmail', MOCK_TENANT_ID, userId),
@@ -36,4 +39,5 @@ async function migrateLegacyWorkspace(userId: string): Promise<void> {
       console.error('[integrations/tenant] copyCanonicalFile failed:', error);
     })
   ]);
+  migratedLegacyWorkspaces.add(userId);
 }

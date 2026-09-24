@@ -205,7 +205,8 @@ export function integrationStatusQueryOptions() {
       }
       return response.json() as Promise<IntegrationStatus>;
     },
-    staleTime: 30_000
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 }
 
@@ -479,13 +480,39 @@ export function useDisconnectIntegration() {
         throw new Error('Failed to disconnect');
       }
     },
-    onSuccess: (_data, provider) => {
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
-      toast.success(disconnectToast(provider));
+    onMutate: async (provider) => {
+      await queryClient.cancelQueries({ queryKey: revcollectKeys.integrationStatus() });
+      const previous = queryClient.getQueryData<IntegrationStatus>(
+        revcollectKeys.integrationStatus()
+      );
+      queryClient.setQueryData<IntegrationStatus>(revcollectKeys.integrationStatus(), (current) => {
+        if (!current) return current;
+        const labels: Record<IntegrationProviderKey, string> = {
+          gmail: 'Gmail',
+          xero: 'Xero',
+          quickbooks: 'QuickBooks',
+          zoho: 'Zoho Books'
+        };
+        return {
+          ...current,
+          [provider]: {
+            connected: false,
+            label: labels[provider],
+            detail: 'Not connected'
+          }
+        };
+      });
+      return { previous };
     },
     onError: () => {
       toast.error('Could not disconnect');
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+    },
+    onSuccess: (_data, provider) => {
+      toast.success(disconnectToast(provider));
     }
   });
 }

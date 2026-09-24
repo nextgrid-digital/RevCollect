@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { getConnectedBooksProvider, ingestConnectedBooks } from '@/lib/canonical/ingest-accounting';
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { ZohoNotConnectedError } from '@/lib/integrations/zoho-api';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { assertCanWrite, billingErrorResponse } from '@/lib/billing/entitlements';
 
@@ -47,6 +48,12 @@ export async function POST() {
     if (billingResponse) return billingResponse;
     if (error instanceof XeroNotConnectedError) {
       if (error.code === 'xero_expired') {
+        return expiredResponse();
+      }
+      return disconnectedResponse();
+    }
+    if (error instanceof ZohoNotConnectedError) {
+      if (error.code === 'zoho_expired') {
         return expiredResponse();
       }
       return disconnectedResponse();

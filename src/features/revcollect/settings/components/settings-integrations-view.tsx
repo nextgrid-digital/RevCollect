@@ -9,8 +9,14 @@ import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
+import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
 import { revcollectKeys, useIntegrationStatus } from '../../api/queries';
 import { formatLastSyncLabel } from '../../utils';
+import {
+  BOOKS_LEDGER_OPTIONS,
+  BooksProviderPicker,
+  booksConnectPath
+} from './books-provider-picker';
 import {
   IntegrationDisconnectButton,
   IntegrationReconnectLinks,
@@ -39,35 +45,10 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   missing_zoho_credentials:
     'Zoho OAuth is not configured. Add ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.',
   no_zoho_organisation: 'No Zoho organisation was returned. Check your Zoho account and try again.',
+  books_already_connected:
+    'This workspace already has a ledger connected. Disconnect it first to switch.',
   access_denied: 'Connection was cancelled.'
 };
-
-const integrations = [
-  {
-    key: 'gmail' as const,
-    href: '/onboarding/connect-gmail',
-    connectPath: '/api/integrations/gmail/connect?returnTo=/settings/integrations',
-    icon: Icons.inbox
-  },
-  {
-    key: 'xero' as const,
-    href: '/onboarding/connect-xero',
-    connectPath: '/api/integrations/xero/connect?returnTo=/settings/integrations',
-    icon: Icons.billing
-  },
-  {
-    key: 'quickbooks' as const,
-    href: '/onboarding/connect-quickbooks',
-    connectPath: '/api/integrations/quickbooks/connect?returnTo=/settings/integrations',
-    icon: Icons.billing
-  },
-  {
-    key: 'zoho' as const,
-    href: '/onboarding/connect-zoho',
-    connectPath: '/api/integrations/zoho/connect?returnTo=/settings/integrations',
-    icon: Icons.billing
-  }
-];
 
 function IntegrationConnectToast() {
   const searchParams = useSearchParams();
@@ -94,6 +75,10 @@ function IntegrationConnectToast() {
 export function SettingsIntegrationsView() {
   const isHydrated = useIsHydrated();
   const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
+  const connectedBooks = integrationStatus ? connectedBooksFromStatus(integrationStatus) : null;
+  const connectedOption = connectedBooks ? BOOKS_LEDGER_OPTIONS[connectedBooks] : null;
+  const connectedItem =
+    connectedBooks && integrationStatus ? integrationStatus[connectedBooks] : null;
 
   return (
     <div className='divide-border divide-y'>
@@ -116,62 +101,83 @@ export function SettingsIntegrationsView() {
       ) : !isHydrated || isPending || !integrationStatus ? (
         <p className='text-muted-foreground text-sm'>Loading integrations…</p>
       ) : (
-        integrations.map(({ key, href, connectPath, icon: Icon }, index) => {
-          const item = integrationStatus[key];
-          return (
+        <>
+          <SettingsSection
+            title={integrationStatus.gmail.label}
+            leading={<Icons.inbox className='size-4' />}
+            action={
+              <Badge variant={integrationStatus.gmail.connected ? 'default' : 'secondary'}>
+                {integrationStatus.gmail.connected ? 'Connected' : 'Not connected'}
+              </Badge>
+            }
+            className='pb-6'
+          >
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+              <p className='text-muted-foreground text-sm'>{integrationStatus.gmail.detail}</p>
+              <div className='flex flex-wrap gap-2'>
+                {!integrationStatus.gmail.connected ? (
+                  <Button asChild size='sm' variant='outline'>
+                    <Link href='/onboarding/connect-gmail'>Connect</Link>
+                  </Button>
+                ) : null}
+                <Button asChild size='sm' variant='outline'>
+                  <Link href='/api/integrations/gmail/connect?returnTo=/settings/integrations'>
+                    Reconnect
+                  </Link>
+                </Button>
+                {integrationStatus.gmail.connected ? (
+                  <IntegrationDisconnectButton provider='gmail' label='Gmail' />
+                ) : null}
+              </div>
+            </div>
+          </SettingsSection>
+
+          {!connectedBooks ? (
             <SettingsSection
-              key={key}
-              title={item.label}
-              leading={<Icon className='size-4' />}
-              action={
-                <Badge variant={item.connected ? 'default' : 'secondary'}>
-                  {item.connected ? 'Connected' : 'Not connected'}
-                </Badge>
-              }
-              className={index === 0 ? 'pb-6' : index === integrations.length - 1 ? 'pt-6' : 'py-6'}
+              title='Connect your ledger'
+              leading={<Icons.billing className='size-4' />}
+              action={<Badge variant='secondary'>Not connected</Badge>}
+              className='pt-6'
+            >
+              <BooksProviderPicker returnTo='/settings/integrations' />
+            </SettingsSection>
+          ) : connectedOption && connectedItem ? (
+            <SettingsSection
+              title={connectedItem.label}
+              leading={<Icons.billing className='size-4' />}
+              action={<Badge variant='default'>Connected</Badge>}
+              className='pt-6'
             >
               <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                 <div className='space-y-1'>
-                  <p className='text-muted-foreground text-sm'>{item.detail}</p>
-                  {(key === 'xero' || key === 'quickbooks' || key === 'zoho') && item.connected ? (
-                    <p className='text-muted-foreground text-xs'>
-                      {item.lastSyncAt
-                        ? `Last synced ${formatLastSyncLabel(item.lastSyncAt)}`
-                        : 'Never synced'}
-                    </p>
-                  ) : null}
+                  <p className='text-muted-foreground text-sm'>{connectedItem.detail}</p>
+                  <p className='text-muted-foreground text-xs'>
+                    {connectedItem.lastSyncAt
+                      ? `Last synced ${formatLastSyncLabel(connectedItem.lastSyncAt)}`
+                      : 'Never synced'}
+                  </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
-                  {!item.connected ? (
-                    <Button asChild size='sm' variant='outline'>
-                      <Link href={href}>{key === 'xero' ? 'Connect with Xero' : 'Connect'}</Link>
-                    </Button>
-                  ) : null}
-                  {(key === 'xero' || key === 'gmail' || key === 'quickbooks' || key === 'zoho') &&
-                  connectPath ? (
-                    <Button asChild size='sm' variant='outline'>
-                      <Link href={connectPath}>
-                        {key === 'xero' ? 'Reconnect with Xero' : 'Reconnect'}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {(key === 'xero' || key === 'quickbooks' || key === 'zoho') && item.connected ? (
-                    <XeroResyncButton />
-                  ) : null}
-                  {key === 'xero' && item.connected ? (
+                  <Button asChild size='sm' variant='outline'>
+                    <Link href={booksConnectPath(connectedBooks, '/settings/integrations')}>
+                      {connectedOption.reconnectLabel}
+                    </Link>
+                  </Button>
+                  <XeroResyncButton />
+                  {connectedBooks === 'xero' ? (
                     <Button asChild size='sm' variant='outline'>
                       <Link href='/onboarding/import-invoices'>Import PDFs</Link>
                     </Button>
                   ) : null}
-                  {item.connected &&
-                  (key === 'xero' || key === 'gmail' || key === 'quickbooks' || key === 'zoho') ? (
-                    <IntegrationDisconnectButton provider={key} label={item.label} />
-                  ) : null}
+                  <IntegrationDisconnectButton
+                    provider={connectedBooks}
+                    label={connectedItem.label}
+                  />
                 </div>
               </div>
             </SettingsSection>
-          );
-        })
+          ) : null}
+        </>
       )}
     </div>
   );

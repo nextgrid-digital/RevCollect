@@ -10,6 +10,11 @@ import {
   QUICKBOOKS_OAUTH_RETURN_COOKIE,
   sanitizeOAuthReturnPath
 } from '@/lib/integrations/oauth-return';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import {
+  assertCanStartBooksConnect,
+  BOOKS_ALREADY_CONNECTED
+} from '@/lib/integrations/books-exclusivity';
 import {
   buildQuickBooksAuthUrl,
   getQuickBooksOAuthConfig
@@ -36,6 +41,12 @@ export async function GET(request: NextRequest) {
 
   if (!canPersistIntegrations()) {
     return errorRedirect(getIntegrationStorageErrorCode(), returnTo);
+  }
+
+  const tenantId = await getIntegrationTenantId();
+  const allowed = await assertCanStartBooksConnect(tenantId, 'quickbooks');
+  if (!allowed.ok) {
+    return errorRedirect(BOOKS_ALREADY_CONNECTED, returnTo);
   }
 
   const state = randomBytes(24).toString('hex');

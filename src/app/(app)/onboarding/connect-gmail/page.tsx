@@ -8,8 +8,8 @@ export default function ConnectGmailPage() {
       <Suspense fallback={null}>
         <ConnectGmailView
           nextStep={{
-            href: '/onboarding/connect-xero',
-            label: 'Connect Xero'
+            href: '/onboarding',
+            label: 'Connect books'
           }}
         />
       </Suspense>

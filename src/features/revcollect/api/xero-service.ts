@@ -1,10 +1,7 @@
 import 'server-only';
 import { after } from 'next/server';
-import {
-  fetchXeroInvoicePdf,
-  getXeroAccessContext,
-  XeroNotConnectedError
-} from '@/lib/integrations/xero-api';
+import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { fetchConnectedInvoicePdf } from '@/lib/integrations/books-invoice-pdf';
 import { getIntegrationStatus as getLiveIntegrationStatus } from '@/lib/integrations/get-integration-status';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { startAgentAddonCheckout } from '@/lib/billing/checkout';
@@ -558,7 +555,7 @@ export class XeroRevCollectService implements RevCollectService {
     const policy = policyFromCustomer(customer);
     const to = (policy.preferredEmail ?? customer.email).trim();
     if (!to || !to.includes('@')) {
-      throw new Error('This customer has no email address in Xero');
+      throw new Error('This customer has no email address');
     }
     const blocked = new Set(policy.doNotContact.map((email) => email.trim().toLowerCase()));
     if (policy.state === 'do_not_contact' || blocked.has(to.toLowerCase())) {
@@ -580,11 +577,10 @@ export class XeroRevCollectService implements RevCollectService {
 
     let attachments: Array<{ filename: string; mimeType: string; content: Buffer }> | undefined;
     if (attachedInvoices.length > 0) {
-      const context = await getXeroAccessContext(tenantId);
       attachments = await Promise.all(
         attachedInvoices.map(async (invoice) => {
           try {
-            const content = await fetchXeroInvoicePdf(context, invoice.id);
+            const content = await fetchConnectedInvoicePdf(tenantId, invoice.id);
             return {
               filename: `${sanitizeInvoicePdfFilename(invoice.number)}.pdf`,
               mimeType: 'application/pdf',

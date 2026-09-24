@@ -2,28 +2,29 @@ import { getCanonicalStore } from './store';
 import { ingestXeroAr } from './ingest-xero';
 import { ingestQuickBooksAr } from './ingest-quickbooks';
 import { ingestZohoAr } from './ingest-zoho';
-import { getXeroConnection } from '@/lib/integrations/xero-connection-store';
-import { getQuickBooksConnection } from '@/lib/integrations/quickbooks-connection-store';
-import { getZohoConnection } from '@/lib/integrations/zoho-connection-store';
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { ZohoNotConnectedError } from '@/lib/integrations/zoho-api';
+import { reconcileExclusiveBooks } from '@/lib/integrations/books-exclusivity';
 import type { BooksProvider } from '@/lib/integrations/books-provider';
 import { INGEST_STALE_MS, type CanonicalSnapshot } from './types';
 
 export async function getConnectedBooksProvider(tenantId: string): Promise<BooksProvider | null> {
-  if (await getXeroConnection(tenantId)) return 'xero';
-  if (await getQuickBooksConnection(tenantId)) return 'quickbooks';
-  if (await getZohoConnection(tenantId)) return 'zoho';
-  return null;
+  return reconcileExclusiveBooks(tenantId);
 }
 
 export async function ingestConnectedBooks(tenantId: string): Promise<CanonicalSnapshot> {
   const provider = await getConnectedBooksProvider(tenantId);
+  if (provider === 'xero') return ingestXeroAr(tenantId);
   if (provider === 'quickbooks') return ingestQuickBooksAr(tenantId);
   if (provider === 'zoho') return ingestZohoAr(tenantId);
-  return ingestXeroAr(tenantId);
+  throw new Error('Accounting is not connected');
 }
 
 export const fetchOpenAr = ingestConnectedBooks;
+
+function isBooksDisconnected(error: unknown): boolean {
+  return error instanceof XeroNotConnectedError || error instanceof ZohoNotConnectedError;
+}
 
 export async function ensureAccountingIngest(
   tenantId: string,
@@ -45,7 +46,7 @@ export async function ensureAccountingIngest(
   try {
     return await ingestConnectedBooks(tenantId);
   } catch (error) {
-    if (error instanceof XeroNotConnectedError) return current;
+    if (isBooksDisconnected(error)) return current;
     throw error;
   }
 }
@@ -72,7 +73,7 @@ export function scheduleBackgroundAccountingIngest(
     return true;
   })()
     .catch((error) => {
-      if (error instanceof XeroNotConnectedError) return false;
+      if (isBooksDisconnected(error)) return false;
       console.error('[ingest-accounting] background ingest failed:', error);
       return false;
     })

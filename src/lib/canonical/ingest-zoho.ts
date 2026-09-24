@@ -1,6 +1,10 @@
 import { mapLedgerCustomers, mapLedgerInvoice } from '@/features/revcollect/api/xero-map';
 import { applyOpenArSnapshot } from './apply-open-ar';
-import { fetchZohoAccountsReceivable } from '@/lib/integrations/zoho-api';
+import {
+  fetchZohoAccountsReceivable,
+  zohoContactEmail,
+  zohoLedgerStatus
+} from '@/lib/integrations/zoho-api';
 import type { CanonicalPayment, CanonicalSnapshot } from './types';
 
 function toCents(amount: number | undefined): number {
@@ -19,7 +23,6 @@ export async function ingestZohoAr(tenantId: string): Promise<CanonicalSnapshot>
     if (!invoice.invoice_id || !invoice.customer_id) return [];
     const amountDueCents = toCents(invoice.balance);
     const amountCents = toCents(invoice.total ?? invoice.balance);
-    const unpaid = amountDueCents > 0;
     return [
       mapLedgerInvoice({
         id: invoice.invoice_id,
@@ -30,7 +33,7 @@ export async function ingestZohoAr(tenantId: string): Promise<CanonicalSnapshot>
         paidCents: Math.max(0, amountCents - amountDueCents),
         dueDate: invoice.due_date ?? invoice.date ?? new Date().toISOString().slice(0, 10),
         issueDate: invoice.date,
-        ledgerStatus: unpaid ? 'AUTHORISED' : 'PAID'
+        ledgerStatus: zohoLedgerStatus(invoice.status, amountDueCents)
       })
     ];
   });
@@ -38,7 +41,7 @@ export async function ingestZohoAr(tenantId: string): Promise<CanonicalSnapshot>
   const contacts = rawContacts.map((contact) => ({
     id: contact.contact_id,
     name: contact.contact_name ?? 'Customer',
-    email: contact.email ?? '',
+    email: zohoContactEmail(contact),
     company: contact.company_name ?? contact.contact_name
   }));
   const customers = mapLedgerCustomers(contacts, invoices);

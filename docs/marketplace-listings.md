@@ -1,5 +1,7 @@
 # Marketplace listing copy and founder checklist
 
+Full Intuit and Zoho **listing requirements** (reviews, fees, URLs, assets): [marketplace-listing-requirements.md](./marketplace-listing-requirements.md).
+
 Do not put “Xero”, “QuickBooks”, or “Zoho” in the RevCollect product name.
 
 ## Positioning (all stores)

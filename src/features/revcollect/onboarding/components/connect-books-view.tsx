@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
@@ -9,6 +9,7 @@ import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { Button } from '@/components/ui/button';
 import { revcollectKeys, useIntegrationStatus } from '@/features/revcollect/api/queries';
 import { useQueryClient } from '@tanstack/react-query';
+import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
 import { toast } from 'sonner';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -29,6 +30,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_xero_organisation: 'No Xero organisation was returned. Check your Xero account and try again.',
   no_zoho_organisation: 'No Zoho organisation was returned. Check your Zoho account and try again.',
   xero_connect_failed: 'Could not connect Xero. Check your credentials and try again.',
+  books_already_connected:
+    'This workspace already has a ledger connected. Disconnect it first to switch.',
   access_denied: 'Connection was cancelled.'
 };
 
@@ -87,12 +90,22 @@ interface ConnectBooksViewProps {
 
 export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: integrationStatus, isPending } = useIntegrationStatus();
   const copy = BOOKS_COPY[provider];
   const status = integrationStatus?.[provider];
   const connected = status?.connected ?? false;
   const organisationName = status?.detail;
+  const otherBooks =
+    integrationStatus && !isPending ? connectedBooksFromStatus(integrationStatus) : null;
+  const blocked = Boolean(otherBooks && otherBooks !== provider);
+
+  useEffect(() => {
+    if (blocked) {
+      router.replace('/onboarding');
+    }
+  }, [blocked, router]);
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -110,6 +123,18 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
 
   function handleConnect() {
     window.location.assign(copy.connectPath);
+  }
+
+  if (blocked) {
+    return (
+      <WorkspaceCanvas className='flex-col'>
+        <WorkspacePageTitle
+          className='h-8 shrink-0'
+          breadcrumbs={[{ label: 'Onboarding', href: '/onboarding' }, { label: copy.title }]}
+        />
+        <p className='text-muted-foreground p-4 text-sm'>This workspace already has a ledger.</p>
+      </WorkspaceCanvas>
+    );
   }
 
   return (

@@ -7,7 +7,14 @@ import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { Button } from '@/components/ui/button';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
-import { useIntegrationStatus, type IntegrationProviderKey } from '../../api/queries';
+import { useIsHydrated } from '@/hooks/use-is-hydrated';
+import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
+import { useIntegrationStatus } from '../../api/queries';
+import {
+  BOOKS_LEDGER_OPTIONS,
+  BooksProviderPicker,
+  booksConnectPath
+} from '../../settings/components/books-provider-picker';
 import {
   IntegrationDisconnectButton,
   IntegrationReconnectLinks,
@@ -29,8 +36,26 @@ function OnboardingHeader() {
   );
 }
 
+function StepStatusIcon({ done }: { done: boolean }) {
+  return done ? (
+    <Icons.check className='text-primary size-4' />
+  ) : (
+    <span className='bg-muted size-4 rounded-full' />
+  );
+}
+
 export function OnboardingSteps() {
+  const isHydrated = useIsHydrated();
   const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
+
+  if (!isHydrated) {
+    return (
+      <WorkspaceCanvas className='flex-col'>
+        <OnboardingHeader />
+        <p className='text-muted-foreground text-sm'>Loading onboarding steps…</p>
+      </WorkspaceCanvas>
+    );
+  }
 
   if (isError) {
     return (
@@ -64,142 +89,97 @@ export function OnboardingSteps() {
     );
   }
 
-  const booksConnected =
-    integrationStatus.xero.connected ||
-    integrationStatus.quickbooks.connected ||
-    integrationStatus.zoho.connected;
-
-  const steps: {
-    title: string;
-    description: string;
-    href: string;
-    done: boolean;
-    provider?: IntegrationProviderKey;
-    connectPath?: string;
-    lastSyncAt?: string | null;
-    connectLabel?: string;
-  }[] = [
-    {
-      title: 'Connect Gmail',
-      description: 'Send and receive collection emails from your inbox.',
-      href: '/onboarding/connect-gmail',
-      done: integrationStatus.gmail.connected,
-      provider: 'gmail',
-      connectPath: '/api/integrations/gmail/connect?returnTo=/onboarding'
-    },
-    {
-      title: 'Connect with Xero',
-      description:
-        booksConnected && !integrationStatus.xero.connected
-          ? 'Another ledger is already connected. One books connection per workspace.'
-          : 'Customers, invoices, and payment status sync from your organisation.',
-      href: '/onboarding/connect-xero',
-      done: integrationStatus.xero.connected,
-      provider: 'xero',
-      connectPath: '/api/integrations/xero/connect?returnTo=/onboarding',
-      lastSyncAt: integrationStatus.xero.lastSyncAt,
-      connectLabel: 'Connect with Xero'
-    },
-    {
-      title: 'Connect QuickBooks',
-      description:
-        booksConnected && !integrationStatus.quickbooks.connected
-          ? 'Another ledger is already connected. One books connection per workspace.'
-          : 'US QuickBooks Online sandbox or production company.',
-      href: '/onboarding/connect-quickbooks',
-      done: integrationStatus.quickbooks.connected,
-      provider: 'quickbooks',
-      connectPath: '/api/integrations/quickbooks/connect?returnTo=/onboarding',
-      lastSyncAt: integrationStatus.quickbooks.lastSyncAt
-    },
-    {
-      title: 'Connect Zoho Books',
-      description:
-        booksConnected && !integrationStatus.zoho.connected
-          ? 'Another ledger is already connected. One books connection per workspace.'
-          : 'Zoho Books organisation. Gmail stays the send channel.',
-      href: '/onboarding/connect-zoho',
-      done: integrationStatus.zoho.connected,
-      provider: 'zoho',
-      connectPath: '/api/integrations/zoho/connect?returnTo=/onboarding',
-      lastSyncAt: integrationStatus.zoho.lastSyncAt
-    },
-    {
-      title: 'Open your dashboard',
-      description: 'See who needs attention and what ARI ran overnight.',
-      href: POST_LOGIN_PATH,
-      done: false
-    }
-  ];
+  const connectedBooks = connectedBooksFromStatus(integrationStatus);
+  const connectedOption = connectedBooks ? BOOKS_LEDGER_OPTIONS[connectedBooks] : null;
+  const connectedStatus = connectedBooks ? integrationStatus[connectedBooks] : null;
 
   return (
     <WorkspaceCanvas className='flex-col'>
       <OnboardingHeader />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className='mx-auto flex w-full max-w-2xl flex-col gap-4 pb-6'>
-          {steps.map((step) => (
-            <WorkspaceCard key={step.title} className='p-4 md:p-5'>
+          <WorkspaceCard className='p-4 md:p-5'>
+            <div className='flex flex-col gap-1'>
+              <h2 className='flex items-center gap-2 text-base font-semibold'>
+                <StepStatusIcon done={integrationStatus.gmail.connected} />
+                Connect Gmail
+              </h2>
+              <p className='text-muted-foreground text-sm'>
+                Send and receive collection emails from your inbox.
+              </p>
+            </div>
+            <div className='mt-4 flex flex-wrap gap-2'>
+              {!integrationStatus.gmail.connected ? (
+                <Button asChild size='sm'>
+                  <Link href='/onboarding/connect-gmail'>Connect</Link>
+                </Button>
+              ) : null}
+              <Button asChild size='sm' variant='outline'>
+                <Link href='/api/integrations/gmail/connect?returnTo=/onboarding'>Reconnect</Link>
+              </Button>
+              {integrationStatus.gmail.connected ? (
+                <IntegrationDisconnectButton provider='gmail' label='Gmail' />
+              ) : null}
+            </div>
+          </WorkspaceCard>
+
+          {connectedBooks && connectedOption && connectedStatus ? (
+            <WorkspaceCard className='p-4 md:p-5'>
               <div className='flex flex-col gap-1'>
                 <h2 className='flex items-center gap-2 text-base font-semibold'>
-                  {step.done ? (
-                    <Icons.check className='text-primary size-4' />
-                  ) : (
-                    <span className='bg-muted size-4 rounded-full' />
-                  )}
-                  {step.title}
+                  <StepStatusIcon done />
+                  Connect {connectedOption.label}
                 </h2>
-                <p className='text-muted-foreground text-sm'>{step.description}</p>
-                {step.provider === 'xero' ||
-                step.provider === 'quickbooks' ||
-                step.provider === 'zoho' ? (
-                  <p className='text-muted-foreground text-xs'>
-                    {step.done
-                      ? step.lastSyncAt
-                        ? `Last synced ${formatLastSyncLabel(step.lastSyncAt)}`
-                        : 'Never synced'
-                      : 'Already connected before? Reconnect if Xero or Intuit revoked access.'}
-                  </p>
-                ) : null}
+                <p className='text-muted-foreground text-sm'>{connectedOption.description}</p>
+                <p className='text-muted-foreground text-xs'>
+                  {connectedStatus.lastSyncAt
+                    ? `Last synced ${formatLastSyncLabel(connectedStatus.lastSyncAt)}`
+                    : 'Never synced'}
+                </p>
               </div>
               <div className='mt-4 flex flex-wrap gap-2'>
-                {!step.done && !step.connectPath ? (
-                  <Button asChild size='sm'>
-                    <Link href={step.href}>Continue</Link>
-                  </Button>
-                ) : null}
-                {!step.done && step.connectPath ? (
-                  <Button asChild size='sm'>
-                    <Link href={step.href}>{step.connectLabel ?? 'Connect'}</Link>
-                  </Button>
-                ) : null}
-                {step.connectPath ? (
-                  <Button asChild size='sm' variant='outline'>
-                    <Link href={step.connectPath}>Reconnect</Link>
-                  </Button>
-                ) : null}
-                {(step.provider === 'xero' ||
-                  step.provider === 'quickbooks' ||
-                  step.provider === 'zoho') &&
-                step.done ? (
-                  <XeroResyncButton />
-                ) : null}
-                {step.provider && step.done ? (
-                  <IntegrationDisconnectButton
-                    provider={step.provider}
-                    label={
-                      step.provider === 'xero'
-                        ? 'Xero'
-                        : step.provider === 'gmail'
-                          ? 'Gmail'
-                          : step.provider === 'quickbooks'
-                            ? 'QuickBooks'
-                            : 'Zoho Books'
-                    }
-                  />
-                ) : null}
+                <Button asChild size='sm' variant='outline'>
+                  <Link href={booksConnectPath(connectedBooks, '/onboarding')}>
+                    {connectedOption.reconnectLabel}
+                  </Link>
+                </Button>
+                <XeroResyncButton />
+                <IntegrationDisconnectButton
+                  provider={connectedBooks}
+                  label={connectedOption.label}
+                />
               </div>
             </WorkspaceCard>
-          ))}
+          ) : (
+            <WorkspaceCard className='p-4 md:p-5'>
+              <div className='flex flex-col gap-1'>
+                <h2 className='flex items-center gap-2 text-base font-semibold'>
+                  <StepStatusIcon done={false} />
+                  Connect your ledger
+                </h2>
+              </div>
+              <div className='mt-4'>
+                <BooksProviderPicker returnTo='/onboarding' />
+              </div>
+            </WorkspaceCard>
+          )}
+
+          <WorkspaceCard className='p-4 md:p-5'>
+            <div className='flex flex-col gap-1'>
+              <h2 className='flex items-center gap-2 text-base font-semibold'>
+                <StepStatusIcon done={false} />
+                Open your dashboard
+              </h2>
+              <p className='text-muted-foreground text-sm'>
+                See who needs attention and what ARI ran overnight.
+              </p>
+            </div>
+            <div className='mt-4 flex flex-wrap gap-2'>
+              <Button asChild size='sm'>
+                <Link href={POST_LOGIN_PATH}>Continue</Link>
+              </Button>
+            </div>
+          </WorkspaceCard>
         </div>
       </div>
     </WorkspaceCanvas>

@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { getXeroRevCollectService } from '@/features/revcollect/api/xero-service';
 import { sanitizeInvoicePdfFilename } from '@/features/revcollect/lib/invoice-pdf';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
-import {
-  fetchXeroInvoicePdf,
-  getXeroAccessContext,
-  XeroNotConnectedError
-} from '@/lib/integrations/xero-api';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { fetchConnectedInvoicePdf } from '@/lib/integrations/books-invoice-pdf';
+import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
+import { ZohoNotConnectedError } from '@/lib/integrations/zoho-api';
 
 export const runtime = 'nodejs';
 
@@ -25,14 +24,14 @@ export async function GET(
   }
 
   try {
+    const tenantId = await getIntegrationTenantId();
     const invoices = await getXeroRevCollectService().listInvoices();
     const invoice = invoices.find((item) => item.id === invoiceId);
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    const context = await getXeroAccessContext();
-    const pdf = await fetchXeroInvoicePdf(context, invoice.id);
+    const pdf = await fetchConnectedInvoicePdf(tenantId, invoice.id);
     const filename = `${sanitizeInvoicePdfFilename(invoice.number)}.pdf`;
 
     return new NextResponse(new Uint8Array(pdf), {
@@ -44,7 +43,7 @@ export async function GET(
       }
     });
   } catch (error) {
-    if (error instanceof XeroNotConnectedError) {
+    if (error instanceof XeroNotConnectedError || error instanceof ZohoNotConnectedError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : 'Could not load invoice PDF';
