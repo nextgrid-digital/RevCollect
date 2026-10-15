@@ -6,7 +6,8 @@ import {
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const PERSIST_KEY = 'revcollect-query-cache-v3';
+/** v4: clear stale inbox rows that used pre-remap ledger ids (All N + empty list). */
+const PERSIST_KEY = 'revcollect-query-cache-v4';
 
 function shouldPersistQuery(query: {
   queryKey: readonly unknown[];
@@ -15,7 +16,6 @@ function shouldPersistQuery(query: {
   return (
     query.state.status === 'success' &&
     query.queryKey[0] === 'revcollect' &&
-    query.queryKey[1] !== 'inbox' &&
     query.queryKey[1] !== 'agent' &&
     query.queryKey[1] !== 'integrations'
   );

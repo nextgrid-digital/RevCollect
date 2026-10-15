@@ -1,5 +1,5 @@
 import { MOCK_TENANT_ID } from '@/features/revcollect/api/types';
-import { copyCanonicalFile } from '@/lib/canonical/file-store';
+import { copyCanonicalIfEmpty } from '@/lib/canonical/store';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import {
   copyIntegrationSecret,
@@ -34,10 +34,12 @@ async function migrateLegacyWorkspace(userId: string): Promise<void> {
     copyIntegrationSecret('xero', MOCK_TENANT_ID, userId),
     copyIntegrationSecret('gmail', MOCK_TENANT_ID, userId),
     copyIntegrationSecret('quickbooks', MOCK_TENANT_ID, userId),
-    copyIntegrationSecret('zoho', MOCK_TENANT_ID, userId),
-    copyCanonicalFile(MOCK_TENANT_ID, userId).catch((error) => {
-      console.error('[integrations/tenant] copyCanonicalFile failed:', error);
-    })
+    copyIntegrationSecret('zoho', MOCK_TENANT_ID, userId)
   ]);
+  try {
+    await copyCanonicalIfEmpty(MOCK_TENANT_ID, userId);
+  } catch (error) {
+    console.error('[tenant] canonical AR migrate failed:', error);
+  }
   migratedLegacyWorkspaces.add(userId);
 }

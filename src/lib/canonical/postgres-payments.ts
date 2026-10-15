@@ -1,10 +1,5 @@
+import { isUuid, ledgerEntityUuid } from './ledger-entity-id';
 import type { CanonicalPayment } from './types';
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value);
-}
 
 export function toPaymentRows(
   tenantId: string,
@@ -19,18 +14,25 @@ export function toPaymentRows(
   paid_at: string;
   external_id: string;
 }> {
-  return payments
-    .filter((payment) => isUuid(payment.id) && isUuid(payment.customerId))
-    .map((payment) => {
-      const invoiceId = payment.invoiceId;
-      return {
-        id: payment.id,
-        tenant_id: tenantId,
-        customer_id: payment.customerId,
-        invoice_id: invoiceId && isUuid(invoiceId) && invoiceIds.has(invoiceId) ? invoiceId : null,
-        amount_cents: payment.amountCents,
-        paid_at: payment.paidAt,
-        external_id: payment.externalId ?? payment.id
-      };
-    });
+  return payments.map((payment) => {
+    const externalId = payment.externalId ?? payment.id;
+    const id = isUuid(payment.id) ? payment.id : ledgerEntityUuid(tenantId, 'payment', externalId);
+    const customerId = isUuid(payment.customerId)
+      ? payment.customerId
+      : ledgerEntityUuid(tenantId, 'customer', payment.customerId);
+    const rawInvoiceId = payment.invoiceId
+      ? isUuid(payment.invoiceId)
+        ? payment.invoiceId
+        : ledgerEntityUuid(tenantId, 'invoice', payment.invoiceId)
+      : null;
+    return {
+      id,
+      tenant_id: tenantId,
+      customer_id: customerId,
+      invoice_id: rawInvoiceId && invoiceIds.has(rawInvoiceId) ? rawInvoiceId : null,
+      amount_cents: payment.amountCents,
+      paid_at: payment.paidAt,
+      external_id: externalId
+    };
+  });
 }

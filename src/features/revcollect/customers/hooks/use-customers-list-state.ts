@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useAgentConfig, useCustomers } from '../../api/queries';
+import { useAgentConfig, useCustomers, useIntegrationStatus } from '../../api/queries';
+import { useAutoResyncWhenEmpty } from '../../hooks/use-auto-resync-when-empty';
 import type { Customer } from '../../types';
 import {
   classifyCustomerRiskTier,
@@ -23,14 +24,21 @@ function matchesCustomerSearch(customer: Customer, query: string): boolean {
 function getListEmptyMessage(
   filter: CustomerRiskFilter,
   searchQuery: string,
-  hasResults: boolean
+  hasResults: boolean,
+  options: { booksConnected: boolean; isResyncing: boolean }
 ): string {
   if (searchQuery.trim() && !hasResults) {
     return 'No customers match your search';
   }
 
   if (filter === 'all') {
-    return 'No customers with open Xero balances. Click Refresh from Xero after invoices are awaiting payment.';
+    if (options.isResyncing) {
+      return 'Syncing customers from your ledger…';
+    }
+    if (options.booksConnected) {
+      return 'No customers with open balances yet. Sync again from Settings if they should appear.';
+    }
+    return 'No customers yet. Connect your ledger in Settings to pull open balances.';
   }
   if (filter === 'high') return 'No high-risk customers';
   if (filter === 'watch') return 'No customers on watch';
@@ -40,6 +48,13 @@ function getListEmptyMessage(
 export function useCustomersListState() {
   const { data: customers = [], isPending, isError, error } = useCustomers();
   const { data: agentConfig } = useAgentConfig();
+  const { data: integrationStatus } = useIntegrationStatus();
+  const { isResyncing } = useAutoResyncWhenEmpty();
+  const booksConnected = Boolean(
+    integrationStatus?.xero.connected ||
+    integrationStatus?.quickbooks.connected ||
+    integrationStatus?.zoho.connected
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [riskFilter, setRiskFilter] = useState<CustomerRiskFilter>('all');
 
@@ -92,6 +107,9 @@ export function useCustomersListState() {
     counts,
     filteredCustomers,
     getRiskTier,
-    emptyMessage: getListEmptyMessage(riskFilter, searchQuery, filteredCustomers.length > 0)
+    emptyMessage: getListEmptyMessage(riskFilter, searchQuery, filteredCustomers.length > 0, {
+      booksConnected,
+      isResyncing
+    })
   };
 }

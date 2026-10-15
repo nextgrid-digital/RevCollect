@@ -12,16 +12,18 @@ import type {
   AgingBucket,
   AgingReportFilters,
   IntegrationStatus,
+  ThreadEmail,
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
 import type {
   RevCollectService,
   SendInboxFollowUpInput,
+  SendInboxFollowUpResult,
   CollectionDecisionInput,
   RelationshipPolicyInput
 } from './service';
-import type { DataAccessEvent, TenantId } from './types';
+import type { DataAccessEvent, InboxSelectionData, TenantId } from './types';
 import type { InboxSendError } from '../extract/record-inbox-send';
 import type { CheckoutKind } from '@/lib/billing/pricing';
 
@@ -62,23 +64,28 @@ export const revcollectKeys = {
 };
 
 const AR_STALE_TIME_MS = 60_000;
+const INBOX_LIST_POLL_MS = 15_000;
+/** Open-thread poll — pairs with forced Gmail sync on selection so replies appear quickly. */
+const INBOX_THREAD_POLL_MS = 5_000;
 
-export function inboxMessagesQueryOptions() {
+export function inboxMessagesQueryOptions(options?: { poll?: boolean }) {
   return queryOptions({
     queryKey: revcollectKeys.inboxMessages(),
     queryFn: () => getRevCollectService().listInboxMessages(),
     staleTime: 0,
-    refetchOnMount: 'always'
+    refetchOnMount: 'always',
+    refetchInterval: options?.poll ? INBOX_LIST_POLL_MS : false
   });
 }
 
-export function inboxSelectionQueryOptions(messageId: string | null) {
+export function inboxSelectionQueryOptions(messageId: string | null, options?: { poll?: boolean }) {
   return queryOptions({
     queryKey: revcollectKeys.inboxSelection(messageId ?? ''),
     queryFn: () => getRevCollectService().getInboxSelectionData(messageId!),
     enabled: !!messageId,
     staleTime: 0,
-    refetchOnMount: 'always'
+    refetchOnMount: 'always',
+    refetchInterval: options?.poll && messageId ? INBOX_THREAD_POLL_MS : false
   });
 }
 
@@ -219,12 +226,16 @@ export function workspaceGeneralSettingsQueryOptions() {
 }
 
 export function useInboxMessages() {
-  return useQuery(inboxMessagesQueryOptions());
+  const { data: integrationStatus } = useIntegrationStatus();
+  const gmailConnected = Boolean(integrationStatus?.gmail.connected);
+  return useQuery(inboxMessagesQueryOptions({ poll: gmailConnected }));
 }
 
 export function useInboxSelectionData(messageId: string | null) {
+  const { data: integrationStatus } = useIntegrationStatus();
+  const gmailConnected = Boolean(integrationStatus?.gmail.connected);
   const query = useQuery({
-    ...inboxSelectionQueryOptions(messageId),
+    ...inboxSelectionQueryOptions(messageId, { poll: gmailConnected }),
     placeholderData: keepPreviousData
   });
   return {
@@ -631,17 +642,96 @@ export function useRequestTenantDeletion() {
   });
 }
 
+function patchInboxSelectionWithEmail(
+  data: InboxSelectionData,
+  email: ThreadEmail,
+  replaceOptimisticId?: string
+): InboxSelectionData {
+  const withoutOptimistic = replaceOptimisticId
+    ? data.threadEmails.filter((item) => item.id !== replaceOptimisticId)
+    : data.threadEmails;
+  const alreadyPresent = withoutOptimistic.some((item) => item.id === email.id);
+  const threadEmails = alreadyPresent
+    ? withoutOptimistic.map((item) => (item.id === email.id ? email : item))
+    : [...withoutOptimistic, email];
+  return {
+    ...data,
+    threadEmails,
+    latestEmail: email,
+    lastAction: {
+      title: 'Follow-up sent',
+      occurredAtLabel: new Date(email.sentAt).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    }
+  };
+}
+
 export function useSendInboxFollowUp() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendInboxFollowUpInput) => getRevCollectService().sendInboxFollowUp(input),
-    onSuccess: () => {
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: revcollectKeys.inbox() });
+      const threadId = input.messageId ?? `xero-customer-${input.customerId}`;
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticEmail: ThreadEmail = {
+        id: optimisticId,
+        threadId,
+        customerId: input.customerId,
+        author: 'agent',
+        from: 'You',
+        to: [],
+        subject: 'Follow-up',
+        body: input.sentBody,
+        sentAt: new Date().toISOString()
+      };
+
+      const previousSelections: Array<[readonly unknown[], InboxSelectionData | null | undefined]> =
+        [];
+      const selectionQueries = queryClient.getQueriesData<InboxSelectionData | null>({
+        queryKey: [...revcollectKeys.inbox(), 'selection']
+      });
+      for (const [queryKey, data] of selectionQueries) {
+        if (!data || data.customer.id !== input.customerId) continue;
+        previousSelections.push([queryKey, data]);
+        queryClient.setQueryData(
+          queryKey,
+          patchInboxSelectionWithEmail(data, {
+            ...optimisticEmail,
+            threadId: data.message.id
+          })
+        );
+      }
+
+      return { previousSelections, optimisticId };
+    },
+    onSuccess: (result: SendInboxFollowUpResult, input, context) => {
+      if (result.email) {
+        const selectionQueries = queryClient.getQueriesData<InboxSelectionData | null>({
+          queryKey: [...revcollectKeys.inbox(), 'selection']
+        });
+        for (const [queryKey, data] of selectionQueries) {
+          if (!data || data.customer.id !== input.customerId) continue;
+          queryClient.setQueryData(
+            queryKey,
+            patchInboxSelectionWithEmail(data, result.email!, context?.optimisticId)
+          );
+        }
+      }
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.customers() });
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.timeline(input.customerId) });
       toast.success('Follow-up sent');
     },
-    onError: (error) => {
+    onError: (error, _input, context) => {
+      if (context?.previousSelections) {
+        for (const [queryKey, data] of context.previousSelections) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       const sendError = error as InboxSendError;
       if (sendError.status === 402) {
         toast.error('Subscribe to send follow-ups', {

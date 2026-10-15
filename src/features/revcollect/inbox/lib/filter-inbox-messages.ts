@@ -40,7 +40,11 @@ export function filterInboxMessages(
 
   return messages.filter((message) => {
     const customer = getCustomer(message.customerId);
-    if (!customer) return false;
+    // Stale persisted inbox rows can outlive a remapped customer id set.
+    // Keep them on "all" so the list does not go blank while counts still show N.
+    if (!customer) {
+      return filter === 'all' && matchesSearch(message, undefined, normalizedQuery);
+    }
 
     const actionStatus = getInboxThreadActionStatus(message, customer);
 

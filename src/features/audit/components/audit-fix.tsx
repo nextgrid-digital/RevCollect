@@ -51,6 +51,8 @@ export function AuditFix({ narrative }: AuditFixProps) {
           Start the 30-day free trial · no card ·{' '}
           <a
             href='https://revcollect.ai'
+            target='_blank'
+            rel='noopener noreferrer'
             className='underline decoration-[var(--audit-ink)] underline-offset-2'
           >
             revcollect.ai

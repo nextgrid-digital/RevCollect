@@ -13,12 +13,20 @@ export function WorkspaceConnectionStatus() {
 
   if (!isHydrated || !integrationStatus) return null;
 
+  const booksConnected =
+    integrationStatus.xero.connected ||
+    integrationStatus.quickbooks.connected ||
+    integrationStatus.zoho.connected;
   const lastSyncAt =
     integrationStatus.xero.lastSyncAt ??
     integrationStatus.quickbooks.lastSyncAt ??
     integrationStatus.zoho.lastSyncAt ??
     null;
-  const lastSyncLabel = lastSyncAt ? `Synced ${formatLastSyncLabel(lastSyncAt)}` : 'Never synced';
+  const lastSyncLabel = lastSyncAt
+    ? `Synced ${formatLastSyncLabel(lastSyncAt)}`
+    : booksConnected
+      ? 'Waiting for sync'
+      : 'Never synced';
 
   return (
     <Link
@@ -28,7 +36,9 @@ export function WorkspaceConnectionStatus() {
       title={
         lastSyncAt
           ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
-          : 'Accounting has not synced yet'
+          : booksConnected
+            ? 'Ledger connected but no AR data yet — open Settings to resync'
+            : 'Accounting has not synced yet'
       }
     >
       <span

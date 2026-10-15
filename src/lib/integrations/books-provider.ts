@@ -2,6 +2,12 @@ export type BooksProvider = 'xero' | 'quickbooks' | 'zoho';
 
 export const BOOKS_PROVIDERS: BooksProvider[] = ['xero', 'quickbooks', 'zoho'];
 
+export const BOOKS_PROVIDER_LABELS: Record<BooksProvider, string> = {
+  xero: 'Xero',
+  quickbooks: 'QuickBooks',
+  zoho: 'Zoho Books'
+};
+
 export function connectedBooksFromStatus(status: {
   xero: { connected: boolean };
   quickbooks: { connected: boolean };

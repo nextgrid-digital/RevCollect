@@ -104,6 +104,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ count: await service.countAgentDraftsReady() });
       case 'getWorkspaceGeneralSettings':
         return NextResponse.json(await service.getWorkspaceGeneralSettings());
+      case 'getIntegrationStatus':
+        return NextResponse.json(await service.getIntegrationStatus());
       default:
         return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
     }

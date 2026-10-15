@@ -14,7 +14,7 @@ function CustomerXeroEmail({ email }: { email: string }) {
   const isMissing = !trimmed || trimmed.toLowerCase() === XERO_PLACEHOLDER_EMAIL;
 
   if (isMissing) {
-    return <p className='text-muted-foreground truncate text-sm'>No email in Xero</p>;
+    return <p className='text-muted-foreground truncate text-sm'>No email on file</p>;
   }
 
   return (

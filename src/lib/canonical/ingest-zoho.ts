@@ -1,5 +1,6 @@
 import { mapLedgerCustomers, mapLedgerInvoice } from '@/features/revcollect/api/xero-map';
 import { applyOpenArSnapshot } from './apply-open-ar';
+import { remapOpenArIds } from './ledger-entity-id';
 import {
   fetchZohoAccountsReceivable,
   zohoContactEmail,
@@ -60,5 +61,5 @@ export async function ingestZohoAr(tenantId: string): Promise<CanonicalSnapshot>
     ];
   });
 
-  return applyOpenArSnapshot(tenantId, { customers, invoices, payments });
+  return applyOpenArSnapshot(tenantId, remapOpenArIds(tenantId, { customers, invoices, payments }));
 }

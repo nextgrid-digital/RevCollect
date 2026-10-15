@@ -9,6 +9,7 @@ interface InboxThreadComposerProps {
   aiDraftBase: string;
   customerStatus: CollectionStatus;
   customerId: string;
+  messageId?: string;
   customer?: Customer;
   autoFocus?: boolean;
 }
@@ -18,18 +19,24 @@ export function InboxThreadComposer({
   aiDraftBase,
   customerStatus,
   customerId,
+  messageId,
   customer,
   autoFocus = false
 }: InboxThreadComposerProps) {
   return (
     <div id='inbox-thread-composer'>
       {agentDraftMeta ? (
-        <InboxAgentDraftPanel draftMeta={agentDraftMeta} customerId={customerId} />
+        <InboxAgentDraftPanel
+          draftMeta={agentDraftMeta}
+          customerId={customerId}
+          messageId={messageId}
+        />
       ) : (
         <InboxFloatingComposer
           draft={aiDraftBase}
           customerStatus={customerStatus}
           customerId={customerId}
+          messageId={messageId}
           customer={customer}
           autoFocus={autoFocus}
         />

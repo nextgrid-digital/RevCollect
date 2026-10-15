@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -14,6 +13,7 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { OAuthStartLink } from './oauth-start-link';
 import {
   useDisconnectIntegration,
   useResyncXero,
@@ -86,20 +86,24 @@ export function IntegrationReconnectLinks({
   return (
     <>
       <Button asChild size='sm'>
-        <Link href={`/api/integrations/xero/connect?returnTo=${returnTo}`}>
+        <OAuthStartLink href={`/api/integrations/xero/connect?returnTo=${returnTo}`}>
           Reconnect with Xero
-        </Link>
+        </OAuthStartLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
-        <Link href={`/api/integrations/quickbooks/connect?returnTo=${returnTo}`}>
+        <OAuthStartLink href={`/api/integrations/quickbooks/connect?returnTo=${returnTo}`}>
           Reconnect QuickBooks
-        </Link>
+        </OAuthStartLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
-        <Link href={`/api/integrations/zoho/connect?returnTo=${returnTo}`}>Reconnect Zoho</Link>
+        <OAuthStartLink href={`/api/integrations/zoho/connect?returnTo=${returnTo}`}>
+          Reconnect Zoho
+        </OAuthStartLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
-        <Link href={`/api/integrations/gmail/connect?returnTo=${returnTo}`}>Reconnect Gmail</Link>
+        <OAuthStartLink href={`/api/integrations/gmail/connect?returnTo=${returnTo}`}>
+          Reconnect Gmail
+        </OAuthStartLink>
       </Button>
     </>
   );

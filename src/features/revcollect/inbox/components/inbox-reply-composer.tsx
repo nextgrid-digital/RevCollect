@@ -150,6 +150,7 @@ export interface InboxReplyComposerProps {
   baseDraft: string;
   customerStatus: CollectionStatus;
   customerId?: string;
+  messageId?: string;
   customer?: Customer;
   defaultTone?: AgentConfig['tone'];
   initialBody?: string;
@@ -166,6 +167,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       baseDraft,
       customerStatus,
       customerId,
+      messageId,
       customer,
       defaultTone,
       initialBody,
@@ -324,6 +326,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       sendFollowUp.mutate(
         {
           customerId,
+          messageId,
           originalBody: baseDraft,
           sentBody,
           kind: 'reply',
@@ -333,7 +336,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           onError: () => setBody(sentBody)
         }
       );
-    }, [attachment?.attachedInvoiceIds, baseDraft, body, customerId, sendFollowUp]);
+    }, [attachment?.attachedInvoiceIds, baseDraft, body, customerId, messageId, sendFollowUp]);
 
     useImperativeHandle(
       ref,

@@ -29,3 +29,20 @@ export function resetCanonicalStoreCache(): void {
   resolved = null;
   resolveInFlight = null;
 }
+
+/** Copy AR snapshot when the target tenant has no customers/invoices yet. */
+export async function copyCanonicalIfEmpty(
+  fromTenantId: string,
+  toTenantId: string
+): Promise<void> {
+  if (fromTenantId === toTenantId) return;
+  const store = await getCanonicalStore();
+  const [source, target] = await Promise.all([store.read(fromTenantId), store.read(toTenantId)]);
+  const targetEmpty =
+    target.customers.length === 0 && target.invoices.length === 0 && !target.ingestedAt;
+  if (!targetEmpty) return;
+  if (source.customers.length === 0 && source.invoices.length === 0 && !source.ingestedAt) {
+    return;
+  }
+  await store.write(toTenantId, source);
+}

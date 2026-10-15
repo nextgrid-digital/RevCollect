@@ -17,8 +17,10 @@ import {
 } from '@/lib/canonical/defaults';
 import {
   ensureAccountingIngest,
+  getConnectedBooksProvider,
   scheduleBackgroundAccountingIngest
 } from '@/lib/canonical/ingest-accounting';
+import { BOOKS_PROVIDER_LABELS } from '@/lib/integrations/books-provider';
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
   overlayInboxWithSentEmails,
@@ -76,6 +78,12 @@ import type {
   TenantDataExport,
   TenantId
 } from './types';
+import {
+  clearArDataMemo,
+  getArDataMemoEntry,
+  getArDataMemoTtlMs,
+  setArDataMemoEntry
+} from '@/lib/canonical/ar-data-memo';
 import { MOCK_TENANT_ID as TENANT_ID } from './types';
 import {
   agingChartBucketsFromInvoices,
@@ -122,6 +130,11 @@ function overlayDrafts(messages: InboxMessage[], drafts: { customerId: string }[
   );
 }
 
+async function booksSourceLabel(tenantId: string): Promise<string> {
+  const provider = await getConnectedBooksProvider(tenantId);
+  return provider ? BOOKS_PROVIDER_LABELS[provider] : 'Ledger';
+}
+
 interface LoadedArData {
   tenantId: string;
   customers: Customer[];
@@ -130,19 +143,20 @@ interface LoadedArData {
   sentEmails: ThreadEmail[];
 }
 
-const AR_DATA_MEMO_TTL_MS = 8_000;
-const arDataMemo = new Map<string, { expiresAt: number; promise: Promise<LoadedArData> }>();
-
-function clearArDataMemo(tenantId: string): void {
-  arDataMemo.delete(tenantId);
-}
-
-async function refreshInboxFromGmail(tenantId: string): Promise<void> {
+async function refreshInboxFromGmail(
+  tenantId: string,
+  options?: { force?: boolean }
+): Promise<void> {
   let didRehome = false;
   let didSync = false;
   try {
     didRehome = await persistRehomedSentEmails(tenantId);
-    didSync = await syncGmailThreads(tenantId);
+    if (options?.force) {
+      didSync = await syncGmailThreads(tenantId);
+    } else {
+      // TTL-aware so list can fire this in the background without stacking pulls.
+      didSync = await scheduleBackgroundGmailSync(tenantId);
+    }
   } catch (error) {
     if (!(error instanceof GmailNotConnectedError)) {
       console.error('[gmail] inbox sync failed:', error);
@@ -159,6 +173,17 @@ async function refreshInboxFromGmail(tenantId: string): Promise<void> {
 }
 
 async function readArData(tenantId: string): Promise<LoadedArData> {
+  const booksProvider = await getConnectedBooksProvider(tenantId);
+  if (!booksProvider) {
+    return {
+      tenantId,
+      customers: [],
+      invoices: [],
+      inboxMessages: [],
+      sentEmails: []
+    };
+  }
+
   let snapshot = await (await getCanonicalStore()).read(tenantId);
   const empty = snapshot.customers.length === 0 && snapshot.invoices.length === 0;
   if (empty) {
@@ -208,16 +233,19 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
 
 async function loadArData(): Promise<LoadedArData> {
   const tenantId = await getIntegrationTenantId();
-  const cached = arDataMemo.get(tenantId);
+  const cached = getArDataMemoEntry<LoadedArData>(tenantId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.promise;
   }
 
   const promise = readArData(tenantId).catch((error) => {
-    arDataMemo.delete(tenantId);
+    clearArDataMemo(tenantId);
     throw error;
   });
-  arDataMemo.set(tenantId, { expiresAt: Date.now() + AR_DATA_MEMO_TTL_MS, promise });
+  setArDataMemoEntry(tenantId, {
+    expiresAt: Date.now() + getArDataMemoTtlMs(),
+    promise
+  });
   return promise;
 }
 
@@ -228,7 +256,10 @@ export class XeroRevCollectService implements RevCollectService {
 
   async listInboxMessages() {
     const tenantId = await getIntegrationTenantId();
-    await refreshInboxFromGmail(tenantId);
+    // Return AR immediately; pull Gmail in the background so list loads stay snappy.
+    after(() => {
+      void refreshInboxFromGmail(tenantId);
+    });
     const { inboxMessages } = await loadArData();
     return inboxMessages;
   }
@@ -245,9 +276,16 @@ export class XeroRevCollectService implements RevCollectService {
 
   async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
     const tenantId = await getIntegrationTenantId();
-    await refreshInboxFromGmail(tenantId);
+    // Await a forced Gmail pull so inbound replies show while the thread is open.
+    await refreshInboxFromGmail(tenantId, { force: true });
     const { customers, invoices, inboxMessages, sentEmails } = await loadArData();
-    const message = inboxMessages.find((item) => item.id === messageId);
+    const legacyCustomerId = messageId.startsWith('xero-customer-')
+      ? messageId.slice('xero-customer-'.length)
+      : messageId;
+    const message =
+      inboxMessages.find((item) => item.id === messageId) ??
+      inboxMessages.find((item) => item.customerId === legacyCustomerId) ??
+      inboxMessages.find((item) => item.id === `xero-customer-${legacyCustomerId}`);
     if (!message) return null;
 
     const customer = customers.find((item) => item.id === message.customerId);
@@ -255,7 +293,11 @@ export class XeroRevCollectService implements RevCollectService {
 
     const customerInvoices = invoices.filter((invoice) => invoice.customerId === customer.id);
     const openInvoices = customerInvoices.filter(isOpenCanonicalInvoice);
-    const inboxContext = buildCustomerContextFromInvoices(customer, customerInvoices);
+    const inboxContext = buildCustomerContextFromInvoices(
+      customer,
+      customerInvoices,
+      await booksSourceLabel(tenantId)
+    );
     const invoiceId = messageId.startsWith('xero-inv-')
       ? messageId.slice('xero-inv-'.length)
       : undefined;
@@ -314,10 +356,10 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async getCustomerContext(customerId: string) {
-    const { customers, invoices } = await loadArData();
+    const { tenantId, customers, invoices } = await loadArData();
     const customer = customers.find((item) => item.id === customerId);
     if (!customer) return null;
-    return buildCustomerContextFromInvoices(customer, invoices);
+    return buildCustomerContextFromInvoices(customer, invoices, await booksSourceLabel(tenantId));
   }
 
   async getCustomerStatusSummary() {

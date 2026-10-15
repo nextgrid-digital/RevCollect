@@ -92,6 +92,8 @@ export interface RelationshipPolicy {
 
 export interface Customer {
   id: string;
+  /** Original ledger id when `id` is a deterministic UUID (QBO/Zoho). */
+  externalId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -123,6 +125,8 @@ export interface CustomerInboxContext {
 
 export interface Invoice {
   id: string;
+  /** Original ledger id when `id` is a deterministic UUID (QBO/Zoho). */
+  externalId?: string;
   customerId: string;
   number: string;
   /** Invoice face value (Xero Total). */

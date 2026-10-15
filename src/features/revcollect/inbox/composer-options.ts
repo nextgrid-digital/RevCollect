@@ -37,34 +37,21 @@ export const COLLECTION_PLAYBOOKS = [
     version: 'Reminder & follow-up'
   },
   {
-    id: 'final_notice' as const,
-    name: 'Final notice',
-    version: 'Escalation'
-  },
-  {
     id: 'payment_verification' as const,
     name: 'Payment check',
     version: 'Thank you + reference'
-  },
-  {
-    id: 'dispute_hold' as const,
-    name: 'Dispute review',
-    version: 'No chase language'
   }
 ];
 
-export function defaultPlaybookForStatus(status: CollectionStatus): CollectionPlaybook {
-  if (status === 'in_dispute') return 'dispute_hold';
+export function defaultPlaybookForStatus(_status: CollectionStatus): CollectionPlaybook {
   return 'standard';
 }
 
 export function defaultPlaybookForCustomer(
-  status: CollectionStatus,
+  _status: CollectionStatus,
   options?: { paymentClaimed?: boolean; allowLegalLanguage?: boolean }
 ): CollectionPlaybook {
   if (options?.paymentClaimed) return 'payment_verification';
-  if (status === 'in_dispute') return 'dispute_hold';
-  if (status === 'overdue' && options?.allowLegalLanguage) return 'final_notice';
   return 'standard';
 }
 

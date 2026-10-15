@@ -74,8 +74,8 @@ export function InboxRelationshipBanner({ customer }: InboxRelationshipBannerPro
         </p>
         <p className='text-muted-foreground mt-1 text-xs'>
           {stale
-            ? 'They said payment was sent, but it has not shown up in Xero. Ask for a reference, or keep waiting.'
-            : 'Overnight chase is paused until this payment is matched in Xero.'}
+            ? 'They said payment was sent, but it has not shown up in your ledger yet. Ask for a reference, or keep waiting.'
+            : 'Overnight chase is paused until this payment is matched in your ledger.'}
         </p>
         {stale ? (
           <div className='mt-3 flex flex-wrap gap-2'>

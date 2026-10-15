@@ -1,5 +1,6 @@
 import { mapLedgerCustomers, mapLedgerInvoice } from '@/features/revcollect/api/xero-map';
 import { applyOpenArSnapshot } from './apply-open-ar';
+import { remapOpenArIds } from './ledger-entity-id';
 import { fetchQuickBooksAccountsReceivable } from '@/lib/integrations/quickbooks-api';
 import type { CanonicalPayment, CanonicalSnapshot } from './types';
 
@@ -61,5 +62,5 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
     ];
   });
 
-  return applyOpenArSnapshot(tenantId, { customers, invoices, payments });
+  return applyOpenArSnapshot(tenantId, remapOpenArIds(tenantId, { customers, invoices, payments }));
 }

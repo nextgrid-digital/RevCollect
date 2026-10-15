@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { Icons } from '@/components/icons';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
@@ -12,9 +13,12 @@ import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
 import { useIntegrationStatus } from '../../api/queries';
 import {
   BOOKS_LEDGER_OPTIONS,
+  BooksLedgerMark,
   BooksProviderPicker,
   booksConnectPath
 } from '../../settings/components/books-provider-picker';
+import { IntegrationConnectToast } from '../../settings/components/integration-connect-toast';
+import { OAuthStartLink } from '../../settings/components/oauth-start-link';
 import {
   IntegrationDisconnectButton,
   IntegrationReconnectLinks,
@@ -96,6 +100,9 @@ export function OnboardingSteps() {
   return (
     <WorkspaceCanvas className='flex-col'>
       <OnboardingHeader />
+      <Suspense fallback={null}>
+        <IntegrationConnectToast />
+      </Suspense>
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
         <div className='mx-auto flex w-full max-w-2xl flex-col gap-4 pb-6'>
           <WorkspaceCard className='p-4 md:p-5'>
@@ -115,7 +122,9 @@ export function OnboardingSteps() {
                 </Button>
               ) : null}
               <Button asChild size='sm' variant='outline'>
-                <Link href='/api/integrations/gmail/connect?returnTo=/onboarding'>Reconnect</Link>
+                <OAuthStartLink href='/api/integrations/gmail/connect?returnTo=/onboarding'>
+                  Reconnect
+                </OAuthStartLink>
               </Button>
               {integrationStatus.gmail.connected ? (
                 <IntegrationDisconnectButton provider='gmail' label='Gmail' />
@@ -128,6 +137,7 @@ export function OnboardingSteps() {
               <div className='flex flex-col gap-1'>
                 <h2 className='flex items-center gap-2 text-base font-semibold'>
                   <StepStatusIcon done />
+                  <BooksLedgerMark provider={connectedBooks} />
                   Connect {connectedOption.label}
                 </h2>
                 <p className='text-muted-foreground text-sm'>{connectedOption.description}</p>
@@ -139,9 +149,9 @@ export function OnboardingSteps() {
               </div>
               <div className='mt-4 flex flex-wrap gap-2'>
                 <Button asChild size='sm' variant='outline'>
-                  <Link href={booksConnectPath(connectedBooks, '/onboarding')}>
+                  <OAuthStartLink href={booksConnectPath(connectedBooks, '/onboarding')}>
                     {connectedOption.reconnectLabel}
-                  </Link>
+                  </OAuthStartLink>
                 </Button>
                 <XeroResyncButton />
                 <IntegrationDisconnectButton

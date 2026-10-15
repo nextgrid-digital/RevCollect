@@ -7,6 +7,7 @@ interface InboxFloatingComposerProps {
   draft: string;
   customerStatus: CollectionStatus;
   customerId: string;
+  messageId?: string;
   customer?: Customer;
   defaultTone?: AgentConfig['tone'];
   autoFocus?: boolean;
@@ -16,6 +17,7 @@ export function InboxFloatingComposer({
   draft,
   customerStatus,
   customerId,
+  messageId,
   customer,
   defaultTone,
   autoFocus = false
@@ -26,6 +28,7 @@ export function InboxFloatingComposer({
         baseDraft={draft}
         customerStatus={customerStatus}
         customerId={customerId}
+        messageId={messageId}
         customer={customer}
         defaultTone={defaultTone}
         autoFocus={autoFocus}

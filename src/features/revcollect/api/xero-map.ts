@@ -359,7 +359,8 @@ export function buildCustomerStatusSummary(customers: Customer[]): CustomerStatu
 
 export function buildCustomerContextFromInvoices(
   customer: Customer,
-  invoices: Invoice[]
+  invoices: Invoice[],
+  sourceLabel = 'Ledger'
 ): CustomerInboxContext {
   const open = invoices.filter(isOpenCanonicalInvoice);
   const billed = invoices.filter((invoice) => invoice.xeroStatus !== 'CREDIT');
@@ -371,8 +372,8 @@ export function buildCustomerContextFromInvoices(
     avgDsoDays: customer.daysOverdue,
     lifetimeValueCents: billed.reduce((sum, invoice) => sum + invoice.amountCents, 0),
     followUpsSent: 0,
-    paymentTerms: 'From Xero',
-    source: 'Xero',
+    paymentTerms: 'As invoiced',
+    source: sourceLabel,
     aiInsight:
       overdueCount > 0
         ? `${overdueCount} overdue invoice${overdueCount === 1 ? '' : 's'} · ${formatInsightBalance(customer.balanceCents)} outstanding`

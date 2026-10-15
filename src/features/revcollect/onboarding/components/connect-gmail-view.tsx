@@ -51,7 +51,7 @@ export function ConnectGmailView({ nextStep }: ConnectGmailViewProps) {
   }, [queryClient, searchParams]);
 
   function handleConnect() {
-    window.location.assign('/api/integrations/gmail/connect');
+    window.open('/api/integrations/gmail/connect', '_blank', 'noopener,noreferrer');
   }
 
   return (

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,14 +10,17 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { IntuitIcon } from '@/components/icons/intuit-icon';
+import { XeroIcon } from '@/components/icons/xero-icon';
+import { ZohoIcon } from '@/components/icons/zoho-icon';
 import { BOOKS_PROVIDERS, type BooksProvider } from '@/lib/integrations/books-provider';
+import { OAuthStartLink } from './oauth-start-link';
 
 export type BooksPickerReturnTo = '/onboarding' | '/settings/integrations';
 
 export interface BooksLedgerOption {
   label: string;
   description: string;
-  href: string;
   connectLabel: string;
   reconnectLabel: string;
 }
@@ -27,28 +29,55 @@ export const BOOKS_LEDGER_OPTIONS: Record<BooksProvider, BooksLedgerOption> = {
   xero: {
     label: 'Xero',
     description: 'Customers, invoices, and payment status sync from your organisation.',
-    href: '/onboarding/connect-xero',
     connectLabel: 'Connect with Xero',
     reconnectLabel: 'Reconnect with Xero'
   },
   quickbooks: {
     label: 'QuickBooks',
     description: 'US QuickBooks Online sandbox or production company.',
-    href: '/onboarding/connect-quickbooks',
-    connectLabel: 'Connect',
-    reconnectLabel: 'Reconnect'
+    connectLabel: 'Connect QuickBooks',
+    reconnectLabel: 'Reconnect QuickBooks'
   },
   zoho: {
     label: 'Zoho Books',
     description: 'Zoho Books organisation. Gmail stays the send channel.',
-    href: '/onboarding/connect-zoho',
-    connectLabel: 'Connect',
-    reconnectLabel: 'Reconnect'
+    connectLabel: 'Connect Zoho Books',
+    reconnectLabel: 'Reconnect Zoho Books'
   }
 };
 
 export function booksConnectPath(provider: BooksProvider, returnTo: BooksPickerReturnTo): string {
   return `/api/integrations/${provider}/connect?returnTo=${returnTo}`;
+}
+
+export function BooksLedgerMark({
+  provider,
+  className = 'size-4 shrink-0'
+}: {
+  provider: BooksProvider;
+  className?: string;
+}) {
+  switch (provider) {
+    case 'xero':
+      return <XeroIcon className={className} />;
+    case 'quickbooks':
+      return <IntuitIcon className={className} />;
+    case 'zoho':
+      return <ZohoIcon className={className} />;
+    default: {
+      const _exhaustive: never = provider;
+      return _exhaustive;
+    }
+  }
+}
+
+function BooksLedgerOptionLabel({ provider }: { provider: BooksProvider }) {
+  return (
+    <span className='flex items-center gap-2'>
+      <BooksLedgerMark provider={provider} />
+      {BOOKS_LEDGER_OPTIONS[provider].label}
+    </span>
+  );
 }
 
 export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnTo }) {
@@ -78,7 +107,7 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
           <SelectContent>
             {BOOKS_PROVIDERS.map((key) => (
               <SelectItem key={key} value={key}>
-                {BOOKS_LEDGER_OPTIONS[key].label}
+                <BooksLedgerOptionLabel provider={key} />
               </SelectItem>
             ))}
           </SelectContent>
@@ -87,14 +116,14 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
       {option && provider ? (
         <div className='flex flex-col gap-2'>
           <p className='text-muted-foreground text-xs'>
-            Already connected before? Reconnect if access was revoked.
+            You&apos;ll sign in with {option.label} and come back here.
           </p>
           <div className='flex flex-wrap gap-2'>
             <Button asChild size='sm'>
-              <Link href={option.href}>{option.connectLabel}</Link>
-            </Button>
-            <Button asChild size='sm' variant='outline'>
-              <Link href={booksConnectPath(provider, returnTo)}>{option.reconnectLabel}</Link>
+              <OAuthStartLink href={booksConnectPath(provider, returnTo)}>
+                <BooksLedgerMark provider={provider} />
+                {option.connectLabel}
+              </OAuthStartLink>
             </Button>
           </div>
         </div>

@@ -1,16 +1,27 @@
 import { MOCK_TENANT_ID } from '@/features/revcollect/api/types';
-import type { BooksProvider } from './books-provider';
+import { clearArDataMemo } from '@/lib/canonical/ar-data-memo';
+import { clearBooksAr } from '@/lib/canonical/clear-books-ar';
 import { withTimeout } from '@/lib/auth-timeout';
+import type { BooksProvider } from './books-provider';
 import { getGmailRefreshToken, deleteGmailConnection } from './gmail-connection-store';
 import { revokeGoogleToken } from './google-oauth';
 import { getXeroOAuthConfig, revokeXeroRefreshToken } from './xero-oauth';
-import { deleteXeroConnection, getXeroRefreshToken } from './xero-connection-store';
+import {
+  deleteXeroConnection,
+  getXeroConnection,
+  getXeroRefreshToken
+} from './xero-connection-store';
 import {
   deleteQuickBooksConnection,
+  getQuickBooksConnection,
   getQuickBooksRefreshToken
 } from './quickbooks-connection-store';
 import { getQuickBooksOAuthConfig, revokeQuickBooksRefreshToken } from './quickbooks-oauth';
-import { deleteZohoConnection, getZohoRefreshToken } from './zoho-connection-store';
+import {
+  deleteZohoConnection,
+  getZohoConnection,
+  getZohoRefreshToken
+} from './zoho-connection-store';
 import { getZohoOAuthConfig, revokeZohoRefreshToken } from './zoho-oauth';
 
 const REVOKE_MS = 4_000;
@@ -33,6 +44,25 @@ async function deleteWorkspaceConnection(
   }
 }
 
+async function hasAnyBooksConnection(tenantId: string): Promise<boolean> {
+  const [xero, quickbooks, zoho] = await Promise.all([
+    getXeroConnection(tenantId),
+    getQuickBooksConnection(tenantId),
+    getZohoConnection(tenantId)
+  ]);
+  return Boolean(xero || quickbooks || zoho);
+}
+
+async function clearArIfNoBooks(tenantId: string): Promise<void> {
+  if (await hasAnyBooksConnection(tenantId)) return;
+  await clearBooksAr(tenantId);
+  clearArDataMemo(tenantId);
+  if (tenantId !== MOCK_TENANT_ID) {
+    await clearBooksAr(MOCK_TENANT_ID);
+    clearArDataMemo(MOCK_TENANT_ID);
+  }
+}
+
 export async function disconnectXero(tenantId: string): Promise<void> {
   const refreshToken = await getXeroRefreshToken(tenantId).catch(() => null);
   const config = getXeroOAuthConfig();
@@ -41,6 +71,8 @@ export async function disconnectXero(tenantId: string): Promise<void> {
   if (config && refreshToken) {
     await settleRevoke(revokeXeroRefreshToken(config, refreshToken), '[xero/disconnect]');
   }
+
+  await clearArIfNoBooks(tenantId);
 }
 
 export async function disconnectQuickBooks(tenantId: string): Promise<void> {
@@ -50,6 +82,8 @@ export async function disconnectQuickBooks(tenantId: string): Promise<void> {
   if (config && token) {
     await settleRevoke(revokeQuickBooksRefreshToken(config, token), '[quickbooks/disconnect]');
   }
+
+  await clearArIfNoBooks(tenantId);
 }
 
 export async function disconnectZoho(tenantId: string): Promise<void> {
@@ -59,6 +93,8 @@ export async function disconnectZoho(tenantId: string): Promise<void> {
   if (config && token) {
     await settleRevoke(revokeZohoRefreshToken(config, token), '[zoho/disconnect]');
   }
+
+  await clearArIfNoBooks(tenantId);
 }
 
 export async function disconnectOtherBooks(tenantId: string, keep: BooksProvider): Promise<void> {

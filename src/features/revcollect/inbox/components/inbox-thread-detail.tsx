@@ -300,6 +300,7 @@ export function InboxThreadDetail({
                 aiDraftBase={selection.aiDraftBase}
                 customerStatus={customer.status}
                 customerId={customer.id}
+                messageId={messageId}
                 customer={customer}
                 autoFocus={variant === 'peek'}
               />

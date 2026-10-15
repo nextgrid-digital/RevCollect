@@ -11,7 +11,8 @@ import { getGmailConnection } from '@/lib/integrations/gmail-connection-store';
 import { overlayInboxWithSentEmails, rehomeSentEmails } from './sent-emails';
 import { getCanonicalStore } from './store';
 
-const GMAIL_SYNC_TTL_MS = 45_000;
+/** Align with inbox client polling so inbound replies surface within ~15s. */
+const GMAIL_SYNC_TTL_MS = 15_000;
 const PLACEHOLDER_EMAIL = 'no-email@xero.local';
 const lastSyncAt = new Map<string, number>();
 const inFlight = new Map<string, Promise<boolean>>();

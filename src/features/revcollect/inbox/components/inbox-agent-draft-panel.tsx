@@ -15,12 +15,14 @@ import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-cont
 interface InboxAgentDraftPanelProps {
   draftMeta: AgentDraftMeta;
   customerId: string;
+  messageId?: string;
   className?: string;
 }
 
 export function InboxAgentDraftPanel({
   draftMeta,
   customerId,
+  messageId,
   className
 }: InboxAgentDraftPanelProps) {
   const attachment = useOptionalInboxThreadAttachment();
@@ -53,6 +55,7 @@ export function InboxAgentDraftPanel({
     sendFollowUp.mutate(
       {
         customerId,
+        messageId,
         originalBody: draftMeta.body,
         sentBody: body,
         kind,
@@ -69,6 +72,7 @@ export function InboxAgentDraftPanel({
     draftMeta.body,
     isSending,
     isSent,
+    messageId,
     sendFollowUp
   ]);
 

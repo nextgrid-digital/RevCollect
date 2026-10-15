@@ -15,25 +15,33 @@ export const DISCONNECTED_INTEGRATION_STATUS = {
 } as const satisfies IntegrationStatus;
 
 async function getBooksLastSyncAt(tenantId: string): Promise<string | null> {
-  if (hasSupabaseAdminEnv()) {
-    try {
-      const supabase = createAdminClient();
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', tenantId)
-        .maybeSingle();
-      if (!error) {
-        const lastSyncedAt = (data as { last_synced_at?: string | null } | null)?.last_synced_at;
-        if (lastSyncedAt) return lastSyncedAt;
-      }
-    } catch {
-      // Fall through to snapshot ingestedAt.
-    }
-  }
   try {
     const snapshot = await (await getCanonicalStore()).read(tenantId);
-    return snapshot.ingestedAt;
+    const hasAr = snapshot.customers.length > 0 || snapshot.invoices.length > 0;
+    // Do not advertise "Synced" when the AR snapshot is empty — badge and lists stay honest.
+    if (!hasAr) return null;
+    if (snapshot.ingestedAt) return snapshot.ingestedAt;
+  } catch {
+    // Store read failed — try tenants.last_synced_at as a fallback.
+  }
+
+  if (!hasSupabaseAdminEnv()) return null;
+  try {
+    const supabase = createAdminClient();
+    const { count: customerCount, error: countError } = await supabase
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+    if (countError || !customerCount) return null;
+
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .maybeSingle();
+    if (error) return null;
+    return (data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null;
   } catch {
     return null;
   }

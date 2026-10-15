@@ -10,6 +10,7 @@ import { DEFAULT_ADDON_STATUS, emptyIntelligence, emptySnapshot } from './defaul
 import { normalizeRelationshipState } from '@/features/revcollect/lib/relationship-policy';
 import { buildSyntheticInboxFromInvoices } from '@/features/revcollect/api/xero-map';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isUuid, ledgerEntityUuid } from './ledger-entity-id';
 import { toPaymentRows } from './postgres-payments';
 import type {
   AgentDraftRecord,
@@ -124,8 +125,10 @@ function intelligenceFromRow(row: CustomerRow): CustomerIntelligence {
 
 function mapCustomer(row: CustomerRow): Customer {
   const intelligence = intelligenceFromRow(row);
+  const externalId = row.external_id && row.external_id !== row.id ? row.external_id : undefined;
   return {
     id: row.id,
+    externalId,
     name: row.name,
     email: row.email,
     phone: row.phone ?? undefined,
@@ -142,8 +145,10 @@ function mapCustomer(row: CustomerRow): Customer {
 }
 
 function mapInvoice(row: InvoiceRow): Invoice {
+  const externalId = row.external_id && row.external_id !== row.id ? row.external_id : undefined;
   return {
     id: row.id,
+    externalId,
     customerId: row.customer_id,
     number: row.number,
     amountCents: row.amount_cents,
@@ -156,10 +161,6 @@ function mapInvoice(row: InvoiceRow): Invoice {
     amountDueCents: row.amount_due_cents ?? undefined,
     paidAt: row.paid_at ?? undefined
   };
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function ensureTenant(tenantId: string): Promise<void> {
@@ -283,10 +284,13 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     const { error } = await supabase.from('customers').upsert(
       snapshot.customers.map((customer) => {
         const intelligence = snapshot.intelligenceByCustomerId[customer.id] ?? emptyIntelligence();
+        const id = isUuid(customer.id)
+          ? customer.id
+          : ledgerEntityUuid(tenantId, 'customer', customer.externalId ?? customer.id);
         return {
-          id: customer.id,
+          id,
           tenant_id: tenantId,
-          external_id: customer.id,
+          external_id: customer.externalId ?? customer.id,
           name: customer.name,
           email: customer.email,
           company: customer.company,
@@ -300,7 +304,10 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           relationship_policy: customer.relationshipPolicy ?? intelligence.relationshipPolicy ?? {},
           follow_up_state: (snapshot.sentEmails ?? []).some(
             (email) =>
-              email.customerId === customer.id || email.threadId === `xero-customer-${customer.id}`
+              email.customerId === customer.id ||
+              email.customerId === id ||
+              email.threadId === `xero-customer-${customer.id}` ||
+              email.threadId === `xero-customer-${id}`
           )
             ? 'sent'
             : 'idle',
@@ -318,16 +325,19 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
   }
 
   if (snapshot.invoices.length > 0) {
-    const uuidInvoices = snapshot.invoices.filter(
-      (invoice) => isUuid(invoice.id) && isUuid(invoice.customerId)
-    );
-    if (uuidInvoices.length > 0) {
-      const { error } = await supabase.from('invoices').upsert(
-        uuidInvoices.map((invoice) => ({
-          id: invoice.id,
+    const { error } = await supabase.from('invoices').upsert(
+      snapshot.invoices.map((invoice) => {
+        const id = isUuid(invoice.id)
+          ? invoice.id
+          : ledgerEntityUuid(tenantId, 'invoice', invoice.externalId ?? invoice.id);
+        const customerId = isUuid(invoice.customerId)
+          ? invoice.customerId
+          : ledgerEntityUuid(tenantId, 'customer', invoice.customerId);
+        return {
+          id,
           tenant_id: tenantId,
-          customer_id: invoice.customerId,
-          external_id: invoice.id,
+          customer_id: customerId,
+          external_id: invoice.externalId ?? invoice.id,
           number: invoice.number,
           amount_cents: invoice.amountCents,
           due_date: invoice.dueDate,
@@ -338,14 +348,20 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           xero_status: invoice.xeroStatus ?? null,
           amount_due_cents: invoice.amountDueCents ?? invoice.amountCents,
           paid_at: invoice.paidAt ?? null
-        })),
-        { onConflict: 'id' }
-      );
-      if (error) throw new Error(`Failed to upsert invoices: ${error.message}`);
-    }
+        };
+      }),
+      { onConflict: 'id' }
+    );
+    if (error) throw new Error(`Failed to upsert invoices: ${error.message}`);
   }
 
-  const invoiceIds = new Set(snapshot.invoices.map((invoice) => invoice.id));
+  const invoiceIds = new Set(
+    snapshot.invoices.map((invoice) =>
+      isUuid(invoice.id)
+        ? invoice.id
+        : ledgerEntityUuid(tenantId, 'invoice', invoice.externalId ?? invoice.id)
+    )
+  );
   const paymentRows = toPaymentRows(tenantId, snapshot.payments, invoiceIds);
   if (paymentRows.length > 0) {
     const { error } = await supabase
@@ -355,15 +371,18 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
   }
 
   if (snapshot.inboxMessages.length > 0) {
-    const threads = snapshot.inboxMessages.filter(
-      (message) => isUuid(message.id) && isUuid(message.customerId)
-    );
-    if (threads.length > 0) {
-      const { error } = await supabase.from('inbox_threads').upsert(
-        threads.map((message) => ({
-          id: message.id,
+    const { error } = await supabase.from('inbox_threads').upsert(
+      snapshot.inboxMessages.map((message) => {
+        const id = isUuid(message.id)
+          ? message.id
+          : ledgerEntityUuid(tenantId, 'inbox', message.id);
+        const customerId = isUuid(message.customerId)
+          ? message.customerId
+          : ledgerEntityUuid(tenantId, 'customer', message.customerId);
+        return {
+          id,
           tenant_id: tenantId,
-          customer_id: message.customerId,
+          customer_id: customerId,
           subject: message.subject,
           preview: message.preview,
           received_at: message.receivedAt,
@@ -373,26 +392,36 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           reply_intent_label: message.replyIntentLabel ?? null,
           agent_draft_ready: Boolean(message.agentDraftReady),
           suggested_action: message.suggestedAction ?? null
-        })),
-        { onConflict: 'id' }
-      );
-      if (error) throw new Error(`Failed to upsert inbox threads: ${error.message}`);
-    }
+        };
+      }),
+      { onConflict: 'id' }
+    );
+    if (error) throw new Error(`Failed to upsert inbox threads: ${error.message}`);
   }
 
-  const uuidDrafts = snapshot.drafts.filter((draft) => isUuid(draft.id) && isUuid(draft.threadId));
-  if (uuidDrafts.length > 0) {
+  if (snapshot.drafts.length > 0) {
     const { error } = await supabase.from('agent_drafts').upsert(
-      uuidDrafts.map((draft) => ({
-        id: draft.id,
-        tenant_id: tenantId,
-        thread_id: draft.threadId,
-        customer_id: draft.customerId || null,
-        title: draft.title,
-        body_text: draft.body,
-        tone: draft.tone,
-        prepared_at: draft.preparedAt
-      })),
+      snapshot.drafts.map((draft) => {
+        const id = isUuid(draft.id) ? draft.id : ledgerEntityUuid(tenantId, 'draft', draft.id);
+        const threadId = isUuid(draft.threadId)
+          ? draft.threadId
+          : ledgerEntityUuid(tenantId, 'inbox', draft.threadId);
+        const customerId = draft.customerId
+          ? isUuid(draft.customerId)
+            ? draft.customerId
+            : ledgerEntityUuid(tenantId, 'customer', draft.customerId)
+          : null;
+        return {
+          id,
+          tenant_id: tenantId,
+          thread_id: threadId,
+          customer_id: customerId,
+          title: draft.title,
+          body_text: draft.body,
+          tone: draft.tone,
+          prepared_at: draft.preparedAt
+        };
+      }),
       { onConflict: 'id' }
     );
     if (error) throw new Error(`Failed to upsert drafts: ${error.message}`);

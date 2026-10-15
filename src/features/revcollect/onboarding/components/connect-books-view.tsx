@@ -122,7 +122,7 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
   }, [copy.title, queryClient, searchParams]);
 
   function handleConnect() {
-    window.location.assign(copy.connectPath);
+    window.open(copy.connectPath, '_blank', 'noopener,noreferrer');
   }
 
   if (blocked) {
