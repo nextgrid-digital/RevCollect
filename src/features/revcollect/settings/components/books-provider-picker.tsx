@@ -127,7 +127,7 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
       </div>
       {provider === 'zoho' ? (
         <div className='space-y-2'>
-          <Label htmlFor='books-zoho-dc'>Zoho data center</Label>
+          <Label htmlFor='books-zoho-dc'>Country</Label>
           <Select value={zohoDc} onValueChange={(value) => setZohoDc(value as ZohoDataCenterId)}>
             <SelectTrigger id='books-zoho-dc' className='w-full sm:max-w-xs'>
               <SelectValue placeholder='Select region' />
