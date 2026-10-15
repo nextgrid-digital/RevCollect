@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/ari",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/supabase-keepalive",
+      "schedule": "0 3 */6 * *"
     }
   ]
 }
