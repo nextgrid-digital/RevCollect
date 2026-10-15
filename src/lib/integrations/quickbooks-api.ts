@@ -10,6 +10,7 @@ import {
   isQuickBooksInvalidGrantError,
   refreshQuickBooksAccessToken
 } from './quickbooks-oauth';
+import { captureIntuitTid, withIntuitTid } from './intuit-tid';
 import { XeroNotConnectedError } from './xero-api';
 
 export class QuickBooksNotConnectedError extends XeroNotConnectedError {
@@ -62,9 +63,7 @@ export interface QboCompanyInfo {
   CompanyName?: string;
 }
 
-async function getAccess(
-  appTenantId: string
-): Promise<{
+async function getAccess(appTenantId: string): Promise<{
   accessToken: string;
   realmId: string;
   organisationName: string;
@@ -119,8 +118,14 @@ async function qboQuery<T>(
       Accept: 'application/json'
     }
   });
+  const intuitTid = captureIntuitTid('qbo.query', response);
   if (!response.ok) {
-    throw new Error(`QuickBooks query failed: ${response.status} ${await response.text()}`);
+    throw new Error(
+      withIntuitTid(
+        `QuickBooks query failed: ${response.status} ${await response.text()}`,
+        intuitTid
+      )
+    );
   }
   const payload = (await response.json()) as { QueryResponse?: Record<string, T[] | undefined> };
   const queryResponse = payload.QueryResponse ?? {};

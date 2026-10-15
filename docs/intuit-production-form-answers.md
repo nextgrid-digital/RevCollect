@@ -182,7 +182,7 @@ Skip any **Lending** section entirely (you selected None of the above for regula
 | # | Question | Your answer |
 | --- | --- | --- |
 | 1 | Tested API errors (syntax/validation)? | **Yes** |
-| 2 | Capture `intuit_tid` from response headers? | **No** (not logged today — do not claim Yes) |
+| 2 | Capture `intuit_tid` from response headers? | **Yes** — every QuickBooks and Intuit OAuth response logs `intuit_tid` (and failed calls include it on the error) |
 | 3 | Store errors in logs for troubleshooting? | **Yes** (server logs; Sentry when enabled) |
 | 4 | Way for customers to contact support in-app? | **Yes** — email **admin@revcollect.ai** (and Settings / support links in product) |
 

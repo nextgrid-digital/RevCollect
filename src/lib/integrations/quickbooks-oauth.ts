@@ -1,3 +1,5 @@
+import { captureIntuitTid, withIntuitTid } from './intuit-tid';
+
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
@@ -80,9 +82,13 @@ export async function exchangeQuickBooksAuthCode(
       redirect_uri: redirectUri
     })
   });
+  const intuitTid = captureIntuitTid('oauth.token', response);
   if (!response.ok) {
     throw new Error(
-      `QuickBooks token exchange failed: ${response.status} ${await response.text()}`
+      withIntuitTid(
+        `QuickBooks token exchange failed: ${response.status} ${await response.text()}`,
+        intuitTid
+      )
     );
   }
   return response.json() as Promise<TokenResponse>;
@@ -104,9 +110,12 @@ export async function refreshQuickBooksAccessToken(
       refresh_token: refreshToken
     })
   });
+  const intuitTid = captureIntuitTid('oauth.refresh', response);
   if (!response.ok) {
     const detail = await response.text();
-    const error = new Error(`QuickBooks token refresh failed: ${response.status} ${detail}`);
+    const error = new Error(
+      withIntuitTid(`QuickBooks token refresh failed: ${response.status} ${detail}`, intuitTid)
+    );
     if (detail.includes('invalid_grant')) error.name = 'QuickBooksInvalidGrantError';
     throw error;
   }
@@ -121,7 +130,7 @@ export async function revokeQuickBooksRefreshToken(
   config: QuickBooksOAuthConfig,
   refreshToken: string
 ): Promise<void> {
-  await fetch(REVOKE_URL, {
+  const response = await fetch(REVOKE_URL, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${basicAuth(config)}`,
@@ -130,6 +139,7 @@ export async function revokeQuickBooksRefreshToken(
     },
     body: JSON.stringify({ token: refreshToken })
   });
+  captureIntuitTid('oauth.revoke', response);
 }
 
 export function isQuickBooksInvalidGrantError(error: unknown): boolean {
@@ -158,6 +168,7 @@ export async function fetchQuickBooksCompanyNameWithToken(
       Accept: 'application/json'
     }
   });
+  captureIntuitTid('qbo.company', response);
   if (!response.ok) return realmId;
   const payload = (await response.json()) as {
     QueryResponse?: { CompanyInfo?: Array<{ CompanyName?: string }> };
