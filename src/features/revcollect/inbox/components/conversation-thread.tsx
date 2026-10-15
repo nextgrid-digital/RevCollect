@@ -30,6 +30,13 @@ export function ConversationThread({
     if (!autoScrollToLatestEmail) return;
 
     const frame = requestAnimationFrame(() => {
+      const latest = emails[emails.length - 1];
+      // After you send, keep the new agent message in view — don't jump back to an
+      // older customer reply higher in the thread.
+      if (latest?.author === 'agent') {
+        endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
+        return;
+      }
       if (latestCustomerEmailId && replyTargetRef.current) {
         replyTargetRef.current.scrollIntoView({ block: 'nearest', behavior: 'auto' });
         return;

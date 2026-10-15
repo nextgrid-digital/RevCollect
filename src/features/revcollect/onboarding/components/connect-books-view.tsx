@@ -2,14 +2,27 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { WorkspacePageTitle } from '@/components/layout/workspace-page-title';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { revcollectKeys, useIntegrationStatus } from '@/features/revcollect/api/queries';
 import { useQueryClient } from '@tanstack/react-query';
 import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
+import {
+  defaultZohoDataCenterIdForClient,
+  ZOHO_DATA_CENTERS,
+  type ZohoDataCenterId
+} from '@/lib/integrations/zoho-regions';
 import { toast } from 'sonner';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -25,10 +38,15 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Connected but could not save the token. Check SUPABASE_SECRET_KEY and the integration_secrets table.',
   xero_redirect_mismatch:
     'Xero redirect URI mismatch. Set XERO_OAUTH_REDIRECT_URI and the matching URI in the Xero developer app.',
-  missing_refresh_token: 'OAuth did not return a refresh token. Try connecting again.',
+  missing_refresh_token:
+    'Zoho did not return a refresh token. Revoke this app under Zoho Accounts → Security → Connected Apps, then connect again.',
   invalid_oauth_state: 'OAuth session expired. Please try connecting again.',
   no_xero_organisation: 'No Xero organisation was returned. Check your Xero account and try again.',
-  no_zoho_organisation: 'No Zoho organisation was returned. Check your Zoho account and try again.',
+  no_zoho_organisation:
+    'No Zoho Books organisation on this account. Create or join one at books.zoho.in (India) or books.zoho.com, then connect again with the same login.',
+  zoho_organizations_failed:
+    'Zoho authorized but could not list Books organisations. Reconnect and approve all scopes (including settings). Confirm you have a Zoho Books org on this account.',
+  zoho_connect_failed: 'Could not connect Zoho Books. Check your Zoho credentials and try again.',
   xero_connect_failed: 'Could not connect Xero. Check your credentials and try again.',
   books_already_connected:
     'This workspace already has a ledger connected. Disconnect it first to switch.',
@@ -100,6 +118,7 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
   const otherBooks =
     integrationStatus && !isPending ? connectedBooksFromStatus(integrationStatus) : null;
   const blocked = Boolean(otherBooks && otherBooks !== provider);
+  const [zohoDc, setZohoDc] = useState<ZohoDataCenterId>(defaultZohoDataCenterIdForClient);
 
   useEffect(() => {
     if (blocked) {
@@ -114,6 +133,7 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
     }
 
     if (searchParams.get('connected') === '1') {
+      void queryClient.removeQueries({ queryKey: revcollectKeys.inbox() });
       void queryClient.invalidateQueries({
         queryKey: revcollectKeys.integrationStatus()
       });
@@ -122,7 +142,11 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
   }, [copy.title, queryClient, searchParams]);
 
   function handleConnect() {
-    window.open(copy.connectPath, '_blank', 'noopener,noreferrer');
+    const href =
+      provider === 'zoho'
+        ? `${copy.connectPath}?dc=${encodeURIComponent(zohoDc)}`
+        : copy.connectPath;
+    window.open(href, '_blank', 'noopener,noreferrer');
   }
 
   if (blocked) {
@@ -162,6 +186,30 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
             ) : (
               <p className='text-muted-foreground text-sm'>{copy.authorize}</p>
             )}
+            {provider === 'zoho' ? (
+              <div className='space-y-2'>
+                <Label htmlFor='zoho-dc'>Zoho data center</Label>
+                <Select
+                  value={zohoDc}
+                  onValueChange={(value) => setZohoDc(value as ZohoDataCenterId)}
+                >
+                  <SelectTrigger id='zoho-dc' className='w-full'>
+                    <SelectValue placeholder='Select region' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ZOHO_DATA_CENTERS.map((dc) => (
+                      <SelectItem key={dc.id} value={dc.id}>
+                        {dc.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className='text-muted-foreground text-xs'>
+                  Pick where your Zoho Books organisation lives (same Client ID works for all
+                  regions when Multi-DC is enabled).
+                </p>
+              </div>
+            ) : null}
             <div className='flex flex-wrap gap-2'>
               {!connected ? <Button onClick={handleConnect}>{copy.connectLabel}</Button> : null}
               <Button variant='outline' onClick={handleConnect}>

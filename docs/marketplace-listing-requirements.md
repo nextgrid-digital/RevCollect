@@ -151,6 +151,8 @@ Expect **weeks to months**, not 5 days. Plan sandbox credentials and a 30-minute
 
 **Still founder/ops:** questionnaire, Silver billing, security review, listing assets, production keys on Vercel (`INTUIT_CLIENT_ID` / `INTUIT_CLIENT_SECRET` / `INTUIT_ENVIRONMENT=production`).
 
+**Ready-to-paste pack:** [intuit-apps-com-listing-pack.md](./intuit-apps-com-listing-pack.md) (reviewer guide, security data-flow, listing copy, screenshot/video shot list). Public help URL: https://app.revcollect.ai/help/quickbooks
+
 ---
 
 ## Zoho Marketplace (Zoho Books)
@@ -177,7 +179,7 @@ The product OAuth app in Zoho API Console is **not** the listing. Listing is a *
 
 RevCollect’s extension should stay thin: **install → redirect to** `https://app.revcollect.ai/onboarding/connect-zoho`. Product OAuth then uses:
 
-`ZohoBooks.invoices.READ`, `ZohoBooks.contacts.READ`, `ZohoBooks.customerpayments.READ`, `AaaServer.profile.Read`
+`ZohoBooks.invoices.READ`, `ZohoBooks.contacts.READ`, `ZohoBooks.customerpayments.READ`, `ZohoBooks.settings.READ`, `AaaServer.profile.Read`
 
 Repo stub: [`marketplace/zoho-books-extension/`](../marketplace/zoho-books-extension/) (`plugin-manifest.json` `redirect_url` must be the **production** origin before submit).
 

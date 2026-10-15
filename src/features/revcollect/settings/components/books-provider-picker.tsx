@@ -14,6 +14,11 @@ import { IntuitIcon } from '@/components/icons/intuit-icon';
 import { XeroIcon } from '@/components/icons/xero-icon';
 import { ZohoIcon } from '@/components/icons/zoho-icon';
 import { BOOKS_PROVIDERS, type BooksProvider } from '@/lib/integrations/books-provider';
+import {
+  defaultZohoDataCenterIdForClient,
+  ZOHO_DATA_CENTERS,
+  type ZohoDataCenterId
+} from '@/lib/integrations/zoho-regions';
 import { OAuthStartLink } from './oauth-start-link';
 
 export type BooksPickerReturnTo = '/onboarding' | '/settings/integrations';
@@ -46,8 +51,14 @@ export const BOOKS_LEDGER_OPTIONS: Record<BooksProvider, BooksLedgerOption> = {
   }
 };
 
-export function booksConnectPath(provider: BooksProvider, returnTo: BooksPickerReturnTo): string {
-  return `/api/integrations/${provider}/connect?returnTo=${returnTo}`;
+export function booksConnectPath(
+  provider: BooksProvider,
+  returnTo: BooksPickerReturnTo,
+  zohoDc?: ZohoDataCenterId
+): string {
+  const params = new URLSearchParams({ returnTo });
+  if (provider === 'zoho' && zohoDc) params.set('dc', zohoDc);
+  return `/api/integrations/${provider}/connect?${params.toString()}`;
 }
 
 export function BooksLedgerMark({
@@ -82,6 +93,7 @@ function BooksLedgerOptionLabel({ provider }: { provider: BooksProvider }) {
 
 export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnTo }) {
   const [provider, setProvider] = useState<BooksProvider | ''>('');
+  const [zohoDc, setZohoDc] = useState<ZohoDataCenterId>(defaultZohoDataCenterIdForClient);
   const option = provider ? BOOKS_LEDGER_OPTIONS[provider] : null;
 
   return (
@@ -113,6 +125,23 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
           </SelectContent>
         </Select>
       </div>
+      {provider === 'zoho' ? (
+        <div className='space-y-2'>
+          <Label htmlFor='books-zoho-dc'>Zoho data center</Label>
+          <Select value={zohoDc} onValueChange={(value) => setZohoDc(value as ZohoDataCenterId)}>
+            <SelectTrigger id='books-zoho-dc' className='w-full sm:max-w-xs'>
+              <SelectValue placeholder='Select region' />
+            </SelectTrigger>
+            <SelectContent>
+              {ZOHO_DATA_CENTERS.map((dc) => (
+                <SelectItem key={dc.id} value={dc.id}>
+                  {dc.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       {option && provider ? (
         <div className='flex flex-col gap-2'>
           <p className='text-muted-foreground text-xs'>
@@ -120,7 +149,9 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
           </p>
           <div className='flex flex-wrap gap-2'>
             <Button asChild size='sm'>
-              <OAuthStartLink href={booksConnectPath(provider, returnTo)}>
+              <OAuthStartLink
+                href={booksConnectPath(provider, returnTo, provider === 'zoho' ? zohoDc : undefined)}
+              >
                 <BooksLedgerMark provider={provider} />
                 {option.connectLabel}
               </OAuthStartLink>

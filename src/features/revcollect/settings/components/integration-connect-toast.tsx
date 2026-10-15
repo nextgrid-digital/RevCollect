@@ -17,7 +17,8 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
     'Connected but could not save the token. Check SUPABASE_SECRET_KEY and the integration_secrets table.',
   xero_redirect_mismatch:
     'Xero redirect URI mismatch. Set XERO_OAUTH_REDIRECT_URI to https://app.revcollect.ai/api/integrations/xero/callback on Vercel and in the Xero developer app.',
-  missing_refresh_token: 'OAuth did not return a refresh token. Try connecting again.',
+  missing_refresh_token:
+    'OAuth did not return a refresh token. For Zoho: revoke the app under Accounts → Security → Connected Apps, then connect again.',
   invalid_oauth_state: 'OAuth session expired. Please try connecting again.',
   no_xero_organisation: 'No Xero organisation was returned. Check your Xero account and try again.',
   xero_connect_failed: 'Could not connect Xero. Check your Xero credentials and try again.',
@@ -26,7 +27,11 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
     'QuickBooks OAuth is not configured. Add INTUIT_CLIENT_ID and INTUIT_CLIENT_SECRET.',
   missing_zoho_credentials:
     'Zoho OAuth is not configured. Add ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.',
-  no_zoho_organisation: 'No Zoho organisation was returned. Check your Zoho account and try again.',
+  no_zoho_organisation:
+    'No Zoho Books organisation on this account. Create or join one at books.zoho.in (India) or books.zoho.com, then connect again with the same login.',
+  zoho_organizations_failed:
+    'Zoho authorized but could not list Books organisations. Reconnect and approve all scopes (including settings). Confirm you have a Zoho Books org on this account.',
+  zoho_connect_failed: 'Could not connect Zoho Books. Check your Zoho credentials and try again.',
   books_already_connected:
     'This workspace already has a ledger connected. Disconnect it first to switch.',
   access_denied: 'Connection was cancelled.'
@@ -48,6 +53,8 @@ export function IntegrationConnectToast() {
     }
 
     if (connected === '1') {
+      // Drop cached inbox threads so a QBO↔Zoho switch cannot show the previous ledger's mail.
+      void queryClient.removeQueries({ queryKey: revcollectKeys.inbox() });
       void queryClient.invalidateQueries({
         queryKey: revcollectKeys.integrationStatus()
       });

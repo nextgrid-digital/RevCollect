@@ -33,6 +33,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/security' ||
     pathname === '/sub-processors' ||
     pathname === '/launch' ||
+    pathname.startsWith('/help/') ||
     pathname.startsWith('/disconnect/')
   );
 }

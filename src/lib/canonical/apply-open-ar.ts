@@ -6,6 +6,7 @@ import {
   restoreRelationshipPolicies
 } from '@/features/revcollect/lib/relationship-policy';
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
+import { filterEmailsSince, getBooksConnectedAt } from '@/lib/integrations/books-connected-at';
 import { emptyIntelligence } from './defaults';
 import { recomputePatternsForSnapshot } from './patterns';
 import { getCanonicalStore } from './store';
@@ -36,9 +37,11 @@ export async function applyOpenArSnapshot(
       receivedPayment: receivedPaymentIds.has(customer.id)
     })
   );
+  const mailSince = await getBooksConnectedAt(tenantId);
+  const sentEmails = filterEmailsSince(current.sentEmails ?? [], mailSince);
   const inboxMessages = overlayInboxWithSentEmails(
     buildSyntheticInboxFromInvoices(input.invoices, customers),
-    current.sentEmails ?? []
+    sentEmails
   );
   const intelligenceByCustomerId = { ...current.intelligenceByCustomerId };
   for (const customer of customers) {
@@ -57,6 +60,7 @@ export async function applyOpenArSnapshot(
     customers,
     invoices: input.invoices,
     payments: input.payments,
+    sentEmails,
     inboxMessages,
     intelligenceByCustomerId,
     ingestedAt: new Date().toISOString()

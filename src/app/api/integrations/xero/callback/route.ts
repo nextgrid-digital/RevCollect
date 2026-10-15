@@ -12,6 +12,7 @@ import {
   fetchXeroConnections,
   getXeroOAuthConfig
 } from '@/lib/integrations/xero-oauth';
+import { clearInboxForLedgerSwitch } from '@/lib/canonical/clear-inbox-for-ledger-switch';
 import { ingestXeroAr } from '@/lib/canonical/ingest-xero';
 import { disconnectOtherBooks } from '@/lib/integrations/disconnect-integration';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
       organisationName: organisation.tenantName,
       refreshToken: tokens.refresh_token
     });
+    await clearInboxForLedgerSwitch(tenantId);
     try {
       await ingestXeroAr(tenantId);
     } catch (ingestError) {

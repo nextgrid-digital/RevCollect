@@ -323,6 +323,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
         toast.error('No customer on this thread');
         return;
       }
+      setBody('');
       sendFollowUp.mutate(
         {
           customerId,

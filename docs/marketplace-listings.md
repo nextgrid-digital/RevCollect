@@ -43,8 +43,9 @@ Founder-only:
 - [ ] Production keys after approval
 - [ ] Silver partner if you want a store listing (Builder cannot keep a listing)
 - [ ] Register Sign in with Intuit redirect `/api/auth/intuit/callback`
+- [ ] Fill TODOs in [intuit-apps-com-listing-pack.md](./intuit-apps-com-listing-pack.md) and submit listing
 
-Listing URLs: launch `/launch`, connect `/onboarding/connect-quickbooks`, disconnect `/disconnect/quickbooks`.
+Listing URLs: launch `/launch`, connect `/onboarding/connect-quickbooks`, disconnect `/disconnect/quickbooks`, help `/help/quickbooks`.
 
 ## Zoho Marketplace
 

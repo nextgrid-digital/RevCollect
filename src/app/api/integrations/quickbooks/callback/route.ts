@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
+import { clearInboxForLedgerSwitch } from '@/lib/canonical/clear-inbox-for-ledger-switch';
 import { ingestQuickBooksAr } from '@/lib/canonical/ingest-quickbooks';
 import { disconnectOtherBooks } from '@/lib/integrations/disconnect-integration';
 import {
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       organisationName,
       refreshToken: tokens.refresh_token
     });
+    await clearInboxForLedgerSwitch(tenantId);
     try {
       await ingestQuickBooksAr(tenantId);
     } catch (ingestError) {

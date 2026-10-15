@@ -10,6 +10,7 @@ export const ZOHO_OAUTH_SCOPES = [
   'ZohoBooks.invoices.READ',
   'ZohoBooks.contacts.READ',
   'ZohoBooks.customerpayments.READ',
+  'ZohoBooks.settings.READ',
   'AaaServer.profile.Read'
 ] as const;
 
@@ -42,7 +43,8 @@ export function getZohoSignupRedirectUri(_config: ZohoOAuthConfig): string {
 export function buildZohoAuthUrl(
   config: ZohoOAuthConfig,
   state: string,
-  redirectUri = config.redirectUri
+  redirectUri = config.redirectUri,
+  accountsUrl = config.accountsUrl
 ): string {
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -53,7 +55,7 @@ export function buildZohoAuthUrl(
     prompt: 'consent',
     state
   });
-  return `${config.accountsUrl}/oauth/v2/auth?${params.toString()}`;
+  return `${accountsUrl.replace(/\/$/, '')}/oauth/v2/auth?${params.toString()}`;
 }
 
 interface TokenResponse {
@@ -66,9 +68,10 @@ interface TokenResponse {
 export async function exchangeZohoAuthCode(
   config: ZohoOAuthConfig,
   code: string,
-  redirectUri = config.redirectUri
+  redirectUri = config.redirectUri,
+  accountsUrl = config.accountsUrl
 ): Promise<TokenResponse> {
-  const response = await fetch(`${config.accountsUrl}/oauth/v2/token`, {
+  const response = await fetch(`${accountsUrl.replace(/\/$/, '')}/oauth/v2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -87,9 +90,10 @@ export async function exchangeZohoAuthCode(
 
 export async function refreshZohoAccessToken(
   config: ZohoOAuthConfig,
-  refreshToken: string
-): Promise<{ accessToken: string; refreshToken: string }> {
-  const response = await fetch(`${config.accountsUrl}/oauth/v2/token`, {
+  refreshToken: string,
+  accountsUrl = config.accountsUrl
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const response = await fetch(`${accountsUrl.replace(/\/$/, '')}/oauth/v2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -105,20 +109,32 @@ export async function refreshZohoAccessToken(
     if (detail.includes('invalid_code') || detail.includes('INVALID_OAUTH')) {
       error.name = 'ZohoInvalidGrantError';
     }
+    if (
+      response.status === 400 &&
+      (detail.includes('too many requests') || detail.includes('Access Denied'))
+    ) {
+      error.name = 'ZohoRateLimitError';
+    }
     throw error;
   }
   const payload = (await response.json()) as TokenResponse;
   return {
     accessToken: payload.access_token,
-    refreshToken: payload.refresh_token ?? refreshToken
+    refreshToken: payload.refresh_token ?? refreshToken,
+    expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : 3600
   };
+}
+
+export function isZohoRateLimitError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'ZohoRateLimitError';
 }
 
 export async function revokeZohoRefreshToken(
   config: ZohoOAuthConfig,
-  refreshToken: string
+  refreshToken: string,
+  accountsUrl = config.accountsUrl
 ): Promise<void> {
-  const response = await fetch(`${config.accountsUrl}/oauth/v2/token/revoke`, {
+  const response = await fetch(`${accountsUrl.replace(/\/$/, '')}/oauth/v2/token/revoke`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ token: refreshToken })
@@ -136,16 +152,22 @@ export async function fetchZohoOrganizations(
   accessToken: string,
   apiBase: string
 ): Promise<Array<{ organization_id: string; name: string }>> {
-  const response = await fetch(`${apiBase}/organizations`, {
+  const url = new URL(`${apiBase}/organizations`);
+  // Include orgs the user administers (Zoho sometimes hides these by default).
+  url.searchParams.set('show_admin_orgs', 'true');
+  const response = await fetch(url, {
     headers: { Authorization: `Zoho-oauthtoken ${accessToken}` }
   });
   if (!response.ok) {
-    throw new Error(`Zoho organizations failed: ${response.status}`);
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Zoho organizations failed: ${response.status} ${detail}`.trim());
   }
   const payload = (await response.json()) as {
-    organizations?: Array<{ organization_id: string; name: string }>;
+    organizations?: Array<{ organization_id: string; name: string; is_org_active?: boolean }>;
   };
-  return payload.organizations ?? [];
+  const orgs = payload.organizations ?? [];
+  const active = orgs.filter((org) => org.is_org_active !== false);
+  return active.length > 0 ? active : orgs;
 }
 
 export async function fetchZohoUserEmail(

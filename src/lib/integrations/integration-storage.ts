@@ -20,7 +20,10 @@ export function isReadOnlyFilesystemError(error: unknown): boolean {
   return code === 'EROFS' || code === 'EPERM' || code === 'EACCES';
 }
 
-export function mapIntegrationSaveError(error: unknown): string {
+export function mapIntegrationSaveError(
+  error: unknown,
+  provider: 'xero' | 'quickbooks' | 'zoho' | 'gmail' = 'xero'
+): string {
   if (!canPersistIntegrations() || isReadOnlyFilesystemError(error)) {
     return getIntegrationStorageErrorCode();
   }
@@ -31,17 +34,27 @@ export function mapIntegrationSaveError(error: unknown): string {
     return 'missing_xero_credentials';
   }
 
+  if (provider === 'zoho' && message.includes('organizations failed')) {
+    return 'zoho_organizations_failed';
+  }
+
   if (message.includes('token exchange failed')) {
+    if (provider === 'zoho') return 'zoho_connect_failed';
+    if (provider === 'gmail') return 'gmail_connect_failed';
+    if (provider === 'quickbooks') return 'intuit_connect_failed';
     return 'xero_connect_failed';
   }
 
   if (message.includes('redirect_uri') || message.includes('invalid_grant')) {
-    return 'xero_redirect_mismatch';
+    return provider === 'xero' ? 'xero_redirect_mismatch' : `${provider}_connect_failed`;
   }
 
   if (message.includes('integration')) {
     return 'integration_storage_failed';
   }
 
+  if (provider === 'zoho') return 'zoho_connect_failed';
+  if (provider === 'gmail') return 'gmail_connect_failed';
+  if (provider === 'quickbooks') return 'intuit_connect_failed';
   return 'xero_connect_failed';
 }

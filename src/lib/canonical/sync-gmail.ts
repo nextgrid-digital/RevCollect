@@ -1,5 +1,9 @@
 import type { Customer, ThreadEmail } from '@/features/revcollect/types';
 import {
+  filterEmailsSince,
+  getBooksConnectedAt
+} from '@/lib/integrations/books-connected-at';
+import {
   fetchGmailMessageThreadId,
   fetchGmailThreadMessages,
   GmailNotConnectedError,
@@ -83,10 +87,11 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
   const customers = snapshot.customers as Customer[];
-  const existingRaw = snapshot.sentEmails ?? [];
+  const mailSince = await getBooksConnectedAt(tenantId);
+  const existingRaw = filterEmailsSince(snapshot.sentEmails ?? [], mailSince);
   const existing = rehomeSentEmails(existingRaw, customers);
   const incoming: ThreadEmail[] = [...existing];
-  if (emailsNeedWrite(existingRaw, existing)) {
+  if (emailsNeedWrite(snapshot.sentEmails ?? [], existing)) {
     snapshot.sentEmails = existing;
     snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, existing);
     await store.write(tenantId, snapshot);
@@ -117,7 +122,10 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   }
 
   for (const [gmailThreadId, owner] of threadOwners) {
-    const messages = await fetchGmailThreadMessages(tenantId, gmailThreadId);
+    const messages = filterEmailsSince(
+      await fetchGmailThreadMessages(tenantId, gmailThreadId),
+      mailSince
+    );
     const customerEmail = customerById.get(owner.customerId)?.email ?? '';
     for (const message of messages) {
       incoming.push({
@@ -145,9 +153,13 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   for (const customer of customers) {
     if (customersWithThread.has(customer.id)) continue;
     if (!isUsableCustomerEmail(customer.email, connectedEmail)) continue;
-    const messages = await searchGmailFromAddress(tenantId, customer.email.trim());
+    const messages = await searchGmailFromAddress(
+      tenantId,
+      customer.email.trim(),
+      mailSince
+    );
     const threadId = `xero-customer-${customer.id}`;
-    for (const message of messages) {
+    for (const message of filterEmailsSince(messages, mailSince)) {
       incoming.push({
         id: message.id,
         threadId,
@@ -237,10 +249,20 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
     }
   }
 
-  if (incoming.length === 0) return false;
-  if (!emailsNeedWrite(existingRaw, incoming)) return false;
+  const merged = filterEmailsSince(
+    rehomeSentEmails(mergeThreadEmails(existingRaw, incoming), customers),
+    mailSince
+  );
+  if (incoming.length === 0 && merged.length === 0) {
+    if ((snapshot.sentEmails ?? []).length === 0) return false;
+    snapshot.sentEmails = [];
+    snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, []);
+    await store.write(tenantId, snapshot);
+    return true;
+  }
+  if (!emailsNeedWrite(snapshot.sentEmails ?? [], merged)) return false;
 
-  snapshot.sentEmails = rehomeSentEmails(mergeThreadEmails(existingRaw, incoming), customers);
+  snapshot.sentEmails = merged;
   snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, snapshot.sentEmails);
   await store.write(tenantId, snapshot);
   return true;

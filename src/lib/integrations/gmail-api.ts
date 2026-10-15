@@ -414,9 +414,20 @@ export async function searchGmailByQuery(
 
 export async function searchGmailFromAddress(
   tenantId: string,
-  fromEmail: string
+  fromEmail: string,
+  afterIso?: string | null
 ): Promise<NonNullable<ReturnType<typeof mapGmailMessage>>[]> {
-  return searchGmailByQuery(tenantId, `from:${fromEmail} newer_than:90d`);
+  let query = `from:${fromEmail} newer_than:90d`;
+  if (afterIso) {
+    const date = new Date(afterIso);
+    if (!Number.isNaN(date.getTime())) {
+      const yyyy = date.getUTCFullYear();
+      const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(date.getUTCDate()).padStart(2, '0');
+      query = `from:${fromEmail} after:${yyyy}/${mm}/${dd}`;
+    }
+  }
+  return searchGmailByQuery(tenantId, query);
 }
 
 export async function getConnectedGmailEmail(tenantId: string): Promise<string | null> {

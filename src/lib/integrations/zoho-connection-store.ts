@@ -12,6 +12,8 @@ export interface ZohoConnectionRecord {
   refreshToken: EncryptedPayload;
   connectedAt: string;
   apiBase?: string;
+  /** Accounts host for this org's DC, e.g. https://accounts.zoho.in */
+  accountsUrl?: string;
 }
 
 export async function getZohoConnection(appTenantId: string): Promise<ZohoConnectionRecord | null> {
@@ -25,6 +27,7 @@ export async function saveZohoConnection(
     organisationName: string;
     refreshToken: string;
     apiBase?: string;
+    accountsUrl?: string;
   }
 ): Promise<ZohoConnectionRecord> {
   const record: ZohoConnectionRecord = {
@@ -32,7 +35,8 @@ export async function saveZohoConnection(
     organisationName: input.organisationName,
     refreshToken: encryptSecret(input.refreshToken),
     connectedAt: new Date().toISOString(),
-    apiBase: input.apiBase
+    apiBase: input.apiBase,
+    accountsUrl: input.accountsUrl
   };
   await writeIntegrationSecret('zoho', appTenantId, record);
   return record;

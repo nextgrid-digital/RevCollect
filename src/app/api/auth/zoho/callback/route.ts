@@ -45,16 +45,29 @@ export async function GET(request: NextRequest) {
 
   try {
     const redirectUri = getZohoSignupRedirectUri(config);
-    const tokens = await exchangeZohoAuthCode(config, code, redirectUri);
+    const accountsServer = searchParams.get('accounts-server')?.trim();
+    const accountsUrl =
+      accountsServer && /^https:\/\/accounts\.zoho(\.[a-z.]+)?$/i.test(accountsServer)
+        ? accountsServer
+        : config.accountsUrl;
+    const tokens = await exchangeZohoAuthCode(config, code, redirectUri, accountsUrl);
     if (!tokens.refresh_token) return redirectHome('missing_refresh_token');
 
-    const email = await fetchZohoUserEmail(tokens.access_token, config.accountsUrl);
+    const email = await fetchZohoUserEmail(tokens.access_token, accountsUrl);
     if (!email) return redirectHome('missing_zoho_email');
 
-    const apiBase = tokens.api_domain
+    const preferredApiBase = tokens.api_domain
       ? `${tokens.api_domain.replace(/\/$/, '')}/books/v3`
       : config.apiBase;
-    const organisations = await fetchZohoOrganizations(tokens.access_token, apiBase);
+    let apiBase = preferredApiBase;
+    let organisations;
+    try {
+      organisations = await fetchZohoOrganizations(tokens.access_token, preferredApiBase);
+    } catch (error) {
+      if (preferredApiBase === config.apiBase) throw error;
+      apiBase = config.apiBase;
+      organisations = await fetchZohoOrganizations(tokens.access_token, config.apiBase);
+    }
     const organisation = organisations[0];
     if (!organisation) return redirectHome('no_zoho_organisation');
 
@@ -82,6 +95,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('[auth/zoho] signup failed:', error);
-    return redirectHome(mapIntegrationSaveError(error));
+    return redirectHome(mapIntegrationSaveError(error, 'zoho'));
   }
 }

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
+import { clearInboxForLedgerSwitch } from '@/lib/canonical/clear-inbox-for-ledger-switch';
 import { ingestZohoAr } from '@/lib/canonical/ingest-zoho';
 import { disconnectOtherBooks } from '@/lib/integrations/disconnect-integration';
 import {
@@ -15,10 +16,21 @@ import {
   fetchZohoOrganizations,
   getZohoOAuthConfig
 } from '@/lib/integrations/zoho-oauth';
+import { getZohoDataCenter } from '@/lib/integrations/zoho-regions';
 
 const OAUTH_STATE_COOKIE = 'zoho_oauth_state';
+const OAUTH_DC_COOKIE = 'zoho_oauth_dc';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const DEFAULT_RETURN = '/onboarding/connect-zoho';
+
+function isZohoAccountsHost(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host.startsWith('accounts.zoho') || host.startsWith('accounts.zohocloud');
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
@@ -49,13 +61,32 @@ export async function GET(request: NextRequest) {
   if (!expectedState || expectedState !== state) return redirectWithError('invalid_oauth_state');
 
   try {
-    const tokens = await exchangeZohoAuthCode(config, code);
+    const dcFromCookie = cookieStore.get(OAUTH_DC_COOKIE)?.value;
+    cookieStore.delete(OAUTH_DC_COOKIE);
+    const selectedDc = getZohoDataCenter(dcFromCookie);
+
+    const accountsServer = searchParams.get('accounts-server')?.trim();
+    const accountsUrl =
+      accountsServer && isZohoAccountsHost(accountsServer)
+        ? accountsServer
+        : (selectedDc?.accountsUrl ?? config.accountsUrl);
+    const tokens = await exchangeZohoAuthCode(config, code, config.redirectUri, accountsUrl);
     if (!tokens.refresh_token) return redirectWithError('missing_refresh_token');
 
-    const apiBase = tokens.api_domain
+    const preferredApiBase = tokens.api_domain
       ? `${tokens.api_domain.replace(/\/$/, '')}/books/v3`
-      : config.apiBase;
-    const organisations = await fetchZohoOrganizations(tokens.access_token, apiBase);
+      : (selectedDc?.apiBase ?? config.apiBase);
+    let apiBase = preferredApiBase;
+    let organisations;
+    try {
+      organisations = await fetchZohoOrganizations(tokens.access_token, preferredApiBase);
+    } catch (error) {
+      const fallbackApiBase = selectedDc?.apiBase ?? config.apiBase;
+      if (preferredApiBase === fallbackApiBase) throw error;
+      console.warn('[zoho/callback] org list failed on api_domain, retrying DC apiBase:', error);
+      apiBase = fallbackApiBase;
+      organisations = await fetchZohoOrganizations(tokens.access_token, fallbackApiBase);
+    }
     const organisation = organisations[0];
     if (!organisation) return redirectWithError('no_zoho_organisation');
 
@@ -65,8 +96,10 @@ export async function GET(request: NextRequest) {
       organizationId: organisation.organization_id,
       organisationName: organisation.name,
       refreshToken: tokens.refresh_token,
-      apiBase
+      apiBase,
+      accountsUrl
     });
+    await clearInboxForLedgerSwitch(tenantId);
     try {
       await ingestZohoAr(tenantId);
     } catch (ingestError) {
@@ -78,6 +111,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(successUrl);
   } catch (error) {
     console.error('[zoho/callback] connect failed:', error);
-    return redirectWithError(mapIntegrationSaveError(error));
+    return redirectWithError(mapIntegrationSaveError(error, 'zoho'));
   }
 }

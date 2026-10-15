@@ -22,6 +22,13 @@ export default function DisconnectQuickBooksPage() {
         <Link className='underline underline-offset-4' href='/settings/integrations'>
           Integrations
         </Link>
+        {' · '}
+        <Link className='underline underline-offset-4' href='/help/quickbooks'>
+          Help
+        </Link>
+      </p>
+      <p className='text-muted-foreground text-xs leading-relaxed'>
+        Intuit and QuickBooks are registered trademarks of Intuit Inc. Used with permission.
       </p>
     </LegalPage>
   );

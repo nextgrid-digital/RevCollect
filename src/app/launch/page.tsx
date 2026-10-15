@@ -26,6 +26,12 @@ export default function LaunchPage() {
           <Link href='/onboarding/connect-quickbooks'>Connect QuickBooks</Link>
         </Button>
       </div>
+      <p className='text-muted-foreground text-xs leading-relaxed'>
+        <Link className='underline underline-offset-4' href='/help/quickbooks'>
+          QuickBooks Online setup help
+        </Link>
+        . Intuit and QuickBooks are registered trademarks of Intuit Inc. Used with permission.
+      </p>
     </main>
   );
 }

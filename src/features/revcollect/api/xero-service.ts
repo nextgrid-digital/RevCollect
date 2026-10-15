@@ -20,6 +20,7 @@ import {
   getConnectedBooksProvider,
   scheduleBackgroundAccountingIngest
 } from '@/lib/canonical/ingest-accounting';
+import { filterEmailsSince, getBooksConnectedAt } from '@/lib/integrations/books-connected-at';
 import { BOOKS_PROVIDER_LABELS } from '@/lib/integrations/books-provider';
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
@@ -307,7 +308,11 @@ export class XeroRevCollectService implements RevCollectService {
           (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
         )[0];
 
-    const threadEmails = sentEmailsForThread(sentEmails, message.id, customer.id);
+    const mailSince = await getBooksConnectedAt(tenantId);
+    const threadEmails = filterEmailsSince(
+      sentEmailsForThread(sentEmails, message.id, customer.id),
+      mailSince
+    );
     const latestSent = threadEmails[threadEmails.length - 1];
     const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
     const timelineEvents = await this.getTimelineForCustomer(customer.id);

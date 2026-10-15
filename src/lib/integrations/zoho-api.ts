@@ -5,9 +5,15 @@ import {
   getZohoRefreshToken,
   updateZohoRefreshToken
 } from './zoho-connection-store';
-import { getZohoOAuthConfig, isZohoInvalidGrantError, refreshZohoAccessToken } from './zoho-oauth';
+import { accountsUrlFromApiBase } from './zoho-regions';
+import {
+  getZohoOAuthConfig,
+  isZohoInvalidGrantError,
+  isZohoRateLimitError,
+  refreshZohoAccessToken
+} from './zoho-oauth';
 
-export type ZohoConnectionErrorCode = 'zoho_disconnected' | 'zoho_expired';
+export type ZohoConnectionErrorCode = 'zoho_disconnected' | 'zoho_expired' | 'zoho_rate_limited';
 
 export class ZohoNotConnectedError extends Error {
   readonly code: ZohoConnectionErrorCode;
@@ -21,6 +27,18 @@ export class ZohoNotConnectedError extends Error {
     this.code = code;
   }
 }
+
+type ZohoAccess = {
+  accessToken: string;
+  organizationId: string;
+  apiBase: string;
+};
+
+/** In-memory access tokens — Zoho rate-limits refresh if called on every request. */
+const accessCache = new Map<string, ZohoAccess & { expiresAt: number }>();
+const refreshInFlight = new Map<string, Promise<ZohoAccess>>();
+/** Refresh a bit before Zoho's expiry (tokens are typically ~1 hour). */
+const ACCESS_SKEW_MS = 60_000;
 
 export interface ZohoContact {
   contact_id: string;
@@ -53,43 +71,77 @@ const ZOHO_PAGE_SIZE = 200;
 const ZOHO_MAX_PAGES = 50;
 const SKIP_INVOICE_STATUSES = new Set(['draft', 'void', 'cancelled']);
 
-type ZohoAccess = {
-  accessToken: string;
-  organizationId: string;
-  apiBase: string;
-};
-
 async function getAccess(appTenantId: string): Promise<ZohoAccess> {
-  const config = getZohoOAuthConfig();
-  if (!config) throw new Error('Zoho OAuth is not configured');
-  const connection = await getZohoConnection(appTenantId);
-  if (!connection) throw new ZohoNotConnectedError();
-  let refreshToken: string | null = null;
-  try {
-    refreshToken = await getZohoRefreshToken(appTenantId);
-  } catch {
-    throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
-  }
-  if (!refreshToken) {
-    throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
-  }
-  try {
-    const tokens = await refreshZohoAccessToken(config, refreshToken);
-    if (tokens.refreshToken !== refreshToken) {
-      await updateZohoRefreshToken(appTenantId, tokens.refreshToken);
-    }
+  const cached = accessCache.get(appTenantId);
+  if (cached && cached.expiresAt > Date.now()) {
     return {
-      accessToken: tokens.accessToken,
-      organizationId: connection.organizationId,
-      apiBase: connection.apiBase ?? config.apiBase
+      accessToken: cached.accessToken,
+      organizationId: cached.organizationId,
+      apiBase: cached.apiBase
     };
-  } catch (error) {
-    if (isZohoInvalidGrantError(error)) {
-      await deleteZohoConnection(appTenantId);
+  }
+
+  const existing = refreshInFlight.get(appTenantId);
+  if (existing) return existing;
+
+  const pending = (async (): Promise<ZohoAccess> => {
+    const config = getZohoOAuthConfig();
+    if (!config) throw new Error('Zoho OAuth is not configured');
+    const connection = await getZohoConnection(appTenantId);
+    if (!connection) throw new ZohoNotConnectedError();
+    let refreshToken: string | null = null;
+    try {
+      refreshToken = await getZohoRefreshToken(appTenantId);
+    } catch {
       throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
     }
-    throw error;
-  }
+    if (!refreshToken) {
+      throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
+    }
+    try {
+      const accountsUrl =
+        connection.accountsUrl ??
+        accountsUrlFromApiBase(connection.apiBase) ??
+        config.accountsUrl;
+      const tokens = await refreshZohoAccessToken(config, refreshToken, accountsUrl);
+      if (tokens.refreshToken !== refreshToken) {
+        await updateZohoRefreshToken(appTenantId, tokens.refreshToken);
+      }
+      const access: ZohoAccess = {
+        accessToken: tokens.accessToken,
+        organizationId: connection.organizationId,
+        apiBase: connection.apiBase ?? config.apiBase
+      };
+      accessCache.set(appTenantId, {
+        ...access,
+        expiresAt: Date.now() + Math.max(tokens.expiresIn * 1000 - ACCESS_SKEW_MS, 60_000)
+      });
+      return access;
+    } catch (error) {
+      if (isZohoInvalidGrantError(error)) {
+        accessCache.delete(appTenantId);
+        await deleteZohoConnection(appTenantId);
+        throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
+      }
+      if (isZohoRateLimitError(error)) {
+        throw new ZohoNotConnectedError(
+          'Zoho rate-limited token refresh. Wait a minute, then resync once.',
+          'zoho_rate_limited'
+        );
+      }
+      throw error;
+    } finally {
+      refreshInFlight.delete(appTenantId);
+    }
+  })();
+
+  refreshInFlight.set(appTenantId, pending);
+  return pending;
+}
+
+export function clearZohoAccessCache(appTenantId?: string): void {
+  if (appTenantId) accessCache.delete(appTenantId);
+  else accessCache.clear();
 }
 
 async function zohoGet<T>(

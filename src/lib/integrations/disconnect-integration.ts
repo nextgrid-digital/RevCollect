@@ -87,11 +87,15 @@ export async function disconnectQuickBooks(tenantId: string): Promise<void> {
 }
 
 export async function disconnectZoho(tenantId: string): Promise<void> {
+  const connection = await getZohoConnection(tenantId).catch(() => null);
   const token = await getZohoRefreshToken(tenantId).catch(() => null);
   const config = getZohoOAuthConfig();
   await deleteWorkspaceConnection(deleteZohoConnection, tenantId);
   if (config && token) {
-    await settleRevoke(revokeZohoRefreshToken(config, token), '[zoho/disconnect]');
+    await settleRevoke(
+      revokeZohoRefreshToken(config, token, connection?.accountsUrl ?? config.accountsUrl),
+      '[zoho/disconnect]'
+    );
   }
 
   await clearArIfNoBooks(tenantId);

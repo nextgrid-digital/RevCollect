@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -96,9 +97,7 @@ export function IntegrationReconnectLinks({
         </OAuthStartLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
-        <OAuthStartLink href={`/api/integrations/zoho/connect?returnTo=${returnTo}`}>
-          Reconnect Zoho
-        </OAuthStartLink>
+        <Link href={`/onboarding/connect-zoho`}>Reconnect Zoho</Link>
       </Button>
       <Button asChild size='sm' variant='outline'>
         <OAuthStartLink href={`/api/integrations/gmail/connect?returnTo=${returnTo}`}>

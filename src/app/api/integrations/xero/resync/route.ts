@@ -56,6 +56,12 @@ export async function POST() {
       if (error.code === 'zoho_expired') {
         return expiredResponse();
       }
+      if (error.code === 'zoho_rate_limited') {
+        return NextResponse.json(
+          { error: error.message, code: 'zoho_rate_limited' as const },
+          { status: 429 }
+        );
+      }
       return disconnectedResponse();
     }
     console.error('[books/resync] failed:', error);
