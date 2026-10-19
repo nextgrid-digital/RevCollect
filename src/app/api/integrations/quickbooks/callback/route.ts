@@ -81,7 +81,30 @@ export async function GET(request: NextRequest) {
     successUrl.searchParams.set('connected', '1');
     return NextResponse.redirect(successUrl);
   } catch (error) {
-    console.error('[quickbooks/callback] connect failed:', error);
-    return redirectWithError(mapIntegrationSaveError(error, 'quickbooks'));
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[quickbooks/callback] connect failed:', {
+      message,
+      redirectUri: config.redirectUri,
+      environment: config.environment,
+      clientIdPrefix: config.clientId.slice(0, 8)
+    });
+    const code = mapIntegrationSaveError(error, 'quickbooks');
+    const url = new URL(returnTo, APP_URL);
+    url.searchParams.set('error', code);
+    // Safe snippet for toast (no secrets): Intuit status / error name only.
+    const detailMatch = message.match(
+      /token exchange failed:\s*(\d+)\s*(\{[\s\S]*\})?/i
+    );
+    if (detailMatch) {
+      let hint = detailMatch[1];
+      try {
+        const body = detailMatch[2] ? (JSON.parse(detailMatch[2]) as { error?: string }) : null;
+        if (body?.error) hint = `${detailMatch[1]}:${body.error}`;
+      } catch {
+        /* ignore parse */
+      }
+      url.searchParams.set('detail', hint.slice(0, 80));
+    }
+    return NextResponse.redirect(url);
   }
 }

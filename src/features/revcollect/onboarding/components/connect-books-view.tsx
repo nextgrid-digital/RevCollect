@@ -132,8 +132,10 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
 
   useEffect(() => {
     const error = searchParams.get('error');
+    const detail = searchParams.get('detail');
     if (error) {
-      toast.error(ERROR_MESSAGES[error] ?? `Could not connect ${copy.title}.`);
+      const base = ERROR_MESSAGES[error] ?? `Could not connect ${copy.title}.`;
+      toast.error(detail ? `${base} (${detail})` : base);
     }
 
     if (searchParams.get('connected') === '1') {

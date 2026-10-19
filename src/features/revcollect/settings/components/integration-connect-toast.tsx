@@ -47,13 +47,15 @@ export function IntegrationConnectToast() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const error = searchParams.get('error');
+  const detail = searchParams.get('detail');
   const connected = searchParams.get('connected');
 
   useEffect(() => {
     if (!error && connected !== '1') return;
 
     if (error) {
-      toast.error(CONNECT_ERROR_MESSAGES[error] ?? 'Could not connect.');
+      const base = CONNECT_ERROR_MESSAGES[error] ?? 'Could not connect.';
+      toast.error(detail ? `${base} (${detail})` : base);
     }
 
     if (connected === '1') {
@@ -67,7 +69,7 @@ export function IntegrationConnectToast() {
     }
 
     router.replace(pathname, { scroll: false });
-  }, [connected, error, pathname, queryClient, router]);
+  }, [connected, detail, error, pathname, queryClient, router]);
 
   useEffect(() => {
     function refetchStatus() {
