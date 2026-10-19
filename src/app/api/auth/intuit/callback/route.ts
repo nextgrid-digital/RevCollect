@@ -81,6 +81,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('[auth/intuit] signup failed:', error);
-    return redirectHome(mapIntegrationSaveError(error));
+    return redirectHome(mapIntegrationSaveError(error, 'quickbooks'));
   }
 }

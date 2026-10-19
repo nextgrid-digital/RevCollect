@@ -82,6 +82,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(successUrl);
   } catch (error) {
     console.error('[quickbooks/callback] connect failed:', error);
-    return redirectWithError(mapIntegrationSaveError(error));
+    return redirectWithError(mapIntegrationSaveError(error, 'quickbooks'));
   }
 }

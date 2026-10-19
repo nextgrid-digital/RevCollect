@@ -31,6 +31,9 @@ export function mapIntegrationSaveError(
   const message = error instanceof Error ? error.message : String(error);
 
   if (message.includes('EMAIL_ENCRYPTION_KEY')) {
+    if (provider === 'quickbooks') return 'missing_intuit_credentials';
+    if (provider === 'zoho') return 'missing_zoho_credentials';
+    if (provider === 'gmail') return 'missing_google_credentials';
     return 'missing_xero_credentials';
   }
 
@@ -46,7 +49,11 @@ export function mapIntegrationSaveError(
   }
 
   if (message.includes('redirect_uri') || message.includes('invalid_grant')) {
-    return provider === 'xero' ? 'xero_redirect_mismatch' : `${provider}_connect_failed`;
+    if (provider === 'xero') return 'xero_redirect_mismatch';
+    if (provider === 'quickbooks') return 'intuit_redirect_mismatch';
+    if (provider === 'zoho') return 'zoho_connect_failed';
+    if (provider === 'gmail') return 'gmail_connect_failed';
+    return 'xero_redirect_mismatch';
   }
 
   if (message.includes('integration')) {

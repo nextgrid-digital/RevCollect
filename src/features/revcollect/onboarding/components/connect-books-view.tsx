@@ -30,6 +30,10 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Xero OAuth is not configured. Add XERO_CLIENT_ID, XERO_CLIENT_SECRET, and EMAIL_ENCRYPTION_KEY to your environment.',
   missing_intuit_credentials:
     'QuickBooks OAuth is not configured. Add INTUIT_CLIENT_ID and INTUIT_CLIENT_SECRET.',
+  intuit_connect_failed:
+    'Could not connect QuickBooks. Check INTUIT_CLIENT_ID / SECRET, INTUIT_ENVIRONMENT, and redirect URIs on Vercel and the Intuit app.',
+  intuit_redirect_mismatch:
+    'QuickBooks redirect URI mismatch. Set INTUIT_OAUTH_REDIRECT_URI to https://app.revcollect.ai/api/integrations/quickbooks/callback on Vercel and on the Intuit Production keys tab.',
   missing_zoho_credentials:
     'Zoho OAuth is not configured. Add ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.',
   missing_integration_storage:
