@@ -18,10 +18,15 @@ export interface QuickBooksOAuthConfig {
   environment: 'sandbox' | 'production';
 }
 
+function envSecret(value: string | undefined): string {
+  return (value ?? '').trim().replace(/^['"]|['"]$/g, '').trim();
+}
+
 export function getQuickBooksOAuthConfig(): QuickBooksOAuthConfig | null {
-  const clientId = process.env.INTUIT_CLIENT_ID?.trim() || process.env.QUICKBOOKS_CLIENT_ID?.trim();
-  const clientSecret =
-    process.env.INTUIT_CLIENT_SECRET?.trim() || process.env.QUICKBOOKS_CLIENT_SECRET?.trim();
+  const clientId = envSecret(process.env.INTUIT_CLIENT_ID || process.env.QUICKBOOKS_CLIENT_ID);
+  const clientSecret = envSecret(
+    process.env.INTUIT_CLIENT_SECRET || process.env.QUICKBOOKS_CLIENT_SECRET
+  );
   if (!clientId || !clientSecret) return null;
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -62,6 +67,63 @@ interface TokenResponse {
 
 function basicAuth(config: QuickBooksOAuthConfig): string {
   return Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
+}
+
+/** Dummy token request — invalid_grant means Client ID+Secret are accepted. */
+export async function probeQuickBooksClientCredentials(): Promise<{
+  configured: boolean;
+  environment: 'sandbox' | 'production' | null;
+  redirectUri: string | null;
+  clientIdLength: number;
+  clientSecretLength: number;
+  clientIdPrefix: string | null;
+  probeStatus: number | null;
+  probeError: string | null;
+}> {
+  const config = getQuickBooksOAuthConfig();
+  if (!config) {
+    return {
+      configured: false,
+      environment: null,
+      redirectUri: null,
+      clientIdLength: 0,
+      clientSecretLength: 0,
+      clientIdPrefix: null,
+      probeStatus: null,
+      probeError: 'missing_credentials'
+    };
+  }
+  const response = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basicAuth(config)}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json'
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: 'oauth-health-probe',
+      redirect_uri: config.redirectUri
+    })
+  });
+  const text = await response.text();
+  let probeError: string | null = text.slice(0, 180);
+  try {
+    const body = JSON.parse(text) as { error?: string };
+    if (body.error) probeError = body.error;
+  } catch {
+    /* keep raw */
+  }
+  return {
+    configured: true,
+    environment: config.environment,
+    redirectUri: config.redirectUri,
+    clientIdLength: config.clientId.length,
+    clientSecretLength: config.clientSecret.length,
+    clientIdPrefix: config.clientId.slice(0, 4),
+    probeStatus: response.status,
+    probeError
+  };
 }
 
 export async function exchangeQuickBooksAuthCode(
@@ -116,7 +178,9 @@ export async function refreshQuickBooksAccessToken(
     const error = new Error(
       withIntuitTid(`QuickBooks token refresh failed: ${response.status} ${detail}`, intuitTid)
     );
-    if (detail.includes('invalid_grant')) error.name = 'QuickBooksInvalidGrantError';
+    if (detail.includes('invalid_grant') || detail.includes('invalid_client')) {
+      error.name = 'QuickBooksInvalidGrantError';
+    }
     throw error;
   }
   const payload = (await response.json()) as TokenResponse;
@@ -146,6 +210,7 @@ export function isQuickBooksInvalidGrantError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
     message.includes('invalid_grant') ||
+    message.includes('invalid_client') ||
     (error instanceof Error && error.name === 'QuickBooksInvalidGrantError')
   );
 }

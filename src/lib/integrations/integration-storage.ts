@@ -44,7 +44,10 @@ export function mapIntegrationSaveError(
   if (message.includes('token exchange failed')) {
     if (provider === 'zoho') return 'zoho_connect_failed';
     if (provider === 'gmail') return 'gmail_connect_failed';
-    if (provider === 'quickbooks') return 'intuit_connect_failed';
+    if (provider === 'quickbooks') {
+      if (message.includes('invalid_client')) return 'intuit_invalid_client';
+      return 'intuit_connect_failed';
+    }
     return 'xero_connect_failed';
   }
 

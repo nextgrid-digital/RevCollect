@@ -32,6 +32,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     'QuickBooks OAuth is not configured. Add INTUIT_CLIENT_ID and INTUIT_CLIENT_SECRET.',
   intuit_connect_failed:
     'Could not connect QuickBooks. Check INTUIT_CLIENT_ID / SECRET, INTUIT_ENVIRONMENT, and redirect URIs on Vercel and the Intuit app.',
+  intuit_invalid_client:
+    'QuickBooks Client Secret does not match the Client ID. Recopy both from Intuit → Keys & credentials → Production, update Vercel Production, redeploy, then reconnect.',
   intuit_redirect_mismatch:
     'QuickBooks redirect URI mismatch. Set INTUIT_OAUTH_REDIRECT_URI to https://app.revcollect.ai/api/integrations/quickbooks/callback on Vercel and on the Intuit Production keys tab.',
   missing_zoho_credentials:

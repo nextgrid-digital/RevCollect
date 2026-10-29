@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
       message,
       redirectUri: config.redirectUri,
       environment: config.environment,
-      clientIdPrefix: config.clientId.slice(0, 8)
+      clientIdLength: config.clientId.length,
+      clientSecretLength: config.clientSecret.length
     });
     const code = mapIntegrationSaveError(error, 'quickbooks');
     const url = new URL(returnTo, APP_URL);

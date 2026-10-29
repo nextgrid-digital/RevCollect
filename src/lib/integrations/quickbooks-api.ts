@@ -97,7 +97,7 @@ async function getAccess(appTenantId: string): Promise<{
     if (isQuickBooksInvalidGrantError(error)) {
       await deleteQuickBooksConnection(appTenantId);
       throw new QuickBooksNotConnectedError(
-        'QuickBooks session expired. Reconnect.',
+        'QuickBooks credentials changed or the session expired. Reconnect QuickBooks.',
         'xero_expired'
       );
     }
