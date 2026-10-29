@@ -10,7 +10,7 @@ interface OAuthStartLinkProps {
 
 export function OAuthStartLink({ href, children, className }: OAuthStartLinkProps) {
   return (
-    <a href={href} target='_blank' rel='noopener noreferrer' className={className}>
+    <a href={href} className={className}>
       {children}
     </a>
   );

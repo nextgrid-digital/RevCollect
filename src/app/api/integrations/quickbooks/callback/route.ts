@@ -58,19 +58,28 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeQuickBooksAuthCode(config, code);
     if (!tokens.refresh_token) return redirectWithError('missing_refresh_token');
 
-    const organisationName = await fetchQuickBooksCompanyNameWithToken(
-      tokens.access_token,
-      realmId,
-      config.environment
-    );
     const tenantId = await getIntegrationTenantId();
+    let organisationName = realmId;
+    try {
+      organisationName = await fetchQuickBooksCompanyNameWithToken(
+        tokens.access_token,
+        realmId,
+        config.environment
+      );
+    } catch (companyError) {
+      console.error('[quickbooks/callback] company name failed:', companyError);
+    }
     await disconnectOtherBooks(tenantId, 'quickbooks');
     await saveQuickBooksConnection(tenantId, {
       realmId,
       organisationName,
       refreshToken: tokens.refresh_token
     });
-    await clearInboxForLedgerSwitch(tenantId);
+    try {
+      await clearInboxForLedgerSwitch(tenantId);
+    } catch (inboxError) {
+      console.error('[quickbooks/callback] inbox clear failed:', inboxError);
+    }
     try {
       await ingestQuickBooksAr(tenantId);
     } catch (ingestError) {
@@ -92,10 +101,7 @@ export async function GET(request: NextRequest) {
     const code = mapIntegrationSaveError(error, 'quickbooks');
     const url = new URL(returnTo, APP_URL);
     url.searchParams.set('error', code);
-    // Safe snippet for toast (no secrets): Intuit status / error name only.
-    const detailMatch = message.match(
-      /token exchange failed:\s*(\d+)\s*(\{[\s\S]*\})?/i
-    );
+    const detailMatch = message.match(/token exchange failed:\s*(\d+)\s*(\{[\s\S]*\})?/i);
     if (detailMatch) {
       let hint = detailMatch[1];
       try {
@@ -105,6 +111,11 @@ export async function GET(request: NextRequest) {
         /* ignore parse */
       }
       url.searchParams.set('detail', hint.slice(0, 80));
+    } else if (message) {
+      url.searchParams.set(
+        'detail',
+        message.replace(/[A-Za-z0-9+/=]{20,}/g, '…').slice(0, 80)
+      );
     }
     return NextResponse.redirect(url);
   }
