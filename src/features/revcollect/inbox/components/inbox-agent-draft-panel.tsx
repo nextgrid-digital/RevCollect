@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
 import { useSendInboxFollowUp } from '../../api/queries';
 import type { AgentDraftMeta } from '../../types';
 import { InboxAttachedInvoiceChips } from './inbox-attached-invoice-chips';
@@ -202,6 +203,9 @@ export function InboxAgentDraftPanel({
           </Button>
         </div>
       </div>
+      {!isSent ? (
+        <p className='text-muted-foreground text-[11px] leading-relaxed'>{CAN_SPAM_SEND_NOTE}</p>
+      ) : null}
     </article>
   );
 }

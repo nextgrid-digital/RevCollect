@@ -8,8 +8,14 @@ import {
   useResyncXero
 } from '../api/queries';
 
-/** Session-wide guard so inbox + customers don't each fire a resync. */
+/** Session-wide guard so inbox and customers don't each fire a resync. */
 let autoResyncAttempted = false;
+
+function claimAutoResync(): boolean {
+  if (autoResyncAttempted) return false;
+  autoResyncAttempted = true;
+  return true;
+}
 
 /**
  * When books are connected but both customers and inbox are empty, trigger one
@@ -31,8 +37,7 @@ export function useAutoResyncWhenEmpty(): { isResyncing: boolean } {
   useEffect(() => {
     if (!customersFetched || !inboxFetched || !booksConnected) return;
     if (customers.length > 0 || inboxMessages.length > 0) return;
-    if (autoResyncAttempted || resync.isPending) return;
-    autoResyncAttempted = true;
+    if (resync.isPending || !claimAutoResync()) return;
     resync.mutate();
     // Intentionally omit full `resync` — mutate once per empty session.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot empty-AR recovery

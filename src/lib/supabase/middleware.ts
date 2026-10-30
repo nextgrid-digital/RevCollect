@@ -26,6 +26,10 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/icon.png' ||
     pathname === '/apple-icon.png' ||
     pathname === '/apple-icon' ||
+    pathname === '/opengraph-image' ||
+    pathname.startsWith('/opengraph-image/') ||
+    pathname === '/twitter-image' ||
+    pathname.startsWith('/twitter-image/') ||
     pathname.startsWith('/eve/') ||
     pathname.startsWith('/api/auth/') ||
     pathname === '/privacy' ||

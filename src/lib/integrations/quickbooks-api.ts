@@ -49,6 +49,9 @@ export interface QboInvoice {
   DueDate?: string;
   TxnDate?: string;
   CustomerRef?: QboRef;
+  EmailStatus?: string;
+  BillEmail?: { Address?: string };
+  DeliveryInfo?: { DeliveryTime?: string };
 }
 
 export interface QboPayment {

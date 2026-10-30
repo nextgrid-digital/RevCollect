@@ -1,14 +1,15 @@
-import type { Metadata } from 'next';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy — RevCollect',
-  description: 'How RevCollect handles accounting, Gmail, and workspace data.'
-};
+export const metadata = publicMetadata({
+  title: 'Privacy Policy',
+  description: 'How RevCollect handles accounting, Gmail, and workspace data.',
+  path: '/privacy'
+});
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title='Privacy Policy'>
+    <LegalPage title='Privacy Policy' lastUpdated='October 29, 2026'>
       <p>
         RevCollect is a collections workspace for bookkeepers. We sync open invoices, contacts, and
         payment status from the accounting system you connect (Xero, QuickBooks Online, or Zoho

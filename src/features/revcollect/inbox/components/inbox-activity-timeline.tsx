@@ -1,17 +1,14 @@
 import { cn } from '@/lib/utils';
 import { formatInboxActivityTime } from '../../utils';
 import { resolveTimelineThreadEmailId } from '../lib/resolve-timeline-email';
-import type { ThreadEmail, TimelineEvent, TimelineEventType } from '../../types';
-
-const messageActivityTypes = new Set<TimelineEventType>(['email_sent', 'email_received']);
-
-export function activityEventsWithoutMessages(events: TimelineEvent[]): TimelineEvent[] {
-  return events.filter((event) => !messageActivityTypes.has(event.type));
-}
+import type { ThreadEmail, TimelineEvent } from '../../types';
 
 function getActivityDotClass(event: TimelineEvent): string {
   if (event.type === 'email_received') {
     return 'bg-emerald-500';
+  }
+  if (event.type === 'email_sent') {
+    return 'bg-foreground/70';
   }
 
   const text = `${event.title} ${event.description}`.toLowerCase();
@@ -33,16 +30,14 @@ export function InboxActivityTimeline({
   threadEmails,
   onEventClick
 }: InboxActivityTimelineProps) {
-  const activityEvents = activityEventsWithoutMessages(events);
-
-  if (activityEvents.length === 0) {
+  if (events.length === 0) {
     return <p className='text-muted-foreground text-sm'>No activity recorded yet.</p>;
   }
 
   return (
     <ol>
-      {activityEvents.map((event, index) => {
-        const isLast = index === activityEvents.length - 1;
+      {events.map((event, index) => {
+        const isLast = index === events.length - 1;
 
         const linkedEmailId = resolveTimelineThreadEmailId(event, threadEmails);
         const isClickable = Boolean(linkedEmailId && onEventClick);
@@ -78,9 +73,6 @@ export function InboxActivityTimeline({
                 >
                   {formatInboxActivityTime(event.occurredAt)}
                 </time>
-                <p className='text-muted-foreground mt-1 text-xs leading-relaxed'>
-                  {event.description}
-                </p>
               </button>
             ) : (
               <div className='min-w-0 flex-1 px-2 py-1'>
@@ -91,9 +83,6 @@ export function InboxActivityTimeline({
                 >
                   {formatInboxActivityTime(event.occurredAt)}
                 </time>
-                <p className='text-muted-foreground mt-1 text-xs leading-relaxed'>
-                  {event.description}
-                </p>
               </div>
             )}
           </li>

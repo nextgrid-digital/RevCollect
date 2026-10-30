@@ -1,18 +1,19 @@
-import type { Metadata } from 'next';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service — RevCollect',
-  description: 'Terms for using RevCollect.'
-};
+export const metadata = publicMetadata({
+  title: 'Terms of Service',
+  description: 'Terms for using RevCollect.',
+  path: '/terms'
+});
 
 export default function TermsPage() {
   return (
-    <LegalPage title='Terms of Service'>
+    <LegalPage title='Terms of Service' lastUpdated='October 29, 2026'>
       <p>
         RevCollect drafts collection follow-ups. You remain the sender. You are responsible for
         CAN-SPAM and similar rules, for the accuracy of your books, and for who you authorize to
-        connect Xero, QuickBooks, Zoho Books, and Gmail.
+        connect Xero, QuickBooks Online, Zoho Books, and Gmail.
       </p>
       <p>
         Accounting data stays in your ledger. RevCollect is not a substitute for your practice

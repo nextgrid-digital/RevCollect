@@ -44,6 +44,7 @@ export interface XeroContact {
 export interface XeroInvoiceContact {
   ContactID?: string;
   Name?: string;
+  EmailAddress?: string;
 }
 
 export interface XeroValidationError {
@@ -65,6 +66,7 @@ export interface XeroInvoice {
   AmountPaid?: number;
   Total?: number;
   Contact?: XeroInvoiceContact;
+  SentToContact?: boolean;
   HasErrors?: boolean;
   ValidationErrors?: XeroValidationError[];
 }

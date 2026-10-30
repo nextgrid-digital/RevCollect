@@ -20,7 +20,8 @@ import {
   getConnectedBooksProvider,
   scheduleBackgroundAccountingIngest
 } from '@/lib/canonical/ingest-accounting';
-import { filterEmailsSince, getBooksConnectedAt } from '@/lib/integrations/books-connected-at';
+import { openArMailSince } from '@/lib/canonical/open-ar-mail-since';
+import { filterEmailsSince } from '@/lib/integrations/books-connected-at';
 import { BOOKS_PROVIDER_LABELS } from '@/lib/integrations/books-provider';
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
@@ -37,6 +38,7 @@ import {
   sentEmailFromResult,
   GmailNotConnectedError
 } from '@/lib/integrations/gmail-api';
+import { activityLabelsForEmails } from '../lib/activity-labels';
 import { MAX_INVOICE_ATTACHMENTS, sanitizeInvoicePdfFilename } from '../lib/invoice-pdf';
 import { applyAutoPromises } from '@/lib/ari/apply-auto-promises';
 import { applyRelationshipSignals } from '@/lib/ari/apply-relationship-signals';
@@ -58,6 +60,7 @@ import type {
   TimelineEvent,
   WorkspaceGeneralSettings
 } from '../types';
+import { formatPromisedDateLabel } from '../lib/collection-decision';
 import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
 import { isOpenCanonicalInvoice } from '../lib/invoice-open';
 import { applyCollectionDecisionToCustomer } from '../lib/collection-decision';
@@ -307,10 +310,9 @@ export class XeroRevCollectService implements RevCollectService {
           (a, b) => getDaysOverdueFromDueDate(b.dueDate) - getDaysOverdueFromDueDate(a.dueDate)
         )[0];
 
-    const mailSince = await getBooksConnectedAt(tenantId);
     const threadEmails = filterEmailsSince(
       sentEmailsForThread(sentEmails, message.id, customer.id),
-      mailSince
+      openArMailSince(customer, customerInvoices)
     );
     const latestSent = threadEmails[threadEmails.length - 1];
     const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
@@ -345,7 +347,10 @@ export class XeroRevCollectService implements RevCollectService {
           }
         : undefined,
       openInvoiceNumbers: openInvoices.map((invoice) => invoice.number),
-      openInvoices: openInvoices.map((invoice) => ({ id: invoice.id, number: invoice.number }))
+      openInvoices: openInvoices.map((invoice) => ({
+        id: invoice.id,
+        number: invoice.number
+      }))
     };
   }
 
@@ -426,22 +431,53 @@ export class XeroRevCollectService implements RevCollectService {
     const tenantId = await getIntegrationTenantId();
     const snapshot = await (await getCanonicalStore()).read(tenantId);
     const invoiceById = new Map(snapshot.invoices.map((invoice) => [invoice.id, invoice]));
-    const payments = snapshot.payments
-      .filter((payment) => payment.customerId === customerId)
-      .map((payment) => {
-        const invoice = payment.invoiceId ? invoiceById.get(payment.invoiceId) : undefined;
-        return {
-          id: payment.id,
-          customerId,
-          type: 'payment' as const,
-          title: 'Payment received',
-          description: invoice
-            ? `${formatCurrencyWhole(payment.amountCents)} · ${invoice.number}`
-            : formatCurrencyWhole(payment.amountCents),
-          occurredAt: payment.paidAt
-        };
+    const customer = snapshot.customers.find((item) => item.id === customerId);
+    const threadId = `xero-customer-${customerId}`;
+    const events: TimelineEvent[] = [];
+
+    for (const payment of snapshot.payments) {
+      if (payment.customerId !== customerId) continue;
+      const invoice = payment.invoiceId ? invoiceById.get(payment.invoiceId) : undefined;
+      events.push({
+        id: payment.id,
+        customerId,
+        type: 'payment',
+        title: 'Payment received',
+        description: invoice
+          ? `${formatCurrencyWhole(payment.amountCents)} · ${invoice.number}`
+          : formatCurrencyWhole(payment.amountCents),
+        occurredAt: payment.paidAt
       });
-    return payments.toSorted((left, right) => right.occurredAt.localeCompare(left.occurredAt));
+    }
+
+    const customerEmails = (snapshot.sentEmails ?? []).filter(
+      (email) => email.customerId === customerId || email.threadId === threadId
+    );
+    const activityLabels = activityLabelsForEmails(customerEmails);
+    for (const email of customerEmails) {
+      events.push({
+        id: `email-${email.id}`,
+        customerId,
+        type: email.author === 'agent' ? 'email_sent' : 'email_received',
+        title: activityLabels.get(email.id) ?? 'Customer responded',
+        description: '',
+        occurredAt: email.sentAt,
+        threadEmailId: email.id
+      });
+    }
+
+    if (customer?.promisedDate) {
+      events.push({
+        id: `promise-${customerId}`,
+        customerId,
+        type: 'promise',
+        title: 'Payment promised',
+        description: `Promised ${formatPromisedDateLabel(customer.promisedDate)}`,
+        occurredAt: `${customer.promisedDate.slice(0, 10)}T12:00:00.000Z`
+      });
+    }
+
+    return events.toSorted((left, right) => right.occurredAt.localeCompare(left.occurredAt));
   }
 
   async getAgentDraftMetaForMessage(messageId: string): Promise<AgentDraftMeta | undefined> {
@@ -654,7 +690,10 @@ export class XeroRevCollectService implements RevCollectService {
       gmailThreadId: existingThread?.gmailThreadId,
       attachments
     });
-    const email = sentEmailFromResult(sent, { threadId, customerId: customer.id });
+    const email = sentEmailFromResult(sent, {
+      threadId,
+      customerId: customer.id
+    });
     await persistSentFollowUp({
       tenantId,
       customerId: customer.id,

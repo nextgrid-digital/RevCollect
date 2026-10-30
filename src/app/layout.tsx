@@ -4,6 +4,7 @@ import { fontVariables } from '@/components/themes/font.config';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
 import { META_THEME_COLORS } from '@/components/themes/theme-color-meta';
 import ThemeProvider from '@/components/themes/theme-provider';
+import { APP_DESCRIPTION, APP_NAME, APP_URL } from '@/lib/site';
 import { cn } from '@/lib/utils';
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
@@ -14,11 +15,25 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: {
-    default: 'RevCollect',
-    template: '%s | RevCollect'
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`
   },
-  description: 'AI-powered accounts receivable and collections dashboard',
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: APP_NAME,
+    title: APP_NAME,
+    description: APP_DESCRIPTION
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_NAME,
+    description: APP_DESCRIPTION
+  },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

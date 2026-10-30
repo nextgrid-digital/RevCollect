@@ -231,14 +231,13 @@ export function AuthPage() {
         <div className='absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background' />
         <RevCollectMark className='relative z-10 mr-auto' />
 
-        <div className='z-10 mt-auto'>
-          <blockquote className='space-y-2'>
-            <p className='text-xl'>
-              &ldquo;RevCollect cut our follow-up time in half — overdue invoices and customer
-              context live in one inbox.&rdquo;
-            </p>
-            <footer className='font-mono text-sm font-semibold'>~ Finance lead</footer>
-          </blockquote>
+        <div className='z-10 mt-auto max-w-lg space-y-3'>
+          <p className='text-xl'>
+            Collections inbox for bookkeepers. Connect Xero, QuickBooks Online, or Zoho Books.
+          </p>
+          <p className='text-muted-foreground text-sm'>
+            Draft follow-ups, then send from Gmail. You stay the sender.
+          </p>
         </div>
         <div className='absolute inset-0'>
           <FloatingPaths position={1} />

@@ -17,9 +17,8 @@ export const DISCONNECTED_INTEGRATION_STATUS = {
 async function getBooksLastSyncAt(tenantId: string): Promise<string | null> {
   try {
     const snapshot = await (await getCanonicalStore()).read(tenantId);
-    const hasAr = snapshot.customers.length > 0 || snapshot.invoices.length > 0;
-    // Do not advertise "Synced" when the AR snapshot is empty — badge and lists stay honest.
-    if (!hasAr) return null;
+    // A completed sync sets ingestedAt even when the ledger has no open AR.
+    // Ignoring that timestamp left the header pill on "Waiting for sync".
     if (snapshot.ingestedAt) return snapshot.ingestedAt;
   } catch {
     // Store read failed — try tenants.last_synced_at as a fallback.
@@ -28,20 +27,28 @@ async function getBooksLastSyncAt(tenantId: string): Promise<string | null> {
   if (!hasSupabaseAdminEnv()) return null;
   try {
     const supabase = createAdminClient();
-    const { count: customerCount, error: countError } = await supabase
-      .from('customers')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null);
-    if (countError || !customerCount) return null;
-
     const { data, error } = await supabase
       .from('tenants')
-      .select('*')
+      .select('last_synced_at')
       .eq('id', tenantId)
       .maybeSingle();
-    if (error) return null;
-    return (data as { last_synced_at?: string | null } | null)?.last_synced_at ?? null;
+    if (!error) {
+      const stamped = (data as { last_synced_at?: string | null } | null)?.last_synced_at;
+      if (stamped) return stamped;
+    }
+
+    // Rows can exist from an ingest that never wrote last_synced_at.
+    // Without this, the header stays on "Waiting for sync" beside a full customer list.
+    const { data: newest, error: newestError } = await supabase
+      .from('customers')
+      .select('created_at')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (newestError) return null;
+    return (newest as { created_at?: string | null } | null)?.created_at ?? null;
   } catch {
     return null;
   }

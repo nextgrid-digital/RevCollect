@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
 
 export const metadata: Metadata = {
-  title: 'Connection ended — RevCollect',
+  title: 'Zoho Books connection ended',
   description: 'How to reconnect after disconnecting Zoho Books.'
 };
 

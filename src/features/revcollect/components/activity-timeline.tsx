@@ -48,7 +48,9 @@ export function ActivityTimeline({ events, className }: ActivityTimelineProps) {
                   {formatRelativeDate(event.occurredAt)}
                 </time>
               </div>
-              <p className='text-muted-foreground mt-0.5 text-sm'>{event.description}</p>
+              {event.description ? (
+                <p className='text-muted-foreground mt-0.5 text-sm'>{event.description}</p>
+              ) : null}
             </div>
           </li>
         );

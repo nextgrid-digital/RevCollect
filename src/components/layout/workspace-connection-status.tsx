@@ -1,32 +1,63 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useIsMutating, useQuery } from '@tanstack/react-query';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { useIntegrationStatus } from '@/features/revcollect/api/queries';
+import {
+  BOOKS_RESYNC_MUTATION_KEY,
+  integrationStatusQueryOptions
+} from '@/features/revcollect/api/queries';
 import { formatLastSyncLabel } from '@/features/revcollect/utils';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
+import type { IntegrationStatus } from '@/features/revcollect/types';
+
+const SYNCED_LABEL_TICK_MS = 15_000;
+const WAITING_STATUS_POLL_MS = 5_000;
+const SYNCED_STATUS_POLL_MS = 60_000;
+
+function booksLastSyncAt(status: IntegrationStatus): string | null {
+  return status.xero.lastSyncAt ?? status.quickbooks.lastSyncAt ?? status.zoho.lastSyncAt ?? null;
+}
+
+function booksConnectedFromStatus(status: IntegrationStatus): boolean {
+  return status.xero.connected || status.quickbooks.connected || status.zoho.connected;
+}
 
 export function WorkspaceConnectionStatus() {
   const isHydrated = useIsHydrated();
-  const { data: integrationStatus } = useIntegrationStatus();
+  const [now, setNow] = useState(() => Date.now());
+  const resyncing = useIsMutating({ mutationKey: BOOKS_RESYNC_MUTATION_KEY }) > 0;
+  const { data: integrationStatus } = useQuery({
+    ...integrationStatusQueryOptions(),
+    refetchInterval: (query) => {
+      const status = query.state.data;
+      if (!status || !booksConnectedFromStatus(status)) return false;
+      return booksLastSyncAt(status) ? SYNCED_STATUS_POLL_MS : WAITING_STATUS_POLL_MS;
+    },
+    refetchIntervalInBackground: false
+  });
+
+  const booksConnected = integrationStatus ? booksConnectedFromStatus(integrationStatus) : false;
+  const lastSyncAt = integrationStatus ? booksLastSyncAt(integrationStatus) : null;
+
+  useEffect(() => {
+    if (!lastSyncAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), SYNCED_LABEL_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [lastSyncAt]);
 
   if (!isHydrated || !integrationStatus) return null;
 
-  const booksConnected =
-    integrationStatus.xero.connected ||
-    integrationStatus.quickbooks.connected ||
-    integrationStatus.zoho.connected;
-  const lastSyncAt =
-    integrationStatus.xero.lastSyncAt ??
-    integrationStatus.quickbooks.lastSyncAt ??
-    integrationStatus.zoho.lastSyncAt ??
-    null;
+  const syncing = booksConnected && !lastSyncAt && resyncing;
   const lastSyncLabel = lastSyncAt
-    ? `Synced ${formatLastSyncLabel(lastSyncAt)}`
-    : booksConnected
-      ? 'Waiting for sync'
-      : 'Never synced';
+    ? `Synced ${formatLastSyncLabel(lastSyncAt, now)}`
+    : syncing
+      ? 'Syncing…'
+      : booksConnected
+        ? 'Waiting for sync'
+        : 'Never synced';
 
   return (
     <Link
@@ -36,9 +67,11 @@ export function WorkspaceConnectionStatus() {
       title={
         lastSyncAt
           ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
-          : booksConnected
-            ? 'Ledger connected but no AR data yet — open Settings to resync'
-            : 'Accounting has not synced yet'
+          : syncing
+            ? 'Syncing accounting data'
+            : booksConnected
+              ? 'Ledger connected but no AR data yet — open Settings to resync'
+              : 'Accounting has not synced yet'
       }
     >
       <span
@@ -49,7 +82,11 @@ export function WorkspaceConnectionStatus() {
             : 'bg-muted text-muted-foreground'
         )}
       >
-        <Icons.clock className='size-3.5 shrink-0' aria-hidden />
+        {syncing ? (
+          <Icons.spinner className='size-3.5 shrink-0 animate-spin' aria-hidden />
+        ) : (
+          <Icons.clock className='size-3.5 shrink-0' aria-hidden />
+        )}
         <span className='truncate'>{lastSyncLabel}</span>
       </span>
     </Link>

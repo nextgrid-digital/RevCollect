@@ -1,11 +1,13 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { APP_DESCRIPTION, APP_NAME, publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'RevCollect',
-  description: 'Drafts you send. Your books stay the books. Gmail is the mail.'
-};
+export const metadata = publicMetadata({
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
+  path: '/launch',
+  absoluteTitle: true
+});
 
 export default function LaunchPage() {
   return (

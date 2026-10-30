@@ -28,6 +28,7 @@ import {
   type CollectionPlaybook,
   type CollectionTone
 } from '../composer-options';
+import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
 import { followUpDecision } from '../../lib/relationship-policy';
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
@@ -387,6 +388,9 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
             )
           }
         />
+        <p className='text-muted-foreground px-1 text-[11px] leading-relaxed'>
+          {CAN_SPAM_SEND_NOTE}
+        </p>
       </div>
     );
   }

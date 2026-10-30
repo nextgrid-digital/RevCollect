@@ -116,6 +116,8 @@ export function mapLedgerInvoice(input: {
   issueDate?: string;
   paidAt?: string;
   ledgerStatus?: string;
+  ledgerEmailedAt?: string;
+  billEmail?: string;
 }): Invoice {
   const daysOverdue = input.amountDueCents > 0 ? getDaysOverdueFromDueDate(input.dueDate) : 0;
   return {
@@ -127,6 +129,8 @@ export function mapLedgerInvoice(input: {
     paidCents: input.paidCents,
     paidAt: input.paidAt,
     issueDate: input.issueDate,
+    ledgerEmailedAt: input.ledgerEmailedAt,
+    billEmail: input.billEmail,
     dueDate: input.dueDate,
     status: mapInvoiceStatus(input.ledgerStatus, daysOverdue, input.amountDueCents),
     agingBucket: toAgingBucket(daysOverdue),
@@ -208,6 +212,8 @@ export function mapXeroInvoice(invoice: XeroInvoice): Invoice | null {
     paidCents,
     paidAt,
     issueDate,
+    ledgerEmailedAt: invoice.SentToContact ? `${issueDate}T12:00:00.000Z` : undefined,
+    billEmail: invoice.Contact?.EmailAddress,
     dueDate,
     status: mapInvoiceStatus(invoice.Status, daysOverdue, amountDueCents),
     agingBucket: toAgingBucket(daysOverdue),

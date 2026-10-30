@@ -9,8 +9,6 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'RevCollect',
-  description: 'AI-powered accounts receivable and collections',
   robots: {
     index: false,
     follow: false

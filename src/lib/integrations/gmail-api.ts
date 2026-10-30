@@ -1,4 +1,5 @@
 import type { ThreadEmail } from '@/features/revcollect/types';
+import { normalizeOutboundPlainText, outboundEmailHtml } from '@/lib/email/format-outbound-email';
 import { stripQuotedReply } from '@/lib/email/strip-quoted-reply';
 import {
   getGoogleOAuthConfig,
@@ -87,6 +88,26 @@ function foldBase64(value: string): string {
   return value.replace(/(.{76})/g, '$1\r\n').replace(/\r\n$/, '');
 }
 
+function encodeMimeBody(value: string): string {
+  return foldBase64(Buffer.from(value, 'utf8').toString('base64'));
+}
+
+function alternativeParts(plain: string, html: string, boundary: string): string[] {
+  return [
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    encodeMimeBody(plain),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    encodeMimeBody(html),
+    `--${boundary}--`
+  ];
+}
+
 function buildRawMessage(input: {
   fromHeader: string;
   to: string;
@@ -94,42 +115,43 @@ function buildRawMessage(input: {
   body: string;
   attachments?: GmailSendAttachment[];
 }): string {
-  const encodedBody = foldBase64(Buffer.from(input.body, 'utf8').toString('base64'));
+  const plain = normalizeOutboundPlainText(input.body);
+  const html = outboundEmailHtml(plain);
+  const altBoundary = `revcollect_alt_${crypto.randomUUID().replaceAll('-', '')}`;
+  const headers = [
+    `From: ${input.fromHeader}`,
+    `To: ${input.to}`,
+    `Subject: ${encodeHeaderValue(input.subject)}`,
+    'MIME-Version: 1.0'
+  ];
   const attachments = input.attachments ?? [];
 
   if (attachments.length === 0) {
     const rfc822 = [
-      `From: ${input.fromHeader}`,
-      `To: ${input.to}`,
-      `Subject: ${encodeHeaderValue(input.subject)}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset="UTF-8"',
-      'Content-Transfer-Encoding: base64',
+      ...headers,
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
       '',
-      encodedBody
+      ...alternativeParts(plain, html, altBoundary),
+      ''
     ].join('\r\n');
     return Buffer.from(rfc822, 'utf8').toString('base64url');
   }
 
-  const boundary = `revcollect_${crypto.randomUUID().replaceAll('-', '')}`;
+  const mixedBoundary = `revcollect_mix_${crypto.randomUUID().replaceAll('-', '')}`;
   const parts = [
-    `From: ${input.fromHeader}`,
-    `To: ${input.to}`,
-    `Subject: ${encodeHeaderValue(input.subject)}`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    ...headers,
+    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
     '',
-    `--${boundary}`,
-    'Content-Type: text/plain; charset="UTF-8"',
-    'Content-Transfer-Encoding: base64',
+    `--${mixedBoundary}`,
+    `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
     '',
-    encodedBody
+    ...alternativeParts(plain, html, altBoundary)
   ];
 
   for (const attachment of attachments) {
     const safeName = attachment.filename.replaceAll('"', '');
     parts.push(
-      `--${boundary}`,
+      `--${mixedBoundary}`,
       `Content-Type: ${attachment.mimeType}; name="${safeName}"`,
       'Content-Transfer-Encoding: base64',
       `Content-Disposition: attachment; filename="${safeName}"`,
@@ -138,11 +160,11 @@ function buildRawMessage(input: {
     );
   }
 
-  parts.push(`--${boundary}--`, '');
+  parts.push(`--${mixedBoundary}--`, '');
   return Buffer.from(parts.join('\r\n'), 'utf8').toString('base64url');
 }
 
-async function getGmailAccessToken(
+export async function getGmailAccessToken(
   tenantId: string
 ): Promise<{ accessToken: string; email: string }> {
   const config = getGoogleOAuthConfig();
@@ -189,11 +211,12 @@ async function getGmailAccessToken(
 
 export async function sendGmailMessage(input: GmailSendInput): Promise<GmailSendResult> {
   const { accessToken, email } = await getGmailAccessToken(input.tenantId);
+  const body = normalizeOutboundPlainText(input.body);
   const raw = buildRawMessage({
     fromHeader: formatFromHeader(email, input.fromName),
     to: input.to,
     subject: input.subject,
-    body: input.body,
+    body,
     attachments: input.attachments
   });
 
@@ -226,7 +249,7 @@ export async function sendGmailMessage(input: GmailSendInput): Promise<GmailSend
     from: email,
     to: input.to,
     subject: input.subject,
-    body: input.body,
+    body,
     sentAt: new Date().toISOString()
   };
 }
@@ -342,7 +365,7 @@ function mapGmailMessage(
   };
 }
 
-async function gmailGet<T>(accessToken: string, path: string): Promise<T> {
+export async function gmailGet<T>(accessToken: string, path: string): Promise<T> {
   const response = await fetch(`${GMAIL_API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });

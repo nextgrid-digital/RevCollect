@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'Connect QuickBooks Online — RevCollect Help',
-  description:
-    'How to connect QuickBooks Online, sync open AR, send from Gmail, and disconnect.'
-};
+export const metadata = publicMetadata({
+  title: 'Connect QuickBooks Online',
+  description: 'How to connect QuickBooks Online, sync open AR, send from Gmail, and disconnect.',
+  path: '/help/quickbooks'
+});
 
 export default function QuickBooksHelpPage() {
   return (
@@ -48,8 +48,8 @@ export default function QuickBooksHelpPage() {
 
       <h2 className='text-foreground pt-2 text-base font-medium'>4. Follow up on open invoices</h2>
       <p>
-        Open Inbox, pick a customer or thread, review the draft, and send. Open invoice context stays
-        alongside the conversation.
+        Open Inbox, pick a customer or thread, review the draft, and send. Open invoice context
+        stays alongside the conversation.
       </p>
 
       <h2 className='text-foreground pt-2 text-base font-medium'>5. Disconnect</h2>

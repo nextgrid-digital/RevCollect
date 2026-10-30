@@ -1,30 +1,46 @@
-import type { Customer, ThreadEmail } from '@/features/revcollect/types';
-import {
-  filterEmailsSince,
-  getBooksConnectedAt
-} from '@/lib/integrations/books-connected-at';
+import type { Customer, Invoice, ThreadEmail } from '@/features/revcollect/types';
+import { filterEmailsSince } from '@/lib/integrations/books-connected-at';
 import {
   fetchGmailMessageThreadId,
   fetchGmailThreadMessages,
   GmailNotConnectedError,
   getConnectedGmailEmail,
-  searchGmailByQuery,
-  searchGmailFromAddress
+  searchGmailByQuery
 } from '@/lib/integrations/gmail-api';
+import { listUnstoredGmailThreadIds } from '@/lib/integrations/gmail-unstored-threads';
 import { getGmailConnection } from '@/lib/integrations/gmail-connection-store';
+import { omitLedgerEmailsAlreadyInGmail } from './ledger-invoice-emails';
+import { openArMailSince, uniqueOpenCustomerEmails } from './open-ar-mail-since';
 import { overlayInboxWithSentEmails, rehomeSentEmails } from './sent-emails';
 import { getCanonicalStore } from './store';
 
 /** Align with inbox client polling so inbound replies surface within ~15s. */
 const GMAIL_SYNC_TTL_MS = 15_000;
+/** Historical threads are discovered in the background so reply polling stays on threads we already have. */
+const CONVERSATION_BACKFILL_TTL_MS = 2 * 60 * 1000;
+const CONVERSATION_BACKFILL_PER_SYNC = 12;
+const CONVERSATION_BACKFILL_PER_CUSTOMER = 2;
 const PLACEHOLDER_EMAIL = 'no-email@xero.local';
 const lastSyncAt = new Map<string, number>();
+const lastConversationBackfillAt = new Map<string, number>();
+
+function isHistoryBackfillThread(emails: ThreadEmail[], gmailThreadId: string): boolean {
+  const messages = emails.filter((email) => email.gmailThreadId === gmailThreadId);
+  return messages.length > 0 && messages.every((email) => email.historyBackfill === true);
+}
 const inFlight = new Map<string, Promise<boolean>>();
 const syncInFlight = new Map<string, Promise<boolean>>();
 
 function isUsableCustomerEmail(email: string, connectedEmail: string): boolean {
   const normalized = email.trim().toLowerCase();
-  if (!normalized || !normalized.includes('@') || normalized === PLACEHOLDER_EMAIL) {
+  if (
+    !normalized ||
+    !normalized.includes('@') ||
+    normalized === PLACEHOLDER_EMAIL ||
+    normalized.endsWith('@ledger.local') ||
+    normalized.endsWith('@xero.local') ||
+    normalized.endsWith('@accounting.local')
+  ) {
     return false;
   }
   return normalized !== connectedEmail.trim().toLowerCase();
@@ -87,8 +103,7 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(tenantId);
   const customers = snapshot.customers as Customer[];
-  const mailSince = await getBooksConnectedAt(tenantId);
-  const existingRaw = filterEmailsSince(snapshot.sentEmails ?? [], mailSince);
+  const existingRaw = snapshot.sentEmails ?? [];
   const existing = rehomeSentEmails(existingRaw, customers);
   const incoming: ThreadEmail[] = [...existing];
   if (emailsNeedWrite(snapshot.sentEmails ?? [], existing)) {
@@ -122,10 +137,8 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
   }
 
   for (const [gmailThreadId, owner] of threadOwners) {
-    const messages = filterEmailsSince(
-      await fetchGmailThreadMessages(tenantId, gmailThreadId),
-      mailSince
-    );
+    if (isHistoryBackfillThread(existing, gmailThreadId)) continue;
+    const messages = await fetchGmailThreadMessages(tenantId, gmailThreadId);
     const customerEmail = customerById.get(owner.customerId)?.email ?? '';
     for (const message of messages) {
       incoming.push({
@@ -149,30 +162,64 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
     }
   }
 
-  const customersWithThread = new Set([...threadOwners.values()].map((owner) => owner.customerId));
-  for (const customer of customers) {
-    if (customersWithThread.has(customer.id)) continue;
-    if (!isUsableCustomerEmail(customer.email, connectedEmail)) continue;
-    const messages = await searchGmailFromAddress(
-      tenantId,
-      customer.email.trim(),
-      mailSince
-    );
-    const threadId = `xero-customer-${customer.id}`;
-    for (const message of filterEmailsSince(messages, mailSince)) {
-      incoming.push({
-        id: message.id,
-        threadId,
-        customerId: customer.id,
-        gmailThreadId: message.gmailThreadId,
-        author: message.author,
-        from: message.from,
-        to: message.to.length > 0 ? message.to : [connectedEmail],
-        subject: message.subject,
-        body: message.body,
-        sentAt: message.sentAt
-      });
+  const backfillDue =
+    Date.now() - (lastConversationBackfillAt.get(tenantId) ?? 0) >= CONVERSATION_BACKFILL_TTL_MS;
+  if (backfillDue) {
+    let budget = CONVERSATION_BACKFILL_PER_SYNC;
+    const knownThreadIds = new Set(threadOwners.keys());
+    const uniqueEmails = uniqueOpenCustomerEmails(customers);
+    const invoices = snapshot.invoices as Invoice[];
+    for (const customer of customers) {
+      if (budget <= 0) break;
+      const mailbox = customer.email.trim().toLowerCase();
+      if (!uniqueEmails.has(mailbox) || !isUsableCustomerEmail(customer.email, connectedEmail)) {
+        continue;
+      }
+      const mailSince = openArMailSince(customer, invoices);
+      if (!mailSince) continue;
+      try {
+        const threadIds = await listUnstoredGmailThreadIds(
+          tenantId,
+          customer.email.trim(),
+          knownThreadIds,
+          Math.min(CONVERSATION_BACKFILL_PER_CUSTOMER, budget),
+          mailSince
+        );
+        const threadId = `xero-customer-${customer.id}`;
+        for (const gmailThreadId of threadIds) {
+          const messages = filterEmailsSince(
+            await fetchGmailThreadMessages(tenantId, gmailThreadId),
+            mailSince
+          );
+          knownThreadIds.add(gmailThreadId);
+          budget -= 1;
+          for (const message of messages) {
+            incoming.push({
+              id: message.id,
+              threadId,
+              customerId: customer.id,
+              gmailThreadId: message.gmailThreadId ?? gmailThreadId,
+              author: authorForCustomerThread({
+                messageId: message.id,
+                fromEmails: message.fromEmails,
+                mappedAuthor: message.author,
+                customerEmail: customer.email,
+                knownAgentIds
+              }),
+              from: message.from,
+              to: message.to.length > 0 ? message.to : [connectedEmail],
+              subject: message.subject,
+              body: message.body,
+              sentAt: message.sentAt,
+              historyBackfill: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[gmail] conversation backfill failed:', customer.id, error);
+      }
     }
+    lastConversationBackfillAt.set(tenantId, Date.now());
   }
 
   const connected = connectedEmail.trim().toLowerCase();
@@ -249,9 +296,8 @@ async function syncGmailThreadsOnce(tenantId: string): Promise<boolean> {
     }
   }
 
-  const merged = filterEmailsSince(
-    rehomeSentEmails(mergeThreadEmails(existingRaw, incoming), customers),
-    mailSince
+  const merged = omitLedgerEmailsAlreadyInGmail(
+    rehomeSentEmails(mergeThreadEmails(existingRaw, incoming), customers)
   );
   if (incoming.length === 0 && merged.length === 0) {
     if ((snapshot.sentEmails ?? []).length === 0) return false;

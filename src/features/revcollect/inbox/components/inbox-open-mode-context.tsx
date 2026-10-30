@@ -144,9 +144,23 @@ function InboxOpenModeProviderInner({ children }: { children: ReactNode }) {
   return <InboxOpenModeContext.Provider value={value}>{children}</InboxOpenModeContext.Provider>;
 }
 
+const inboxOpenModeFallback: InboxOpenModeContextValue = {
+  mode: DEFAULT_INBOX_OPEN_MODE,
+  setMode: () => {},
+  peekMessageId: null,
+  openMessage: () => {},
+  closePeek: () => {}
+};
+
 export function InboxOpenModeProvider({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={children}>
+    <Suspense
+      fallback={
+        <InboxOpenModeContext.Provider value={inboxOpenModeFallback}>
+          {children}
+        </InboxOpenModeContext.Provider>
+      }
+    >
       <InboxOpenModeProviderInner>{children}</InboxOpenModeProviderInner>
     </Suspense>
   );

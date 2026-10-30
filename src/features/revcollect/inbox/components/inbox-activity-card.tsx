@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { ThreadEmail, TimelineEvent } from '../../types';
-import { activityEventsWithoutMessages, InboxActivityTimeline } from './inbox-activity-timeline';
+import { InboxActivityTimeline } from './inbox-activity-timeline';
 import { InboxContextRailSection } from './inbox-context-rail-section';
 
 interface InboxActivityCardProps {
@@ -14,7 +14,7 @@ function InboxActivityCardComponent({
   threadEmails,
   onEventClick
 }: InboxActivityCardProps) {
-  if (activityEventsWithoutMessages(events).length === 0) {
+  if (events.length === 0) {
     return null;
   }
 

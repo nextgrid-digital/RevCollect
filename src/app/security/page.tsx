@@ -1,14 +1,15 @@
-import type { Metadata } from 'next';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'Security — RevCollect',
-  description: 'How RevCollect protects workspace and integration data.'
-};
+export const metadata = publicMetadata({
+  title: 'Security',
+  description: 'How RevCollect protects workspace and integration data.',
+  path: '/security'
+});
 
 export default function SecurityPage() {
   return (
-    <LegalPage title='Security'>
+    <LegalPage title='Security' lastUpdated='October 29, 2026'>
       <p>
         Workspaces are isolated by authenticated user id. Integration refresh tokens are encrypted
         at rest. Dashboard routes require a session. Cron ingest uses a shared secret.

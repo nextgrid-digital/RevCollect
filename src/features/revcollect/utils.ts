@@ -110,10 +110,10 @@ export function formatRelativeDate(iso: string): string {
   return formatDate(iso);
 }
 
-export function formatLastSyncLabel(iso: string): string {
+export function formatLastSyncLabel(iso: string, nowMs: number = Date.now()): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'unknown';
-  const diffMs = Date.now() - date.getTime();
+  const diffMs = nowMs - date.getTime();
   if (diffMs < 45_000) return 'just now';
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 60) return `${minutes}m ago`;

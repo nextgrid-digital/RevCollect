@@ -26,6 +26,8 @@ export interface ThreadEmail {
   body: string;
   sentAt: string;
   attachments?: EmailAttachment[];
+  /** Pulled by open-invoice history backfill. Reply polling does not refetch these threads. */
+  historyBackfill?: boolean;
 }
 
 /** @deprecated Use ThreadEmail */
@@ -141,6 +143,10 @@ export interface Invoice {
   amountDueCents?: number;
   /** ISO date when Xero marked the invoice fully paid. */
   paidAt?: string;
+  /** When the ledger recorded that it emailed this invoice. Not stored on the invoice row. */
+  ledgerEmailedAt?: string;
+  /** Address the ledger used for that invoice email. */
+  billEmail?: string;
 }
 
 export interface InboxMessage {

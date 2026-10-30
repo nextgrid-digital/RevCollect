@@ -6,8 +6,8 @@ import {
   restoreRelationshipPolicies
 } from '@/features/revcollect/lib/relationship-policy';
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
-import { filterEmailsSince, getBooksConnectedAt } from '@/lib/integrations/books-connected-at';
 import { emptyIntelligence } from './defaults';
+import { ledgerInvoiceThreadEmails, omitLedgerEmailsAlreadyInGmail } from './ledger-invoice-emails';
 import { recomputePatternsForSnapshot } from './patterns';
 import { getCanonicalStore } from './store';
 import { overlayInboxWithSentEmails } from './sent-emails';
@@ -37,8 +37,11 @@ export async function applyOpenArSnapshot(
       receivedPayment: receivedPaymentIds.has(customer.id)
     })
   );
-  const mailSince = await getBooksConnectedAt(tenantId);
-  const sentEmails = filterEmailsSince(current.sentEmails ?? [], mailSince);
+  const sentById = new Map((current.sentEmails ?? []).map((email) => [email.id, email]));
+  for (const email of ledgerInvoiceThreadEmails(customers, input.invoices)) {
+    sentById.set(email.id, email);
+  }
+  const sentEmails = omitLedgerEmailsAlreadyInGmail([...sentById.values()]);
   const inboxMessages = overlayInboxWithSentEmails(
     buildSyntheticInboxFromInvoices(input.invoices, customers),
     sentEmails

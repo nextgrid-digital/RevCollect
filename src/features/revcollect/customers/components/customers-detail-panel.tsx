@@ -26,7 +26,6 @@ import {
   useTimelineForCustomer
 } from '../../api/queries';
 import { InboxActivityCard } from '../../inbox/components/inbox-activity-card';
-import { activityEventsWithoutMessages } from '../../inbox/components/inbox-activity-timeline';
 import { InboxAiInsightCard } from '../../inbox/components/inbox-ai-insight-card';
 import { InboxContextSectionLabel } from '../../inbox/components/inbox-context-section-label';
 import type { Invoice } from '../../types';
@@ -71,13 +70,11 @@ export function CustomerActivityAside({
   threadEmails: Parameters<typeof InboxActivityCard>[0]['threadEmails'];
   onEventClick?: (emailId: string) => void;
 }) {
-  const activityEvents = activityEventsWithoutMessages(timeline);
-
   return (
     <div className='scroll-stable flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-4'>
-      {activityEvents.length > 0 ? (
+      {timeline.length > 0 ? (
         <InboxActivityCard
-          events={activityEvents}
+          events={timeline}
           threadEmails={threadEmails}
           onEventClick={onEventClick}
         />

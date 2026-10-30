@@ -528,9 +528,12 @@ export function useDisconnectIntegration() {
   });
 }
 
+export const BOOKS_RESYNC_MUTATION_KEY = ['books-resync'] as const;
+
 export function useResyncXero() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: BOOKS_RESYNC_MUTATION_KEY,
     mutationFn: async (): Promise<XeroResyncResult> => {
       const response = await fetch('/api/integrations/xero/resync', { method: 'POST' });
       if (!response.ok) {

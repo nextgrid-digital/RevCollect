@@ -1,15 +1,17 @@
-import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { AuthPage } from '@/components/auth-page';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
+import { APP_DESCRIPTION, APP_NAME, publicMetadata } from '@/lib/site';
 import { createClient } from '@/lib/supabase/server';
 import { hasSupabaseEnv } from '@/lib/supabase/env';
 
-export const metadata: Metadata = {
-  title: 'RevCollect',
-  description: 'Accounts receivable collections inbox for finance teams'
-};
+export const metadata = publicMetadata({
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
+  path: '/',
+  absoluteTitle: true
+});
 
 export default async function HomePage() {
   if (hasSupabaseEnv()) {

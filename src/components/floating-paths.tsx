@@ -12,8 +12,12 @@ export function FloatingPaths({ position }: { position: number }) {
 
   return (
     <div className='pointer-events-none absolute inset-0'>
-      <svg className='text-primary h-full w-full' fill='none' viewBox='0 0 696 316'>
-        <title>Background Paths</title>
+      <svg
+        aria-hidden='true'
+        className='text-primary h-full w-full'
+        fill='none'
+        viewBox='0 0 696 316'
+      >
         {paths.map((path) => (
           <motion.path
             animate={{

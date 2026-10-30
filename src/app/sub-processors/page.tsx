@@ -1,14 +1,15 @@
-import type { Metadata } from 'next';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { publicMetadata } from '@/lib/site';
 
-export const metadata: Metadata = {
-  title: 'Sub-processors — RevCollect',
-  description: 'Vendors that process RevCollect data.'
-};
+export const metadata = publicMetadata({
+  title: 'Sub-processors',
+  description: 'Vendors that process RevCollect data.',
+  path: '/sub-processors'
+});
 
 export default function SubProcessorsPage() {
   return (
-    <LegalPage title='Sub-processors'>
+    <LegalPage title='Sub-processors' lastUpdated='October 29, 2026'>
       <ul className='list-disc space-y-2 pl-5'>
         <li>Supabase — authentication, Postgres, and encrypted secrets storage.</li>
         <li>Vercel — application hosting and scheduled ingest.</li>

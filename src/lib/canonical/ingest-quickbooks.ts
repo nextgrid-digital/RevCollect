@@ -4,6 +4,17 @@ import { remapOpenArIds } from './ledger-entity-id';
 import { fetchQuickBooksAccountsReceivable } from '@/lib/integrations/quickbooks-api';
 import type { CanonicalPayment, CanonicalSnapshot } from './types';
 
+function quickBooksInvoiceEmailedAt(invoice: {
+  EmailStatus?: string;
+  TxnDate?: string;
+  DeliveryInfo?: { DeliveryTime?: string };
+}): string | undefined {
+  if (invoice.EmailStatus !== 'EmailSent') return undefined;
+  if (invoice.DeliveryInfo?.DeliveryTime) return invoice.DeliveryInfo.DeliveryTime;
+  if (invoice.TxnDate) return `${invoice.TxnDate}T12:00:00.000Z`;
+  return undefined;
+}
+
 function toCents(amount: number | undefined): number {
   if (typeof amount !== 'number' || Number.isNaN(amount)) return 0;
   return Math.round(amount * 100);
@@ -31,6 +42,8 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
         paidCents: Math.max(0, amountCents - amountDueCents),
         dueDate: invoice.DueDate ?? invoice.TxnDate ?? new Date().toISOString().slice(0, 10),
         issueDate: invoice.TxnDate,
+        ledgerEmailedAt: quickBooksInvoiceEmailedAt(invoice),
+        billEmail: invoice.BillEmail?.Address,
         ledgerStatus: amountDueCents > 0 ? 'AUTHORISED' : 'PAID'
       })
     ];
