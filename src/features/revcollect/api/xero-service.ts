@@ -28,8 +28,7 @@ import {
   persistRehomedSentEmails,
   persistSentFollowUp,
   rehomeSentEmails,
-  sentEmailsForThread,
-  timelineEventsFromSentEmails
+  sentEmailsForThread
 } from '@/lib/canonical/sent-emails';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { appendCanSpamFooter } from '../compliance/can-spam';
@@ -442,10 +441,7 @@ export class XeroRevCollectService implements RevCollectService {
           occurredAt: payment.paidAt
         };
       });
-    const sent = timelineEventsFromSentEmails(snapshot.sentEmails ?? [], customerId);
-    return [...payments, ...sent].toSorted((left, right) =>
-      right.occurredAt.localeCompare(left.occurredAt)
-    );
+    return payments.toSorted((left, right) => right.occurredAt.localeCompare(left.occurredAt));
   }
 
   async getAgentDraftMetaForMessage(messageId: string): Promise<AgentDraftMeta | undefined> {

@@ -1,7 +1,13 @@
 import { cn } from '@/lib/utils';
 import { formatInboxActivityTime } from '../../utils';
 import { resolveTimelineThreadEmailId } from '../lib/resolve-timeline-email';
-import type { ThreadEmail, TimelineEvent } from '../../types';
+import type { ThreadEmail, TimelineEvent, TimelineEventType } from '../../types';
+
+const messageActivityTypes = new Set<TimelineEventType>(['email_sent', 'email_received']);
+
+export function activityEventsWithoutMessages(events: TimelineEvent[]): TimelineEvent[] {
+  return events.filter((event) => !messageActivityTypes.has(event.type));
+}
 
 function getActivityDotClass(event: TimelineEvent): string {
   if (event.type === 'email_received') {
@@ -27,14 +33,16 @@ export function InboxActivityTimeline({
   threadEmails,
   onEventClick
 }: InboxActivityTimelineProps) {
-  if (events.length === 0) {
+  const activityEvents = activityEventsWithoutMessages(events);
+
+  if (activityEvents.length === 0) {
     return <p className='text-muted-foreground text-sm'>No activity recorded yet.</p>;
   }
 
   return (
     <ol>
-      {events.map((event, index) => {
-        const isLast = index === events.length - 1;
+      {activityEvents.map((event, index) => {
+        const isLast = index === activityEvents.length - 1;
 
         const linkedEmailId = resolveTimelineThreadEmailId(event, threadEmails);
         const isClickable = Boolean(linkedEmailId && onEventClick);

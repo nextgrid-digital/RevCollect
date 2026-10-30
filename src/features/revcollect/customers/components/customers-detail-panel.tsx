@@ -26,6 +26,7 @@ import {
   useTimelineForCustomer
 } from '../../api/queries';
 import { InboxActivityCard } from '../../inbox/components/inbox-activity-card';
+import { activityEventsWithoutMessages } from '../../inbox/components/inbox-activity-timeline';
 import { InboxAiInsightCard } from '../../inbox/components/inbox-ai-insight-card';
 import { InboxContextSectionLabel } from '../../inbox/components/inbox-context-section-label';
 import type { Invoice } from '../../types';
@@ -42,7 +43,13 @@ interface CustomersDetailPanelProps {
 
 function sortOutstandingInvoices(invoices: Invoice[]): Invoice[] {
   return [...invoices].filter(isOpenCanonicalInvoice).sort((a, b) => {
-    const statusOrder = { overdue: 0, in_dispute: 1, due_soon: 2, promised: 3, current: 4 };
+    const statusOrder = {
+      overdue: 0,
+      in_dispute: 1,
+      due_soon: 2,
+      promised: 3,
+      current: 4
+    };
     const statusDiff = statusOrder[a.status] - statusOrder[b.status];
     if (statusDiff !== 0) return statusDiff;
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -64,13 +71,22 @@ export function CustomerActivityAside({
   threadEmails: Parameters<typeof InboxActivityCard>[0]['threadEmails'];
   onEventClick?: (emailId: string) => void;
 }) {
+  const activityEvents = activityEventsWithoutMessages(timeline);
+
   return (
     <div className='scroll-stable flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-4'>
-      <InboxActivityCard
-        events={timeline}
-        threadEmails={threadEmails}
-        onEventClick={onEventClick}
-      />
+      {activityEvents.length > 0 ? (
+        <InboxActivityCard
+          events={activityEvents}
+          threadEmails={threadEmails}
+          onEventClick={onEventClick}
+        />
+      ) : (
+        <section className='w-full shrink-0'>
+          <InboxContextSectionLabel>Activity</InboxContextSectionLabel>
+          <p className='text-muted-foreground mt-1.5 px-1 text-sm'>No activity recorded yet.</p>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,9 +1,4 @@
-import type {
-  Customer,
-  InboxMessage,
-  ThreadEmail,
-  TimelineEvent
-} from '@/features/revcollect/types';
+import type { Customer, InboxMessage, ThreadEmail } from '@/features/revcollect/types';
 import { stripQuotedReply } from '@/lib/email/strip-quoted-reply';
 import { getCanonicalStore } from './store';
 import type { CanonicalSnapshot } from './types';
@@ -167,23 +162,6 @@ export async function persistRehomedSentEmails(tenantId: string): Promise<boolea
   snapshot.inboxMessages = overlayInboxWithSentEmails(snapshot.inboxMessages, next);
   await store.write(tenantId, snapshot);
   return true;
-}
-
-export function timelineEventsFromSentEmails(
-  sentEmails: ThreadEmail[],
-  customerId: string
-): TimelineEvent[] {
-  return sentEmailsForThread(sentEmails, `xero-customer-${customerId}`, customerId).map(
-    (email) => ({
-      id: `mail-${email.id}`,
-      customerId,
-      type: email.author === 'customer' ? ('email_received' as const) : ('email_sent' as const),
-      title: email.author === 'customer' ? 'Customer replied' : 'Follow-up sent',
-      description: previewFromBody(email.body),
-      occurredAt: email.sentAt,
-      threadEmailId: email.id
-    })
-  );
 }
 
 export async function persistSentFollowUp(input: {
