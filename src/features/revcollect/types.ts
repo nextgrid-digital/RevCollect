@@ -262,6 +262,7 @@ export interface AgentConfig {
   autoSendEnabled: boolean;
   escalationRules: string;
   signature: string;
+  draftInstruction?: string;
 }
 
 export interface WorkspaceGeneralSettings {

@@ -69,7 +69,7 @@ const BEHAVIOR_GROUPS: {
         key: 'dailyDigest',
         label: 'Morning summary of what needs you',
         description: (behaviors) =>
-          `A short email of actions needed, sent at ${formatDigestHour(behaviors.digestHour)}.`
+          `A short email of actions needed, sent at ${formatDigestHour(behaviors.digestHour)} UTC.`
       },
       {
         key: 'escalationAlerts',
@@ -130,7 +130,7 @@ export function AgentBehaviorsSection({ behaviors, onChange }: AgentBehaviorsSec
                           htmlFor='agent-digest-time'
                           className='text-muted-foreground text-xs'
                         >
-                          Send at
+                          Send at (UTC)
                         </Label>
                         <input
                           id='agent-digest-time'
@@ -143,7 +143,7 @@ export function AgentBehaviorsSection({ behaviors, onChange }: AgentBehaviorsSec
                             })
                           }
                           className='border-input bg-background h-8 rounded-md border px-2 text-sm'
-                          aria-label='Morning summary send time'
+                          aria-label='Morning summary send time, UTC'
                         />
                       </div>
                     ) : null}

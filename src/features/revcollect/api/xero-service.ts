@@ -41,6 +41,12 @@ import {
 import { activityLabelsForEmails } from '../lib/activity-labels';
 import { MAX_INVOICE_ATTACHMENTS, sanitizeInvoicePdfFilename } from '../lib/invoice-pdf';
 import { applyAutoPromises } from '@/lib/ari/apply-auto-promises';
+import { rewriteAgentDraft as rewriteStoredAgentDraft } from '@/lib/ari/rewrite-draft';
+import {
+  queueFollowUpDraft,
+  saveDecisionNote as saveStoredDecisionNote
+} from '@/lib/ari/queue-follow-up-draft';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import { applyRelationshipSignals } from '@/lib/ari/apply-relationship-signals';
 import { templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
@@ -73,7 +79,13 @@ import {
   syncPolicyOntoCustomer
 } from '../lib/relationship-policy';
 import type { RelationshipPolicyInput } from '../lib/relationship-policy';
-import type { RevCollectService, SendInboxFollowUpInput, SendInboxFollowUpResult } from './service';
+import type {
+  RevCollectService,
+  RewriteAgentDraftInput,
+  RewriteAgentDraftResult,
+  SendInboxFollowUpInput,
+  SendInboxFollowUpResult
+} from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -559,6 +571,51 @@ export class XeroRevCollectService implements RevCollectService {
     snapshot.workspaceSettings = structuredClone(settings);
     await store.write(tenantId, snapshot);
     return structuredClone(settings);
+  }
+
+  async listDecisionTraces(): Promise<DecisionTrace[]> {
+    const tenantId = await getIntegrationTenantId();
+    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    return snapshot.decisionTraces ?? [];
+  }
+
+  async runPlaygroundDecision(customerId: string): Promise<DecisionTrace> {
+    await assertCanRunAgent();
+    await assertCanWrite();
+    const tenantId = await getIntegrationTenantId();
+    const result = await queueFollowUpDraft({
+      tenantId,
+      customerId,
+      explain: true
+    });
+    if (!result.trace) {
+      throw new Error('No decision was recorded for that customer.');
+    }
+    return result.trace;
+  }
+
+  async saveDecisionNote(traceId: string, note: string): Promise<DecisionTrace> {
+    await assertCanWrite();
+    const tenantId = await getIntegrationTenantId();
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const saved = await saveStoredDecisionNote(store, tenantId, snapshot, traceId, note);
+    if (!saved) {
+      throw new Error('Decision not found.');
+    }
+    return saved;
+  }
+
+  async rewriteAgentDraft(input: RewriteAgentDraftInput): Promise<RewriteAgentDraftResult> {
+    await assertCanRunAgent();
+    await assertCanWrite();
+    const tenantId = await getIntegrationTenantId();
+    return rewriteStoredAgentDraft({
+      tenantId,
+      customerId: input.customerId,
+      body: input.body,
+      instruction: input.instruction
+    });
   }
 
   async recordCollectionDecision(input: CollectionDecisionInput) {

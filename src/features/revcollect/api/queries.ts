@@ -16,10 +16,12 @@ import type {
   WorkspaceGeneralSettings
 } from '../types';
 import { getRevCollectService } from './index';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import type {
   RevCollectService,
   SendInboxFollowUpInput,
   SendInboxFollowUpResult,
+  RewriteAgentDraftInput,
   CollectionDecisionInput,
   RelationshipPolicyInput
 } from './service';
@@ -60,7 +62,8 @@ export const revcollectKeys = {
   integrationStatus: () => [...revcollectKeys.all, 'integrations'] as const,
   workspaceGeneralSettings: () => [...revcollectKeys.all, 'settings', 'general'] as const,
   agentDraftCount: () => [...revcollectKeys.all, 'agent', 'draft-count'] as const,
-  ariRun: () => [...revcollectKeys.all, 'ari', 'latest'] as const
+  ariRun: () => [...revcollectKeys.all, 'ari', 'latest'] as const,
+  playground: () => [...revcollectKeys.all, 'playground'] as const
 };
 
 const AR_STALE_TIME_MS = 60_000;
@@ -594,6 +597,51 @@ export function useAgentDraftCount() {
   });
 }
 
+export function useDecisionTraces() {
+  return useQuery({
+    queryKey: revcollectKeys.playground(),
+    queryFn: () => getRevCollectService().listDecisionTraces()
+  });
+}
+
+export function useRunPlaygroundDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (customerId: string) => getRevCollectService().runPlaygroundDecision(customerId),
+    onSuccess: (trace) => {
+      queryClient.setQueryData<DecisionTrace[]>(revcollectKeys.playground(), (current) => [
+        trace,
+        ...(current ?? []).filter((item) => item.id !== trace.id)
+      ]);
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.playground() });
+      toast.success(
+        trace.draftBody
+          ? 'Draft queued for review. Nothing was sent.'
+          : 'Decision recorded. Nothing was sent.'
+      );
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not run this customer');
+    }
+  });
+}
+
+export function useSaveDecisionNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { traceId: string; note: string }) =>
+      getRevCollectService().saveDecisionNote(input.traceId, input.note),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.playground() });
+      toast.success('Note saved');
+    },
+    onError: () => {
+      toast.error('Could not save the note');
+    }
+  });
+}
+
 export function useLatestAriRun() {
   return useQuery({
     queryKey: revcollectKeys.ariRun(),
@@ -671,6 +719,17 @@ function patchInboxSelectionWithEmail(
       })
     }
   };
+}
+
+export function useRewriteAgentDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RewriteAgentDraftInput) => getRevCollectService().rewriteAgentDraft(input),
+    onSuccess: (_result, input) => {
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
+      void queryClient.invalidateQueries({ queryKey: revcollectKeys.customer(input.customerId) });
+    }
+  });
 }
 
 export function useSendInboxFollowUp() {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
-import { listAriTenantIds } from '@/lib/integrations/tenant';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { runOvernightAri } from '@/lib/ari/run-overnight';
 
 export const runtime = 'nodejs';
@@ -12,10 +12,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const tenantIds = await listAriTenantIds();
-  const results = [];
-  for (const tenantId of tenantIds) {
-    results.push(await runOvernightAri(tenantId, { forceHour: true }));
-  }
-  return NextResponse.json({ ok: true, results });
+  const tenantId = await getIntegrationTenantId();
+  const result = await runOvernightAri(tenantId, { forceHour: true });
+  return NextResponse.json({ ok: true, results: [result] });
 }

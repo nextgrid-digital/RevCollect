@@ -8,7 +8,7 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
-import { useSendInboxFollowUp } from '../../api/queries';
+import { useRewriteAgentDraft, useSendInboxFollowUp } from '../../api/queries';
 import type { AgentDraftMeta } from '../../types';
 import { InboxAttachedInvoiceChips } from './inbox-attached-invoice-chips';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
@@ -34,7 +34,9 @@ export function InboxAgentDraftPanel({
   const [aiPrompt, setAiPrompt] = useState('');
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const sendFollowUp = useSendInboxFollowUp();
+  const rewriteDraft = useRewriteAgentDraft();
   const isSending = sendFollowUp.isPending;
+  const isRewriting = rewriteDraft.isPending;
 
   useEffect(() => {
     setBody(draftMeta.body);
@@ -85,11 +87,22 @@ export function InboxAgentDraftPanel({
   );
 
   const handleAiRewrite = useCallback(() => {
-    if (!aiPrompt.trim() || isSent) return;
-    toast.success('Draft rewritten (mock)');
-    setAiEditOpen(false);
-    setAiPrompt('');
-  }, [aiPrompt, isSent]);
+    const instruction = aiPrompt.trim();
+    if (!instruction || isSent || isRewriting) return;
+    rewriteDraft.mutate(
+      { customerId, body, instruction },
+      {
+        onSuccess: (result) => {
+          setBody(result.body);
+          setAiEditOpen(false);
+          setAiPrompt('');
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'ARI could not rewrite this draft');
+        }
+      }
+    );
+  }, [aiPrompt, body, customerId, isRewriting, isSent, rewriteDraft]);
 
   return (
     <article
@@ -136,7 +149,7 @@ export function InboxAgentDraftPanel({
                 variant='outline'
                 size='sm'
                 className='rounded-full'
-                disabled={isSent}
+                disabled={isSent || isRewriting}
               >
                 <Icons.sparkles className='size-3.5' />
                 <span className='sm:hidden'>AI</span>
@@ -180,7 +193,8 @@ export function InboxAgentDraftPanel({
                   <Button
                     type='button'
                     size='sm'
-                    disabled={!aiPrompt.trim()}
+                    disabled={!aiPrompt.trim() || isRewriting}
+                    isLoading={isRewriting}
                     onClick={handleAiRewrite}
                   >
                     Rewrite

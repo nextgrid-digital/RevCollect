@@ -3,8 +3,10 @@ import { getXeroRevCollectService } from '@/features/revcollect/api/xero-service
 import { extractSituation } from '@/features/revcollect/extract/extract-situation';
 import { applyPreferencesFromEdit } from '@/features/revcollect/extract/preferences-from-edit';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { AriRewriteError } from '@/lib/ari/rewrite-draft';
 import { GmailNotConnectedError } from '@/lib/integrations/gmail-api';
 import { billingErrorResponse } from '@/lib/billing/entitlements';
+import { isPlaygroundEnabled } from '@/lib/playground-enabled';
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { clearXeroArCache } from '@/lib/integrations/xero-api';
 import type {
@@ -98,6 +100,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(await service.getAgentConfig());
       case 'getLatestAriRun':
         return NextResponse.json(await service.getLatestAriRun());
+      case 'listDecisionTraces':
+        if (!isPlaygroundEnabled()) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        return NextResponse.json(await service.listDecisionTraces());
       case 'getAgentAddonStatus':
         return NextResponse.json(await service.getAgentAddonStatus());
       case 'countAgentDraftsReady':
@@ -168,6 +175,88 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json(await service.recordRelationshipPolicy(payload));
       }
+      case 'runPlaygroundDecision': {
+        if (!isPlaygroundEnabled()) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const payload = body.payload as { customerId?: string };
+        if (!payload?.customerId) {
+          return NextResponse.json({ error: 'customerId required' }, { status: 400 });
+        }
+        return NextResponse.json(await service.runPlaygroundDecision(payload.customerId));
+      }
+      case 'architectHarnessFlow': {
+        if (!isPlaygroundEnabled()) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const payload = body.payload as {
+          messages?: Array<{ role?: string; content?: string }>;
+          graph?: unknown;
+        };
+        const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+        for (const message of payload?.messages ?? []) {
+          if (message.role !== 'user' && message.role !== 'assistant') continue;
+          if (typeof message.content !== 'string' || !message.content.trim()) continue;
+          messages.push({ role: message.role, content: message.content.trim().slice(0, 2000) });
+        }
+        if (messages.length === 0) {
+          return NextResponse.json({ error: 'A message is required' }, { status: 400 });
+        }
+        const { architectHarness } = await import('@/lib/ari/architect-harness');
+        const { sanitizeHarnessGraph } =
+          await import('@/features/revcollect/playground/lib/harness-graph');
+        const result = await architectHarness({
+          messages,
+          graph: sanitizeHarnessGraph(payload?.graph)
+        });
+        return NextResponse.json(result);
+      }
+      case 'saveDecisionNote': {
+        if (!isPlaygroundEnabled()) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const payload = body.payload as { traceId?: string; note?: string };
+        if (!payload?.traceId || typeof payload.note !== 'string') {
+          return NextResponse.json({ error: 'traceId and note required' }, { status: 400 });
+        }
+        return NextResponse.json(await service.saveDecisionNote(payload.traceId, payload.note));
+      }
+      case 'rewriteAgentDraft': {
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const payload = body.payload as {
+          customerId?: string;
+          body?: string;
+          instruction?: string;
+        };
+        if (!payload?.customerId || !payload.body || !payload.instruction) {
+          return NextResponse.json(
+            { error: 'customerId, body, and instruction required' },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json(
+          await service.rewriteAgentDraft({
+            customerId: payload.customerId,
+            body: payload.body,
+            instruction: payload.instruction
+          })
+        );
+      }
       case 'recordInboxSend': {
         const userId = await getAuthUserId();
         if (!userId) {
@@ -218,6 +307,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
     }
   } catch (error) {
+    if (error instanceof AriRewriteError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const billingResponse = billingErrorResponse(error);
     if (billingResponse) return billingResponse;
     if (error instanceof GmailNotConnectedError) {

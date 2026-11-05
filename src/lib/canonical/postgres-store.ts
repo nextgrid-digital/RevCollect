@@ -7,6 +7,8 @@ import type {
   ThreadEmail
 } from '@/features/revcollect/types';
 import { DEFAULT_ADDON_STATUS, emptyIntelligence, emptySnapshot } from './defaults';
+import { readDecisionTraceFile, writeDecisionTraceFile } from '@/lib/ari/decision-trace';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import { normalizeRelationshipState } from '@/features/revcollect/lib/relationship-policy';
 import { buildSyntheticInboxFromInvoices } from '@/features/revcollect/api/xero-map';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -82,6 +84,7 @@ interface AriRow {
 interface TenantRow {
   last_synced_at?: string | null;
   sent_emails?: ThreadEmail[];
+  decision_traces?: DecisionTrace[];
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   agent_addon_subscribed?: boolean | null;
@@ -257,6 +260,12 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
       : Array.isArray((tenantRes.data as TenantRow | null)?.sent_emails)
         ? ((tenantRes.data as TenantRow).sent_emails ?? [])
         : [],
+    decisionTraces: tenantRes.error
+      ? await readDecisionTraceFile(tenantId)
+      : Array.isArray((tenantRes.data as TenantRow | null)?.decision_traces) &&
+          ((tenantRes.data as TenantRow).decision_traces?.length ?? 0) > 0
+        ? ((tenantRes.data as TenantRow).decision_traces ?? [])
+        : await readDecisionTraceFile(tenantId),
     stripeCustomerId: tenantRes.error
       ? null
       : ((tenantRes.data as TenantRow | null)?.stripe_customer_id ?? null),
@@ -461,6 +470,23 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     if (error) {
       console.error('[canonical] skipped sent_emails update:', error.message);
     }
+  }
+
+  const traces = snapshot.decisionTraces ?? [];
+  const { error: traceError } = await supabase
+    .from('tenants')
+    .update({ decision_traces: traces, updated_at: now })
+    .eq('id', tenantId);
+  if (traceError) {
+    console.error('[canonical] skipped decision_traces update:', traceError.message);
+  }
+  try {
+    await writeDecisionTraceFile(tenantId, traces);
+  } catch (error) {
+    console.error(
+      '[canonical] skipped playground trace file',
+      error instanceof Error ? error.name : 'write failed'
+    );
   }
 
   const billingUpdate: Record<string, unknown> = { updated_at: now };

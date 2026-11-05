@@ -30,7 +30,7 @@ export function AgentDigestPreviewSection({
     >
       <div className='bg-muted/40 rounded-lg px-4 py-3'>
         <p className='text-sm font-medium'>
-          Morning summary at {formatDigestHour(digestHour)} for {digest.dateLabel}
+          Morning summary at {formatDigestHour(digestHour)} UTC for {digest.dateLabel}
         </p>
         <ul className='text-muted-foreground mt-2 list-disc space-y-1.5 pl-4 text-sm leading-relaxed'>
           {dynamicBullets.map((bullet) => (

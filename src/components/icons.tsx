@@ -36,6 +36,7 @@ import {
   IconExternalLink,
   IconEyeOff,
   IconFile,
+  IconFlask,
   IconFileText,
   IconFileTypePdf,
   IconFileTypeDoc,
@@ -201,6 +202,7 @@ export const Icons = {
   // RevCollect
   aging: IconReportMoney,
   agent: IconRobot,
+  flask: IconFlask,
   integrations: IconPlugConnected,
 
   // Commerce / Plans

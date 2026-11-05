@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { geminiModelId } from '@/lib/ai/gemini';
 import type { InvoiceImportDraft } from './types';
 
 const extractedSchema = z.object({
@@ -77,7 +78,7 @@ export async function extractInvoiceDraftFromPdf(input: {
     return draft;
   }
 
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-flash-latest';
+  const model = geminiModelId();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const base64 = Buffer.from(input.bytes).toString('base64');
 

@@ -1,3 +1,4 @@
+import { isPlaygroundEnabled } from '@/lib/playground-enabled';
 import { NavGroup } from '@/types';
 
 export const navGroups: NavGroup[] = [
@@ -42,6 +43,13 @@ export const navGroups: NavGroup[] = [
         icon: 'agent',
         isActive: false,
         items: []
+      },
+      {
+        title: 'Playground',
+        url: '/playground',
+        icon: 'flask',
+        isActive: false,
+        items: []
       }
     ]
   },
@@ -58,3 +66,11 @@ export const navGroups: NavGroup[] = [
     ]
   }
 ];
+
+export function visibleNavGroups(): NavGroup[] {
+  if (isPlaygroundEnabled()) return navGroups;
+  return navGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.url !== '/playground')
+  }));
+}

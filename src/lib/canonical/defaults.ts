@@ -38,7 +38,8 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   autoSendEnabled: false,
   escalationRules:
     'Escalate to human review when balance exceeds $25,000, customer is in dispute, or no reply after 3 touches.',
-  signature: 'Best regards,\nRevCollect Collections Team'
+  signature: 'Best regards,\nRevCollect Collections Team',
+  draftInstruction: ''
 };
 
 export const DEFAULT_ADDON_STATUS: AgentAddonStatus = {
@@ -83,6 +84,7 @@ export function emptySnapshot(): CanonicalSnapshot {
     inboxMessages: [],
     agentConfig: null,
     ariRuns: [],
+    decisionTraces: [],
     workspaceSettings: null,
     agentAddonStatus: null,
     stripeCustomerId: null,

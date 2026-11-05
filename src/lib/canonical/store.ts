@@ -7,11 +7,21 @@ let resolved: CanonicalStore | null = null;
 let resolveInFlight: Promise<CanonicalStore> | null = null;
 
 async function resolveStore(): Promise<CanonicalStore> {
+  const onVercel = Boolean(process.env.VERCEL);
   if (!hasSupabaseAdminEnv()) {
+    if (onVercel) {
+      throw new Error('Canonical store requires Supabase on Vercel');
+    }
     return fileCanonicalStore;
   }
   const available = await postgresStoreAvailable();
-  return available ? postgresCanonicalStore : fileCanonicalStore;
+  if (!available) {
+    if (onVercel) {
+      throw new Error('Canonical store requires Postgres on Vercel');
+    }
+    return fileCanonicalStore;
+  }
+  return postgresCanonicalStore;
 }
 
 export async function getCanonicalStore(): Promise<CanonicalStore> {

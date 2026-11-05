@@ -10,6 +10,7 @@ import {
   policyFromCustomer
 } from '@/features/revcollect/lib/relationship-policy';
 import { DEFAULT_AGENT_CONFIG, defaultWorkspaceAgentConfig } from '@/lib/canonical/defaults';
+import { latestUnansweredCustomerReply } from '@/lib/canonical/sent-emails';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { getWorkspaceEntitlementsForTenant } from '@/lib/billing/entitlements';
 import { applyAutoPromises } from './apply-auto-promises';
@@ -60,12 +61,22 @@ export async function runOvernightAri(
   const brokenPromises = promiseTracking
     ? snapshot.customers.filter((customer) => isBrokenPromise(customer))
     : [];
+  const sentEmails = snapshot.sentEmails ?? [];
+  const replyCustomers = autoDraftFollowUps
+    ? snapshot.customers.filter(
+        (customer) =>
+          customer.balanceCents > 0 &&
+          Boolean(latestUnansweredCustomerReply(sentEmails, customer.id)) &&
+          !brokenPromises.some((item) => item.id === customer.id)
+      )
+    : [];
   const overdueCustomers = autoDraftFollowUps
     ? snapshot.customers.filter(
         (customer) =>
           customer.daysOverdue > 0 &&
           customer.balanceCents > 0 &&
-          !brokenPromises.some((item) => item.id === customer.id)
+          !brokenPromises.some((item) => item.id === customer.id) &&
+          !replyCustomers.some((item) => item.id === customer.id)
       )
     : [];
   const stalePaymentClaims = autoDraftFollowUps
@@ -74,10 +85,16 @@ export async function runOvernightAri(
           customer.balanceCents > 0 &&
           isPaymentClaimStale(policyFromCustomer(customer)) &&
           !brokenPromises.some((item) => item.id === customer.id) &&
+          !replyCustomers.some((item) => item.id === customer.id) &&
           !overdueCustomers.some((item) => item.id === customer.id)
       )
     : [];
-  const targets = [...brokenPromises, ...overdueCustomers, ...stalePaymentClaims].slice(0, 25);
+  const targets = [
+    ...brokenPromises,
+    ...replyCustomers,
+    ...overdueCustomers,
+    ...stalePaymentClaims
+  ].slice(0, 25);
 
   let drafted = 0;
   let skipped = 0;
@@ -93,7 +110,14 @@ export async function runOvernightAri(
     });
     if (result.draft) {
       drafted += 1;
-      bullets.push(overnightDraftBullet(customer, snapshot.invoices, broken));
+      bullets.push(
+        overnightDraftBullet(
+          customer,
+          snapshot.invoices,
+          broken,
+          replyCustomers.some((item) => item.id === customer.id)
+        )
+      );
     } else {
       skipped += 1;
       if (result.skipped) {
@@ -110,7 +134,15 @@ export async function runOvernightAri(
   return { tenantId, drafted, skipped, bullets };
 }
 
-function overnightDraftBullet(customer: Customer, invoices: Invoice[], broken: boolean): string {
+function overnightDraftBullet(
+  customer: Customer,
+  invoices: Invoice[],
+  broken: boolean,
+  replied: boolean
+): string {
+  if (replied) {
+    return `${customer.company} replied — a reply draft is queued for review`;
+  }
   if (broken && customer.promisedDate) {
     return `${customer.company} promised ${formatPromisedDateLabel(customer.promisedDate)} and hasn't paid — draft queued for review`;
   }

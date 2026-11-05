@@ -1,8 +1,11 @@
 import { parseJsonBody } from '@/lib/json/parse-json-body';
 import { sendInboxFollowUpRequest } from '../extract/record-inbox-send';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import type {
   RevCollectService,
   SendInboxFollowUpInput,
+  RewriteAgentDraftInput,
+  RewriteAgentDraftResult,
   CollectionDecisionInput,
   RelationshipPolicyInput
 } from './service';
@@ -219,6 +222,22 @@ export class HttpXeroRevCollectService implements RevCollectService {
 
   sendInboxFollowUp(input: SendInboxFollowUpInput) {
     return sendInboxFollowUpRequest(input);
+  }
+
+  rewriteAgentDraft(input: RewriteAgentDraftInput) {
+    return postJson<RewriteAgentDraftResult>('rewriteAgentDraft', input);
+  }
+
+  listDecisionTraces() {
+    return getJson<DecisionTrace[]>('listDecisionTraces');
+  }
+
+  runPlaygroundDecision(customerId: string) {
+    return postJson<DecisionTrace>('runPlaygroundDecision', { customerId });
+  }
+
+  saveDecisionNote(traceId: string, note: string) {
+    return postJson<DecisionTrace>('saveDecisionNote', { traceId, note });
   }
 
   recordCollectionDecision(input: CollectionDecisionInput) {

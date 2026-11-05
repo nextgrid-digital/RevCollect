@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   useActivateAgent,
@@ -20,7 +19,7 @@ import { AgentCustomerOverridesSection } from './agent-customer-overrides-sectio
 import { AgentDigestPreviewSection } from './agent-digest-preview-section';
 import { AgentEscalationRulesSection } from './agent-escalation-rules-section';
 import { AgentFollowUpStyleSection } from './agent-follow-up-style-section';
-import { AgentOverviewTab } from './agent-overview-tab';
+import { AgentNeedsYouList } from './agent-needs-you-list';
 import { AgentRiskThresholdsSection } from './agent-risk-thresholds-section';
 import { AgentSetupWizard, type WizardStepId } from './agent-setup-wizard';
 import { AgentSignatureSection } from './agent-signature-section';
@@ -50,7 +49,6 @@ function agentConfigsEqual(a: AgentConfig, b: AgentConfig): boolean {
 }
 
 export function AgentPage() {
-  const router = useRouter();
   const { data: savedConfig, isPending: configLoading } = useAgentConfig();
   const { data: addonStatus, isPending: addonLoading } = useAgentAddonStatus();
   const { data: customers = [] } = useCustomers();
@@ -60,7 +58,7 @@ export function AgentPage() {
   const [draft, setDraft] = useState<AgentConfig | null>(null);
   const [setupDone, setSetupDone] = useState<boolean | null>(null);
   const [wizardStep, setWizardStep] = useState<WizardStepId>(1);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('needs-you');
 
   useEffect(() => {
     if (savedConfig) {
@@ -181,37 +179,6 @@ export function AgentPage() {
     }
   }, [draft, persistDraft]);
 
-  const handleActiveChange = useCallback(
-    async (nextActive: boolean) => {
-      if (!draft || !addonStatus) return;
-
-      if (nextActive && !addonStatus.subscribed) {
-        toast.message('Subscribe to the Collections Agent add-on to activate');
-        router.push('/settings/billing?addon=agent');
-        return;
-      }
-
-      const nextDraft = { ...draft, isActive: nextActive };
-      setDraft(nextDraft);
-
-      if (addonStatus.subscribed) {
-        try {
-          if (nextActive) {
-            await persistDraft(nextDraft);
-            await activateAgent.mutateAsync();
-          } else {
-            await persistDraft(nextDraft);
-          }
-          toast.success(nextActive ? 'Payment reminders are on' : 'Payment reminders paused');
-        } catch {
-          toast.error('Could not update reminder status');
-          setDraft(draft);
-        }
-      }
-    },
-    [activateAgent, addonStatus, draft, persistDraft, router]
-  );
-
   const handleWizardComplete = useCallback(async () => {
     if (!draft || !addonStatus) return;
 
@@ -223,23 +190,11 @@ export function AgentPage() {
       toast.success('Payment reminders are on');
       writeAgentSetupDone(true);
       setSetupDone(true);
-      setTab('overview');
+      setTab('needs-you');
     } catch {
       toast.error('Could not save reminder settings');
     }
   }, [activateAgent, addonStatus, draft, persistDraft]);
-
-  const handleSetupAgain = useCallback(() => {
-    writeAgentSetupDone(false);
-    setWizardStep(1);
-    setSetupDone(false);
-  }, []);
-
-  const handleJumpToStep = useCallback((step: WizardStepId) => {
-    writeAgentSetupDone(false);
-    setWizardStep(step);
-    setSetupDone(false);
-  }, []);
 
   if (addonLoading || !addonStatus) {
     return <p className='text-muted-foreground text-sm'>Loading agent configuration…</p>;
@@ -285,18 +240,11 @@ export function AgentPage() {
           <div className='mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6'>
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
-                <TabsTrigger value='overview'>Overview</TabsTrigger>
+                <TabsTrigger value='needs-you'>Needs you</TabsTrigger>
                 <TabsTrigger value='settings'>Settings</TabsTrigger>
               </TabsList>
-              <TabsContent value='overview' className='mt-4'>
-                <AgentOverviewTab
-                  draft={draft}
-                  priceMonthlyCents={addonStatus.priceMonthlyCents}
-                  onActiveChange={(nextActive) => void handleActiveChange(nextActive)}
-                  onChangeSettings={() => setTab('settings')}
-                  onSetupAgain={handleSetupAgain}
-                  onJumpToStep={handleJumpToStep}
-                />
+              <TabsContent value='needs-you' className='mt-4'>
+                <AgentNeedsYouList />
               </TabsContent>
               <TabsContent value='settings' className='mt-4'>
                 <MotionStagger className='space-y-4'>

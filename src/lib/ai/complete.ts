@@ -11,6 +11,8 @@ export interface CompleteInput<TSchema> {
 export interface CompleteResult {
   text: string;
   source: 'model' | 'template';
+  inputTokens?: number | null;
+  outputTokens?: number | null;
 }
 
 interface GatewayConfig {
@@ -106,9 +108,17 @@ export async function complete(input: CompleteInput<unknown>): Promise<CompleteR
 
   const payload = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
   const text = payload.choices?.[0]?.message?.content?.trim() ?? '';
-  return { text, source: 'model' };
+  return {
+    text,
+    source: 'model',
+    inputTokens:
+      typeof payload.usage?.prompt_tokens === 'number' ? payload.usage.prompt_tokens : null,
+    outputTokens:
+      typeof payload.usage?.completion_tokens === 'number' ? payload.usage.completion_tokens : null
+  };
 }
 
 export function parseJsonObject<T>(text: string): T | null {

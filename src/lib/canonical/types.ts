@@ -1,3 +1,4 @@
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import type {
   AgentAddonStatus,
   AgentConfig,
@@ -100,6 +101,7 @@ export interface CanonicalSnapshot {
   inboxMessages: InboxMessage[];
   agentConfig: AgentConfig | null;
   ariRuns: AriRunRecord[];
+  decisionTraces: DecisionTrace[];
   workspaceSettings: WorkspaceGeneralSettings | null;
   agentAddonStatus: AgentAddonStatus | null;
   stripeCustomerId: string | null;

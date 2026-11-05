@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { geminiModelId } from '@/lib/ai/gemini';
 import type { InvoiceImportDraft } from './types';
 import { emptyInvoiceDraft } from './extract-invoice-from-pdf';
 
@@ -44,7 +45,7 @@ export async function extractDraftsFromWord(
     return [draft];
   }
 
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-flash-latest';
+  const model = geminiModelId();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const prompt = `Below is text extracted from a Word document containing one or more invoices.

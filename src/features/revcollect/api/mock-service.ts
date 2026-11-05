@@ -26,6 +26,7 @@ import {
   getAiSummaryForThread,
   getAiDraftForMessage
 } from '../mock-data';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
 import type {
@@ -43,7 +44,12 @@ import {
   applyRelationshipPolicyInput,
   type RelationshipPolicyInput
 } from '../lib/relationship-policy';
-import type { RevCollectService, SendInboxFollowUpInput } from './service';
+import type {
+  RevCollectService,
+  RewriteAgentDraftInput,
+  RewriteAgentDraftResult,
+  SendInboxFollowUpInput
+} from './service';
 import type {
   DataAccessEvent,
   DeletionRequestResult,
@@ -219,6 +225,22 @@ export class MockRevCollectService implements RevCollectService {
 
   async sendInboxFollowUp(_input: SendInboxFollowUpInput) {
     return { ok: true as const };
+  }
+
+  async rewriteAgentDraft(_input: RewriteAgentDraftInput): Promise<RewriteAgentDraftResult> {
+    throw new Error('ARI rewrite is available on a connected workspace.');
+  }
+
+  async listDecisionTraces() {
+    return [];
+  }
+
+  async runPlaygroundDecision(_customerId: string): Promise<DecisionTrace> {
+    throw new Error('Playground is available on a connected workspace.');
+  }
+
+  async saveDecisionNote(_traceId: string, _note: string): Promise<DecisionTrace> {
+    throw new Error('Playground is available on a connected workspace.');
   }
 
   async recordCollectionDecision(input: CollectionDecisionInput) {

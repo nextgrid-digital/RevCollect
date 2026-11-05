@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const tenantIds = await listAriTenantIds();
   const results = [];
   for (const tenantId of tenantIds) {
-    results.push(await runOvernightAri(tenantId, { forceHour: true }));
+    results.push(await runOvernightAri(tenantId));
   }
   return NextResponse.json({ ok: true, results });
 }

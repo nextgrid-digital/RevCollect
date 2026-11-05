@@ -1,5 +1,5 @@
 'use client';
-import { navGroups } from '@/config/nav-config';
+import { visibleNavGroups } from '@/config/nav-config';
 import { KBarAnimator, KBarPortal, KBarPositioner, KBarProvider, KBarSearch } from 'kbar';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
@@ -9,7 +9,7 @@ import { useFilteredNavGroups } from '@/hooks/use-nav';
 
 export default function KBar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const filteredGroups = useFilteredNavGroups(navGroups);
+  const filteredGroups = useFilteredNavGroups(visibleNavGroups());
 
   // These action are for the navigation
   const actions = useMemo(() => {

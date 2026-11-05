@@ -20,6 +20,7 @@ import type {
   TimelineEvent,
   WorkspaceGeneralSettings
 } from '../types';
+import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import type { CollectionDecisionInput } from '../lib/collection-decision';
 import type { RelationshipPolicyInput } from '../lib/relationship-policy';
 import type {
@@ -46,6 +47,16 @@ export interface SendInboxFollowUpInput {
 export interface SendInboxFollowUpResult {
   ok: true;
   email?: ThreadEmail;
+}
+
+export interface RewriteAgentDraftInput {
+  customerId: string;
+  body: string;
+  instruction: string;
+}
+
+export interface RewriteAgentDraftResult {
+  body: string;
 }
 
 export interface RevCollectService {
@@ -87,6 +98,10 @@ export interface RevCollectService {
     settings: WorkspaceGeneralSettings
   ): Promise<WorkspaceGeneralSettings>;
   sendInboxFollowUp(input: SendInboxFollowUpInput): Promise<SendInboxFollowUpResult>;
+  rewriteAgentDraft(input: RewriteAgentDraftInput): Promise<RewriteAgentDraftResult>;
+  listDecisionTraces(): Promise<DecisionTrace[]>;
+  runPlaygroundDecision(customerId: string): Promise<DecisionTrace>;
+  saveDecisionNote(traceId: string, note: string): Promise<DecisionTrace>;
   recordCollectionDecision(input: CollectionDecisionInput): Promise<Customer>;
   recordRelationshipPolicy(input: RelationshipPolicyInput): Promise<Customer>;
 

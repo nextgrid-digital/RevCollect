@@ -108,6 +108,30 @@ export function sentEmailsForThread(
   );
 }
 
+export function latestUnansweredCustomerReply(
+  sentEmails: ThreadEmail[],
+  customerId: string
+): ThreadEmail | undefined {
+  let latestCustomer: ThreadEmail | undefined;
+  let latestAgentAt = '';
+
+  for (const email of sentEmails) {
+    if (email.customerId !== customerId) continue;
+    if (email.author === 'agent' && email.sentAt > latestAgentAt) {
+      latestAgentAt = email.sentAt;
+    }
+    if (email.author === 'customer' && (!latestCustomer || email.sentAt > latestCustomer.sentAt)) {
+      latestCustomer = email;
+    }
+  }
+
+  if (!latestCustomer) return undefined;
+  if (latestAgentAt && latestAgentAt >= latestCustomer.sentAt) return undefined;
+  const text = stripQuotedReply(latestCustomer.body).trim();
+  if (!text) return undefined;
+  return latestCustomer;
+}
+
 export function overlayInboxWithSentEmails(
   messages: InboxMessage[],
   sentEmails: ThreadEmail[]

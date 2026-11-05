@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Icons } from '@/components/icons';
 import { WorkspaceCanvas } from '@/components/layout/workspace-canvas';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
 import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
-import { useIntegrationStatus } from '../../api/queries';
+import { useCustomers, useInboxMessages, useIntegrationStatus } from '../../api/queries';
+import { listNeedsYou, needsYouCountLabel } from '../../agent/lib/needs-you';
 import {
   BOOKS_LEDGER_OPTIONS,
   BooksLedgerMark,
@@ -51,6 +52,12 @@ function StepStatusIcon({ done }: { done: boolean }) {
 export function OnboardingSteps() {
   const isHydrated = useIsHydrated();
   const { data: integrationStatus, isPending, isError, error, refetch } = useIntegrationStatus();
+  const { data: messages = [], isPending: messagesPending } = useInboxMessages();
+  const { data: customers = [], isPending: customersPending } = useCustomers();
+  const needsYouCount = useMemo(
+    () => listNeedsYou(messages, customers).length,
+    [messages, customers]
+  );
 
   if (!isHydrated) {
     return (
@@ -173,6 +180,27 @@ export function OnboardingSteps() {
               </div>
             </WorkspaceCard>
           )}
+
+          {integrationStatus.gmail.connected && connectedBooks ? (
+            <WorkspaceCard className='p-4 md:p-5'>
+              <div className='flex flex-col gap-1'>
+                <h2 className='flex items-center gap-2 text-base font-semibold'>
+                  <StepStatusIcon done />
+                  What needs a person
+                </h2>
+                <p className='text-muted-foreground text-sm'>
+                  {messagesPending || customersPending
+                    ? 'Checking what needs a person.'
+                    : needsYouCountLabel(needsYouCount)}
+                </p>
+              </div>
+              <div className='mt-4'>
+                <Button asChild size='sm'>
+                  <Link href='/agent'>Open the Agent</Link>
+                </Button>
+              </div>
+            </WorkspaceCard>
+          ) : null}
 
           <WorkspaceCard className='p-4 md:p-5'>
             <div className='flex flex-col gap-1'>

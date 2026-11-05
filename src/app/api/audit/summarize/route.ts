@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { geminiModelId } from '@/lib/ai/gemini';
 import { auditNarrativeSchema, type AuditNarrative } from '@/features/audit/lib/audit-narrative';
 import { buildGeminiNarrativePrompt, sanitizeNarrative } from '@/features/audit/lib/gemini-voice';
 
@@ -25,7 +26,7 @@ async function generateWithGemini(facts: Record<string, unknown>): Promise<Audit
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-flash-latest';
+  const model = geminiModelId();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const prompt = buildGeminiNarrativePrompt(JSON.stringify(facts, null, 2));
 

@@ -21,7 +21,7 @@ import {
   SidebarRail,
   useSidebar
 } from '@/components/ui/sidebar';
-import { navGroups } from '@/config/nav-config';
+import { visibleNavGroups } from '@/config/nav-config';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
 import { POST_LOGIN_PATH } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/client';
@@ -50,7 +50,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile, state } = useSidebar();
   const initials = initialsFromName(user.name);
-  const filteredGroups = useFilteredNavGroups(navGroups);
+  const filteredGroups = useFilteredNavGroups(visibleNavGroups());
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   React.useEffect(() => {
