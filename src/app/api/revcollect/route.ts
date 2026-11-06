@@ -214,6 +214,7 @@ export async function POST(request: NextRequest) {
         const { sanitizeHarnessGraph } =
           await import('@/features/revcollect/playground/lib/harness-graph');
         const result = await architectHarness({
+          tenantId: await getIntegrationTenantId(),
           messages,
           graph: sanitizeHarnessGraph(payload?.graph)
         });
@@ -256,6 +257,15 @@ export async function POST(request: NextRequest) {
             instruction: payload.instruction
           })
         );
+      }
+      case 'summarizeDashboard': {
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const { summarizeDashboard } = await import('@/lib/ari/summarize-dashboard');
+        const copy = await summarizeDashboard(body.payload);
+        return NextResponse.json({ copy });
       }
       case 'recordInboxSend': {
         const userId = await getAuthUserId();

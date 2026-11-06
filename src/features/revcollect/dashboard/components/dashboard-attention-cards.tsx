@@ -1,14 +1,95 @@
 'use client';
 
-import { WorkspaceCard } from '@/components/layout/workspace-card';
-import { StatusBadge } from '@/features/revcollect/components/status-badge';
+import { Icons } from '@/components/icons';
+import {
+  InboxListPill,
+  type InboxListPillVariant
+} from '@/features/revcollect/inbox/lib/inbox-list-badges';
 import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '../../utils';
+import type { StatusBadgeTone } from '../../components/status-badge';
 import type { DashboardAttentionCard } from '../lib/build-dashboard-snapshot';
 
 interface DashboardAttentionCardsProps {
   cards: DashboardAttentionCard[];
   onOpenThread: (messageId: string) => void;
+}
+
+function reasonPillVariant(tone: StatusBadgeTone): InboxListPillVariant {
+  if (tone === 'danger') return 'overdue';
+  if (tone === 'warning') return 'attention';
+  if (tone === 'violet') return 'ai_draft';
+  return 'monitoring';
+}
+
+function AttentionCard({
+  card,
+  onOpenThread
+}: {
+  card: DashboardAttentionCard;
+  onOpenThread: (messageId: string) => void;
+}) {
+  const messageId = card.inboxMessageId;
+  const className = cn(
+    'bg-card border-border/60 flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border text-left',
+    messageId &&
+      'hover:bg-muted/40 focus-visible:ring-ring cursor-pointer transition-colors hover:border-border focus-visible:ring-2 focus-visible:outline-none'
+  );
+  const body = (
+    <div className='flex h-full min-h-0 flex-1 flex-col gap-3 p-4'>
+      <div className='flex items-start justify-between gap-2'>
+        <div className='min-w-0 space-y-1.5'>
+          <h3 className='text-sm leading-snug font-semibold'>{card.company}</h3>
+          <InboxListPill label={card.statusLabel} variant={reasonPillVariant(card.statusTone)} />
+        </div>
+        {messageId ? (
+          <Icons.arrowUpRight
+            className='text-muted-foreground mt-0.5 size-4 shrink-0'
+            aria-hidden
+          />
+        ) : null}
+      </div>
+      <div className='flex flex-wrap items-baseline gap-x-2 gap-y-0.5'>
+        <span className='text-2xl font-semibold tracking-tight tabular-nums'>
+          {formatCurrencyWhole(card.amountCents)}
+        </span>
+        <span className='text-muted-foreground text-xs'>{card.daysLabel}</span>
+      </div>
+      <p className='bg-muted/50 text-muted-foreground mt-auto rounded-lg px-3 py-2.5 text-xs leading-relaxed'>
+        {card.summary}
+      </p>
+      <div className='flex flex-wrap items-center justify-end gap-1.5'>
+        {card.actions.map((label) => (
+          <span
+            key={label}
+            className='border-border text-muted-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium'
+          >
+            {label.toLowerCase().startsWith('call') ? <Icons.phone className='size-3' /> : null}
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (!messageId) {
+    return (
+      <div className={className} aria-label={`${card.company} has no inbox thread`}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type='button'
+      className={className}
+      aria-label={`Open ${card.company} thread`}
+      onClick={() => onOpenThread(messageId)}
+    >
+      {body}
+    </button>
+  );
 }
 
 export function DashboardAttentionCards({ cards, onOpenThread }: DashboardAttentionCardsProps) {
@@ -17,63 +98,25 @@ export function DashboardAttentionCards({ cards, onOpenThread }: DashboardAttent
   }
 
   return (
-    <section className='space-y-3'>
-      <div>
-        <h2 className='text-sm font-semibold sm:text-base'>Needs your attention today</h2>
-        <p className='text-muted-foreground text-xs'>Ranked by cash impact</p>
+    <section className='border-border/60 mt-4 space-y-3 border-t pt-6'>
+      <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
+        <div className='flex min-w-0 flex-wrap items-center gap-2'>
+          <h2 className='text-base font-semibold tracking-tight'>Needs your attention today</h2>
+          <span className='inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-900 dark:bg-orange-950/50 dark:text-orange-200'>
+            {cards.length === 1 ? '1 account' : `${cards.length} accounts`}
+          </span>
+        </div>
+        <p className='text-muted-foreground shrink-0 text-xs leading-snug sm:text-right'>
+          Ranked by cash impact
+        </p>
       </div>
-      <div className='grid gap-3 md:grid-cols-3'>
-        {cards.map((card) => {
-          const canOpen = Boolean(card.inboxMessageId);
-
-          return (
-            <button
-              key={card.customerId}
-              type='button'
-              aria-label={
-                canOpen ? `Open ${card.company} thread` : `${card.company} has no inbox thread`
-              }
-              aria-disabled={!canOpen}
-              className={cn(
-                'w-full appearance-none border-0 bg-transparent p-0 text-left',
-                canOpen ? 'cursor-pointer' : 'cursor-default'
-              )}
-              onClick={() => {
-                if (card.inboxMessageId) onOpenThread(card.inboxMessageId);
-              }}
-            >
-              <WorkspaceCard
-                className={cn(
-                  'flex h-full flex-col p-4 md:p-5 transition-colors',
-                  canOpen && 'hover:border-border hover:bg-muted/30'
-                )}
-              >
-                <div className='min-w-0'>
-                  <p className='truncate text-sm font-semibold'>{card.company}</p>
-                  <StatusBadge label={card.statusLabel} tone={card.statusTone} className='mt-1.5' />
-                </div>
-                <p className='mt-4 text-2xl font-semibold tracking-tight tabular-nums'>
-                  {formatCurrencyWhole(card.amountCents)}
-                </p>
-                <p className='text-muted-foreground text-xs'>{card.daysLabel}</p>
-                <p className='text-muted-foreground mt-3 line-clamp-3 flex-1 text-sm leading-relaxed'>
-                  {card.summary}
-                </p>
-                <div className='mt-4 flex flex-wrap gap-1.5'>
-                  {card.actions.map((label, index) => (
-                    <span
-                      key={`${index}-${label}`}
-                      className='bg-muted text-muted-foreground pointer-events-none rounded-full px-2.5 py-0.5 text-xs font-medium'
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </WorkspaceCard>
-            </button>
-          );
-        })}
-      </div>
+      <ul className='grid grid-cols-1 gap-3 md:grid-cols-3'>
+        {cards.map((card) => (
+          <li key={card.customerId} className='flex min-w-0'>
+            <AttentionCard card={card} onOpenThread={onOpenThread} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

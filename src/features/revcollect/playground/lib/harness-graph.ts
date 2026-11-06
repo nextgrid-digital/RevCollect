@@ -142,19 +142,42 @@ export function sanitizeHarnessGraph(raw: unknown): HarnessGraph {
   return { nodes, edges };
 }
 
-export function readHarnessReply(text: string): { reply: string; graph: HarnessGraph } | null {
+function cleanReply(value: unknown, max: number): string {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, max);
+}
+
+export function readHarnessChat(
+  text: string,
+  current: HarnessGraph
+): { reply: string; graph: HarnessGraph; updated: boolean } | null {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
+  if (start < 0 || end <= start) {
+    const plain = cleanReply(text, 1600);
+    return plain ? { reply: plain, graph: current, updated: false } : null;
+  }
   try {
     const parsed = JSON.parse(text.slice(start, end + 1)) as {
       reply?: unknown;
+      updateFlow?: unknown;
       nodes?: unknown;
       edges?: unknown;
     };
-    const reply = cleanText(parsed.reply, 280) || 'Updated the flow.';
-    return { reply, graph: sanitizeHarnessGraph(parsed) };
+    const reply = cleanReply(parsed.reply, 1600);
+    if (!reply) return null;
+    const hasNodes = Array.isArray(parsed.nodes) && parsed.nodes.length > 0;
+    if (parsed.updateFlow !== true || !hasNodes) {
+      return { reply, graph: current, updated: false };
+    }
+    return { reply, graph: sanitizeHarnessGraph(parsed), updated: true };
   } catch {
-    return null;
+    const plain = cleanReply(text, 1600);
+    return plain ? { reply: plain, graph: current, updated: false } : null;
   }
 }

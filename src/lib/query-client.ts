@@ -18,7 +18,8 @@ function shouldPersistQuery(query: {
     query.queryKey[0] === 'revcollect' &&
     query.queryKey[1] !== 'agent' &&
     query.queryKey[1] !== 'integrations' &&
-    query.queryKey[1] !== 'inbox'
+    query.queryKey[1] !== 'inbox' &&
+    query.queryKey[1] !== 'dashboard-copy'
   );
 }
 

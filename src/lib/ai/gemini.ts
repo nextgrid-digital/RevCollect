@@ -12,25 +12,29 @@ export async function generateGeminiText(input: {
   system: string;
   prompt: string;
   temperature?: number;
+  json?: boolean;
+  model?: string;
+  timeoutMs?: number;
 }): Promise<{ text: string; inputTokens: number | null; outputTokens: number | null }> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const model = geminiModelId();
+  const model = input.model?.trim() || geminiModelId();
   const response = await fetch(`${GEMINI_URL}/${model}:generateContent`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-goog-api-key': apiKey
     },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(input.timeoutMs ?? 20_000),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: input.system }] },
       contents: [{ role: 'user', parts: [{ text: input.prompt }] }],
       generationConfig: {
-        temperature: input.temperature ?? 0.3
+        temperature: input.temperature ?? 0.3,
+        ...(input.json ? { responseMimeType: 'application/json' } : {})
       }
     })
   });
@@ -41,18 +45,21 @@ export async function generateGeminiText(input: {
   }
 
   const payload = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    }>;
     usageMetadata?: {
       promptTokenCount?: number;
       candidatesTokenCount?: number;
       thoughtsTokenCount?: number;
     };
   };
-  const text =
-    payload.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? '')
-      .join('')
-      .trim() ?? '';
+  const parts = payload.candidates?.[0]?.content?.parts ?? [];
+  const spoken = parts.filter((part) => !part.thought);
+  const text = (spoken.length > 0 ? spoken : parts)
+    .map((part) => part.text ?? '')
+    .join('')
+    .trim();
   if (!text) {
     throw new Error('Gemini returned an empty draft');
   }

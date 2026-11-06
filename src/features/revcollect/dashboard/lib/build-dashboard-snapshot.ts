@@ -11,6 +11,17 @@ import type {
 } from '../../types';
 import { formatCurrencyWhole } from '../../utils';
 import { isOpenCanonicalInvoice } from '../../lib/invoice-open';
+import {
+  attentionClause,
+  attentionSummary,
+  copyAccount,
+  humanInboxNote,
+  promiseClause,
+  readableRunBullet,
+  recommendedActions,
+  type DashboardCopyAccount,
+  type DashboardCopyFacts
+} from './dashboard-copy';
 
 const PREFERRED_ATTENTION_COMPANIES = ['Rhein Steel', 'Harborline Shipping', 'Nova Energy'];
 const PREFERRED_ACTIVITY_COMPANIES = ['BlueRidge Hotels', 'Vertex Systems', 'MediSphere Health'];
@@ -33,6 +44,7 @@ export interface DashboardAttentionCard {
   daysOverdue: number;
   daysLabel: string;
   summary: string;
+  digestBeat: string;
   actions: [string, string];
 }
 
@@ -85,6 +97,7 @@ export interface DashboardSnapshot {
   activity: DashboardActivityItem[];
   promises: DashboardPromiseRow[];
   hasArData: boolean;
+  copyFacts: DashboardCopyFacts;
 }
 
 export interface BuildDashboardSnapshotInput {
@@ -155,9 +168,11 @@ function inboxMessageIdFor(customerId: string, inboxMessages: InboxMessage[]): s
 
 function buildAttentionCard(
   customer: Customer,
-  inboxMessages: InboxMessage[]
-): DashboardAttentionCard {
+  inboxMessages: InboxMessage[],
+  invoices: Invoice[]
+): { card: DashboardAttentionCard; account: DashboardCopyAccount } {
   const message = inboxMessages.find((item) => item.customerId === customer.id);
+  const account = copyAccount(customer, invoices, humanInboxNote(message?.preview));
   const text = messageText(message).toLowerCase();
   const isLegalHold = LEGAL_HOLD_PATTERN.test(text);
   const isDispute =
@@ -180,16 +195,7 @@ function buildAttentionCard(
     statusTone = 'info';
   }
 
-  let actions: [string, string];
-  if (isLegalHold) {
-    actions = ['Call the founder', 'Send final notice'];
-  } else if (isEscalation) {
-    actions = ['Send escalation', 'Call AP'];
-  } else if (isDispute) {
-    actions = ['Send reply', 'Review'];
-  } else {
-    actions = [message?.suggestedAction ?? 'Send follow-up', 'Review'];
-  }
+  const actions = recommendedActions(account);
 
   const daysLabel =
     customer.daysOverdue >= 90
@@ -197,16 +203,20 @@ function buildAttentionCard(
       : `oldest ${customer.daysOverdue}d`;
 
   return {
-    customerId: customer.id,
-    company: customer.company,
-    inboxMessageId: inboxMessageIdFor(customer.id, inboxMessages),
-    statusLabel,
-    statusTone,
-    amountCents: customer.balanceCents,
-    daysOverdue: customer.daysOverdue,
-    daysLabel,
-    summary: message?.preview ?? `${customer.company} needs a collections follow-up.`,
-    actions
+    account,
+    card: {
+      customerId: customer.id,
+      company: customer.company,
+      inboxMessageId: inboxMessageIdFor(customer.id, inboxMessages),
+      statusLabel,
+      statusTone,
+      amountCents: customer.balanceCents,
+      daysOverdue: customer.daysOverdue,
+      daysLabel,
+      summary: attentionSummary(account),
+      digestBeat: attentionClause(account),
+      actions
+    }
   };
 }
 
@@ -291,9 +301,10 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
     ariRun
   } = input;
 
-  const attentionCards = pickAttentionCustomers(customers).map((customer) =>
-    buildAttentionCard(customer, inboxMessages)
+  const attention = pickAttentionCustomers(customers).map((customer) =>
+    buildAttentionCard(customer, inboxMessages, invoices)
   );
+  const attentionCards = attention.map((item) => item.card);
 
   const totalArCents =
     agingSummary?.totalArCents ?? agingBuckets.reduce((sum, bucket) => sum + bucket.totalCents, 0);
@@ -308,9 +319,11 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
   const digestBullets = ariRun?.bullets ?? agentConfig?.digestPreview.bullets ?? [];
   const overnightPayments = buildOvernightPayments(inboxMessages, digestBullets);
 
-  const ariBullets = [...digestBullets];
+  const ariBullets = digestBullets
+    .map((bullet) => readableRunBullet(bullet, draftCount))
+    .filter(Boolean);
   if (draftCount > 0 && !ariBullets.some((bullet) => /draft/i.test(bullet))) {
-    ariBullets.push(`${draftCount} follow-up${draftCount === 1 ? '' : 's'} drafted overnight`);
+    ariBullets.push(readableRunBullet('follow-up drafted', draftCount));
   }
 
   const digestHour = agentConfig?.behaviors.digestHour ?? 6;
@@ -324,32 +337,39 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
       ? preferredActivity
       : customers.filter((customer) => customer.balanceCents > 0).slice(0, 3);
 
-  const activity: DashboardActivityItem[] = activitySource.slice(0, 3).map((customer) => {
+  const activityAccounts = activitySource.slice(0, 3).map((customer) => {
     const message = inboxMessages.find((item) => item.customerId === customer.id);
-    return {
-      customerId: customer.id,
-      company: customer.company,
-      summary:
-        message?.preview ?? `${customer.company} is ${customer.status.replaceAll('_', ' ')}.`,
-      inboxMessageId: inboxMessageIdFor(customer.id, inboxMessages)
-    };
+    return copyAccount(customer, invoices, humanInboxNote(message?.preview));
   });
+  const activity: DashboardActivityItem[] = activityAccounts.map((account) => ({
+    customerId: account.customerId,
+    company: account.company,
+    summary: attentionSummary(account),
+    inboxMessageId: inboxMessageIdFor(account.customerId, inboxMessages)
+  }));
 
-  const promises: DashboardPromiseRow[] = customers
+  const promiseAccounts = customers
     .filter((customer) => customer.status === 'promised')
     .toSorted((left, right) => right.balanceCents - left.balanceCents)
     .slice(0, 4)
     .map((customer) => {
       const message = inboxMessages.find((item) => item.customerId === customer.id);
       return {
-        customerId: customer.id,
-        company: customer.company,
-        amountCents: customer.balanceCents,
-        dueLabel: promiseDueLabel(message),
-        note: customer.daysOverdue > 0 ? 'broken, follow up shown' : undefined,
-        inboxMessageId: inboxMessageIdFor(customer.id, inboxMessages)
+        customer,
+        account: copyAccount(customer, invoices, humanInboxNote(message?.preview)),
+        dueLabel: promiseDueLabel(message)
       };
     });
+  const promises: DashboardPromiseRow[] = promiseAccounts.map(
+    ({ customer, account, dueLabel }) => ({
+      customerId: customer.id,
+      company: customer.company,
+      amountCents: customer.balanceCents,
+      dueLabel,
+      note: promiseClause(account),
+      inboxMessageId: inboxMessageIdFor(customer.id, inboxMessages)
+    })
+  );
 
   const agingBars: DashboardAgingBar[] = agingBuckets.map((bucket) => ({
     bucket: bucket.bucket,
@@ -380,6 +400,23 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
     ariHourLabel,
     activity,
     promises,
-    hasArData: totalArCents > 0 || customers.length > 0
+    hasArData: totalArCents > 0 || customers.length > 0,
+    copyFacts: {
+      attention: attention.map((item) => item.account),
+      activity: activityAccounts,
+      promises: promiseAccounts.map(({ account }) => account),
+      openInvoiceCount: invoiceCount,
+      totalArLabel: formatCurrencyWhole(totalArCents),
+      overdueLabel: formatCurrencyWhole(overdueCents),
+      draftCount,
+      hourLabel: ariHourLabel,
+      paymentsLanded: overnightPayments
+        ? {
+            count: overnightPayments.count,
+            amountLabel: formatCurrencyWhole(overnightPayments.amountCents)
+          }
+        : null,
+      existingBullets: ariBullets
+    }
   };
 }

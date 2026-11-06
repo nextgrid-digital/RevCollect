@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { InboxPeekCenterDialog } from '@/features/revcollect/inbox/components/inbox-peek-center-dialog';
 import { MotionReveal } from '@/features/revcollect/motion/motion-primitives';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
@@ -16,9 +17,9 @@ import {
   useLatestAriRun
 } from '../../api/queries';
 import { buildDashboardSnapshot } from '../lib/build-dashboard-snapshot';
+import { applyDashboardCopy, requestDashboardCopy } from '../lib/dashboard-copy';
 import { DashboardActivity } from './dashboard-activity';
 import { DashboardAgingBars } from './dashboard-aging-bars';
-import { DashboardAttentionBanner } from './dashboard-attention-banner';
 import { DashboardAttentionCards } from './dashboard-attention-cards';
 import { DashboardGreeting } from './dashboard-greeting';
 import { DashboardKpiRow } from './dashboard-kpi-row';
@@ -78,8 +79,20 @@ export function DashboardView({ userName }: DashboardViewProps) {
     ]
   );
 
-  const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
   const isHydrated = useIsHydrated();
+  const copyQuery = useQuery({
+    queryKey: ['revcollect', 'dashboard-copy', 'v3', snapshot.copyFacts],
+    queryFn: () => requestDashboardCopy(snapshot.copyFacts),
+    enabled: isHydrated && !isPending && snapshot.hasArData,
+    staleTime: 10 * 60 * 1000,
+    retry: 1
+  });
+  const narrative = useMemo(
+    () => applyDashboardCopy(snapshot, copyQuery.data ?? null),
+    [snapshot, copyQuery.data]
+  );
+
+  const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
   const showSkeleton = !isHydrated || isPending;
 
   function openThread(messageId: string) {
@@ -105,20 +118,18 @@ export function DashboardView({ userName }: DashboardViewProps) {
               <DashboardGreeting
                 userName={userName}
                 overnightPayments={snapshot.overnightPayments}
+                cards={narrative.attentionCards}
               />
             </MotionReveal>
             <MotionReveal>
-              <DashboardAttentionBanner
-                banner={snapshot.attentionBanner}
-                cards={snapshot.attentionCards}
-              />
-            </MotionReveal>
-            <MotionReveal>
-              <DashboardAttentionCards cards={snapshot.attentionCards} onOpenThread={openThread} />
+              <DashboardAttentionCards cards={narrative.attentionCards} onOpenThread={openThread} />
             </MotionReveal>
             {snapshot.agingBars.length > 0 ? (
               <MotionReveal>
-                <DashboardAgingBars bars={snapshot.agingBars} />
+                <DashboardAgingBars
+                  bars={snapshot.agingBars}
+                  actionCount={snapshot.attentionCards.length}
+                />
               </MotionReveal>
             ) : null}
             <MotionReveal>
@@ -127,9 +138,9 @@ export function DashboardView({ userName }: DashboardViewProps) {
             <MotionReveal>
               <DashboardActivity
                 ariHourLabel={snapshot.ariHourLabel}
-                ariBullets={snapshot.ariBullets}
-                activity={snapshot.activity}
-                promises={snapshot.promises}
+                ariBullets={narrative.ariBullets}
+                activity={narrative.activity}
+                promises={narrative.promises}
                 onOpenThread={openThread}
               />
             </MotionReveal>

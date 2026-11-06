@@ -1,11 +1,12 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { Icons } from '@/components/icons';
 import { WorkspaceCard } from '@/components/layout/workspace-card';
 import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '../../utils';
 import type { DashboardActivityItem, DashboardPromiseRow } from '../lib/build-dashboard-snapshot';
-import { DashboardAriRun } from './dashboard-ari-run';
 
 interface DashboardActivityProps {
   ariHourLabel: string;
@@ -15,6 +16,9 @@ interface DashboardActivityProps {
   onOpenThread: (messageId: string) => void;
 }
 
+const STAGGER_INITIAL_MS = 500;
+const STAGGER_STEP_MS = 700;
+
 export function DashboardActivity({
   ariHourLabel,
   ariBullets,
@@ -22,93 +26,177 @@ export function DashboardActivity({
   promises,
   onOpenThread
 }: DashboardActivityProps) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const runKey = useMemo(
+    () => [...ariBullets, ...activity.map((item) => item.customerId)].join('|'),
+    [ariBullets, activity]
+  );
+  const [visibleBulletCount, setVisibleBulletCount] = useState(
+    reduceMotion ? ariBullets.length : 0
+  );
+  const [visibleQueueCount, setVisibleQueueCount] = useState(reduceMotion ? activity.length : 0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setVisibleBulletCount(ariBullets.length);
+      setVisibleQueueCount(activity.length);
+      return;
+    }
+
+    setVisibleBulletCount(0);
+    setVisibleQueueCount(0);
+    const timers: number[] = [];
+    const bulletCount = ariBullets.length;
+    const queueCount = activity.length;
+
+    for (let index = 0; index < bulletCount; index += 1) {
+      timers.push(
+        window.setTimeout(
+          () => setVisibleBulletCount(index + 1),
+          STAGGER_INITIAL_MS + index * STAGGER_STEP_MS
+        )
+      );
+    }
+
+    const queuePhaseStart =
+      bulletCount === 0 ? 0 : STAGGER_INITIAL_MS + (bulletCount - 1) * STAGGER_STEP_MS;
+    for (let index = 0; index < queueCount; index += 1) {
+      timers.push(
+        window.setTimeout(
+          () => setVisibleQueueCount(index + 1),
+          queuePhaseStart + STAGGER_INITIAL_MS + index * STAGGER_STEP_MS
+        )
+      );
+    }
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [reduceMotion, ariBullets.length, activity.length, runKey]);
+
   if (ariBullets.length === 0 && activity.length === 0 && promises.length === 0) {
     return null;
   }
 
   return (
-    <WorkspaceCard className='space-y-5 p-4 md:p-5'>
-      <DashboardAriRun hourLabel={ariHourLabel} bullets={ariBullets} />
-
-      {activity.length > 0 ? (
-        <ul className='space-y-3'>
-          {activity.map((item) => {
-            const canOpen = Boolean(item.inboxMessageId);
-
-            return (
-              <li key={item.customerId}>
-                <button
-                  type='button'
-                  aria-label={
-                    canOpen ? `Open ${item.company} thread` : `${item.company} has no inbox thread`
-                  }
-                  aria-disabled={!canOpen}
-                  className={cn(
-                    'flex w-full appearance-none items-start justify-between gap-3 border-0 bg-transparent p-0 text-left',
-                    canOpen ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
-                  )}
-                  onClick={() => {
-                    if (item.inboxMessageId) onOpenThread(item.inboxMessageId);
-                  }}
-                >
-                  <div className='min-w-0'>
-                    <p className='text-sm font-medium'>{item.company}</p>
-                    <p className='text-muted-foreground line-clamp-2 text-sm'>{item.summary}</p>
-                  </div>
-                  <Icons.chevronRight className='text-muted-foreground mt-0.5 size-4 shrink-0' />
-                </button>
+    <div className='flex flex-col gap-3'>
+      {ariBullets.length > 0 ? (
+        <section className='space-y-3 rounded-xl bg-violet-500/10 p-3 dark:bg-violet-500/15'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <span className='inline-flex items-center rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 dark:text-violet-200'>
+              <span
+                className='mr-1.5 size-1.5 rounded-full bg-violet-600 dark:bg-violet-300'
+                aria-hidden
+              />
+              ARI
+            </span>
+            <p className='text-sm font-semibold tracking-tight'>Overnight run · {ariHourLabel}</p>
+          </div>
+          <ul className='space-y-2' aria-live='polite'>
+            {ariBullets.slice(0, visibleBulletCount).map((bullet) => (
+              <li key={bullet} className='flex gap-2 text-sm leading-snug'>
+                <span className='mt-1.5 size-1.5 shrink-0 rounded-full bg-violet-500' aria-hidden />
+                <span className='text-foreground/90 min-w-0'>{bullet}</span>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
-      {promises.length > 0 ? (
-        <div>
-          <p className='mb-2 text-sm font-semibold'>Promises ARI is tracking</p>
-          <div className='overflow-x-auto'>
-            <table className='w-full text-left text-sm'>
-              <tbody>
+      {activity.length > 0 || promises.length > 0 ? (
+        <WorkspaceCard className='space-y-3 p-4 md:p-5'>
+          {activity.length > 0 ? (
+            <div className='space-y-1'>
+              {activity.slice(0, visibleQueueCount).map((item) => {
+                const messageId = item.inboxMessageId;
+                const row = (
+                  <>
+                    <div className='min-w-0 flex-1'>
+                      <p className='text-sm leading-snug font-medium'>{item.company}</p>
+                      <p className='text-muted-foreground mt-0.5 text-xs leading-snug'>
+                        {item.summary}
+                      </p>
+                    </div>
+                    {messageId ? (
+                      <Icons.arrowUpRight
+                        className='text-muted-foreground mt-0.5 size-4 shrink-0'
+                        aria-hidden
+                      />
+                    ) : null}
+                  </>
+                );
+                if (!messageId) {
+                  return (
+                    <div
+                      key={item.customerId}
+                      className='flex items-start gap-2 rounded-lg px-3 py-2.5'
+                    >
+                      {row}
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={item.customerId}
+                    type='button'
+                    className='hover:bg-muted/40 focus-visible:ring-ring flex w-full cursor-pointer items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none'
+                    aria-label={`Open ${item.company} thread`}
+                    onClick={() => onOpenThread(messageId)}
+                  >
+                    {row}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {promises.length > 0 ? (
+            <section className='border-border/60 rounded-xl border'>
+              <h3 className='border-border/60 border-b px-3 py-2.5 text-sm font-semibold'>
+                Promises ARI is tracking
+              </h3>
+              <ul className='divide-border divide-y'>
                 {promises.map((row) => {
                   const canOpen = Boolean(row.inboxMessageId);
-
+                  const detail = [formatCurrencyWhole(row.amountCents), row.note]
+                    .filter(Boolean)
+                    .join(' · ');
                   return (
-                    <tr
-                      key={row.customerId}
-                      className={cn(
-                        'border-border/60 border-t first:border-t-0',
-                        canOpen && 'hover:bg-muted/40 cursor-pointer'
-                      )}
-                      tabIndex={canOpen ? 0 : undefined}
-                      role={canOpen ? 'button' : undefined}
-                      aria-label={canOpen ? `Open ${row.company} thread` : undefined}
-                      onClick={() => {
-                        if (row.inboxMessageId) onOpenThread(row.inboxMessageId);
-                      }}
-                      onKeyDown={(event) => {
-                        if (!row.inboxMessageId) return;
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onOpenThread(row.inboxMessageId);
-                        }
-                      }}
-                    >
-                      <td className='text-muted-foreground py-2 pr-3 whitespace-nowrap'>
-                        {row.dueLabel}
-                      </td>
-                      <td className='py-2 pr-3 font-medium'>{row.company}</td>
-                      <td className='py-2 pr-3 text-right tabular-nums'>
-                        {formatCurrencyWhole(row.amountCents)}
-                      </td>
-                      <td className='text-muted-foreground py-2 text-xs'>{row.note ?? ''}</td>
-                    </tr>
+                    <li key={row.customerId}>
+                      <button
+                        type='button'
+                        className={cn(
+                          'flex w-full gap-3 px-3 py-2.5 text-left',
+                          canOpen && 'hover:bg-muted/40 cursor-pointer'
+                        )}
+                        disabled={!canOpen}
+                        onClick={() => {
+                          if (row.inboxMessageId) onOpenThread(row.inboxMessageId);
+                        }}
+                      >
+                        <span
+                          className={cn(
+                            'w-14 shrink-0 text-xs font-medium tabular-nums',
+                            row.dueLabel === 'Today'
+                              ? 'text-red-800 dark:text-red-400'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {row.dueLabel}
+                        </span>
+                        <p className='min-w-0 text-xs leading-snug'>
+                          <span className='font-semibold'>{row.company}</span>
+                          <span className='text-muted-foreground'> · {detail}</span>
+                        </p>
+                      </button>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </ul>
+            </section>
+          ) : null}
+        </WorkspaceCard>
       ) : null}
-    </WorkspaceCard>
+    </div>
   );
 }

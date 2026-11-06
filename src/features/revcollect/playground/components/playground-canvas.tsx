@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode
+} from 'react';
 import {
   Controls,
   ReactFlow,
@@ -145,6 +153,12 @@ export function PlaygroundCanvas(props: PlaygroundCanvasProps) {
   const [message, setMessage] = useState('');
   const [architecting, setArchitecting] = useState(false);
   const [architectError, setArchitectError] = useState<string | null>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = transcriptRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [chat, architecting]);
 
   async function onArchitect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -168,11 +182,12 @@ export function PlaygroundCanvas(props: PlaygroundCanvasProps) {
         error?: string;
         reply?: string;
         graph?: HarnessGraph;
+        updated?: boolean;
       };
-      if (!response.ok || !body.graph || !body.reply) {
-        throw new Error(body.error ?? 'The harness could not update the flow.');
+      if (!response.ok || !body.reply) {
+        throw new Error(body.error ?? 'The harness did not answer.');
       }
-      setGraph(body.graph);
+      if (body.updated && body.graph) setGraph(body.graph);
       setChat((current) => [...current, { role: 'assistant', content: body.reply ?? '' }]);
     } catch (error) {
       setArchitectError(
@@ -198,15 +213,27 @@ export function PlaygroundCanvas(props: PlaygroundCanvasProps) {
             />
           </div>
           <form onSubmit={(event) => void onArchitect(event)} className='border-t px-4 py-3'>
-            {chat.length > 0 ? (
-              <p className='text-muted-foreground mb-2 line-clamp-2 text-xs'>
-                {chat[chat.length - 1]?.content}
-              </p>
-            ) : (
-              <p className='text-muted-foreground mb-2 text-xs'>
-                Tell the harness what to add. The checks and the human send stay.
-              </p>
-            )}
+            <div ref={transcriptRef} className='mb-2 flex max-h-56 flex-col gap-2 overflow-y-auto'>
+              {chat.length === 0 ? (
+                <p className='text-muted-foreground text-xs'>
+                  Ask what we know about a customer, or say how to change the flow. A question does
+                  not add a step.
+                </p>
+              ) : (
+                chat.map((item, index) => (
+                  <p
+                    key={`${item.role}-${index}`}
+                    className={
+                      item.role === 'user'
+                        ? 'text-muted-foreground text-xs whitespace-pre-wrap'
+                        : 'text-sm whitespace-pre-wrap'
+                    }
+                  >
+                    {item.content}
+                  </p>
+                ))
+              )}
+            </div>
             {architectError ? (
               <p className='text-destructive mb-2 text-xs'>{architectError}</p>
             ) : null}
@@ -218,7 +245,7 @@ export function PlaygroundCanvas(props: PlaygroundCanvasProps) {
                 id='harness-chat'
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                placeholder='Add a books specialist before the draft'
+                placeholder='What do we know about this customer?'
                 disabled={architecting}
               />
               <Button type='submit' size='sm' isLoading={architecting} disabled={!message.trim()}>
