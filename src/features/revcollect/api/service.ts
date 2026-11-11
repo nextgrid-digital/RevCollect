@@ -65,7 +65,10 @@ export interface RevCollectService {
   listInboxMessages(): Promise<InboxMessage[]>;
   getDefaultInboxMessageId(): Promise<string>;
   getInboxThreadForCustomer(customerId: string): Promise<InboxMessage | undefined>;
-  getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null>;
+  getInboxSelectionData(
+    messageId: string,
+    options?: { soft?: boolean }
+  ): Promise<InboxSelectionData | null>;
 
   listCustomers(): Promise<Customer[]>;
   getCustomerById(id: string): Promise<Customer | undefined>;

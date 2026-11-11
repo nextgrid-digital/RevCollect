@@ -11,10 +11,10 @@ export function CustomerPaidInvoiceCard({ invoice }: CustomerPaidInvoiceCardProp
   const timingLabel = !paidOn
     ? 'Paid'
     : daysVsDue === 0
-      ? 'Paid on due date'
+      ? 'on due date'
       : daysVsDue < 0
-        ? `Paid ${Math.abs(daysVsDue)} day${Math.abs(daysVsDue) === 1 ? '' : 's'} early`
-        : `Paid ${daysVsDue} day${daysVsDue === 1 ? '' : 's'} after due`;
+        ? `${Math.abs(daysVsDue)} day${Math.abs(daysVsDue) === 1 ? '' : 's'} early`
+        : `${daysVsDue} day${daysVsDue === 1 ? '' : 's'} after due`;
 
   return (
     <div className='bg-card flex flex-col gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 ring-border/60 sm:flex-row sm:items-center sm:justify-between'>
@@ -23,8 +23,7 @@ export function CustomerPaidInvoiceCard({ invoice }: CustomerPaidInvoiceCardProp
         <div className='min-w-0'>
           <p className='text-sm font-semibold'>{invoice.number}</p>
           <p className='text-muted-foreground text-xs'>
-            {paidOn ? `Paid: ${formatDate(paidOn)}` : 'Paid'}
-            {` · ${timingLabel}`}
+            {paidOn ? `Paid ${formatDate(paidOn)} · ${timingLabel}` : timingLabel}
           </p>
         </div>
       </div>

@@ -86,7 +86,10 @@ export class MockRevCollectService implements RevCollectService {
     return resolveMock(getInboxThreadForCustomer(customerId));
   }
 
-  async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
+  async getInboxSelectionData(
+    messageId: string,
+    _options?: { soft?: boolean }
+  ): Promise<InboxSelectionData | null> {
     const message = inboxMessages.find((item) => item.id === messageId);
     if (!message) return null;
 

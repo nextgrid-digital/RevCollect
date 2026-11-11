@@ -1,5 +1,10 @@
+import type { Metadata } from 'next';
 import PageContainer from '@/components/layout/page-container';
 import { AgentPage } from '@/features/revcollect/agent/components/agent-page';
+
+export const metadata: Metadata = {
+  title: 'Agent'
+};
 
 export default function AgentPageRoute() {
   return (

@@ -538,7 +538,7 @@ export function useResyncXero() {
   return useMutation({
     mutationKey: BOOKS_RESYNC_MUTATION_KEY,
     mutationFn: async (): Promise<XeroResyncResult> => {
-      const response = await fetch('/api/integrations/xero/resync', { method: 'POST' });
+      const response = await fetch('/api/integrations/books/resync', { method: 'POST' });
       if (!response.ok) {
         let body: { error?: string; code?: XeroResyncError['code'] } = {};
         try {
@@ -546,7 +546,7 @@ export function useResyncXero() {
         } catch {
           // Keep a generic message when the body is not JSON.
         }
-        const error: XeroResyncError = new Error(body.error ?? 'Xero resync failed');
+        const error: XeroResyncError = new Error(body.error ?? 'Accounting resync failed');
         error.status = response.status;
         error.code = body.code;
         throw error;
@@ -556,6 +556,10 @@ export function useResyncXero() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
       void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      if (!result.lastSyncAt) {
+        toast.error('Resync finished but last sync time was not updated');
+        return;
+      }
       toast.success(`Synced ${result.customerCount} customers, ${result.invoiceCount} invoices`);
     },
     onError: (error) => {

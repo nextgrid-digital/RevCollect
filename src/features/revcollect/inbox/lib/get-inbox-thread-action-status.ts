@@ -4,6 +4,7 @@ import { isBrokenPromise } from '../../lib/collection-decision';
 export type InboxThreadActionStatus =
   | 'ai_draft_ready'
   | 'awaiting_reply'
+  | 'needs_follow_up'
   | 'monitoring'
   | 'promise_missed'
   | 'up_to_date';
@@ -42,6 +43,10 @@ export function getInboxThreadActionStatus(
   message: InboxMessage,
   customer: Customer
 ): InboxThreadActionStatus {
+  if (message.id.startsWith('xero-customer-') && customer.balanceCents > 0) {
+    return 'needs_follow_up';
+  }
+
   if (customer.status === 'in_dispute') {
     return 'monitoring';
   }
@@ -66,9 +71,18 @@ export function getInboxThreadActionStatus(
     return 'monitoring';
   }
 
+  if (customer.daysOverdue > 0 || customer.balanceCents > 0) {
+    return 'needs_follow_up';
+  }
+
   return 'up_to_date';
 }
 
 export function threadNeedsAttention(status: InboxThreadActionStatus): boolean {
-  return status === 'ai_draft_ready' || status === 'awaiting_reply' || status === 'promise_missed';
+  return (
+    status === 'ai_draft_ready' ||
+    status === 'awaiting_reply' ||
+    status === 'promise_missed' ||
+    status === 'needs_follow_up'
+  );
 }

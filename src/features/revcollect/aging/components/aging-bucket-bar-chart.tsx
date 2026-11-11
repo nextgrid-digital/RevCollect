@@ -44,17 +44,19 @@ export function AgingBucketBarChart({ buckets }: AgingBucketBarChartProps) {
                 </span>
               </div>
               <div className='bg-muted/50 h-7 min-w-0 overflow-hidden rounded-md sm:h-8'>
-                <motion.div
-                  className={cn(
-                    'flex h-full min-w-[2.5rem] items-center rounded-md px-2 text-[11px] font-medium text-white sm:min-w-[3rem] sm:px-2.5 sm:text-xs',
-                    bucketBarStyles[bucket.bucket]
-                  )}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${widthPct}%` }}
-                  transition={{ ...springSoft, delay: index * 0.04 }}
-                >
-                  {bucket.invoiceCount > 0 ? invoiceLabel : null}
-                </motion.div>
+                {bucket.totalCents > 0 ? (
+                  <motion.div
+                    className={cn(
+                      'flex h-full min-w-[2.5rem] items-center rounded-md px-2 text-[11px] font-medium text-white sm:min-w-[3rem] sm:px-2.5 sm:text-xs',
+                      bucketBarStyles[bucket.bucket]
+                    )}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${widthPct}%` }}
+                    transition={{ ...springSoft, delay: index * 0.04 }}
+                  >
+                    {bucket.invoiceCount > 0 ? invoiceLabel : null}
+                  </motion.div>
+                ) : null}
               </div>
               <span className='hidden text-sm font-medium tabular-nums sm:block'>
                 {formatCurrency(bucket.totalCents)}

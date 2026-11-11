@@ -5,7 +5,6 @@ import {
   memo,
   useCallback,
   useEffect,
-  useId,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -16,10 +15,13 @@ import InputBar from '@/components/chat/input-bar';
 import { ModeSelector } from '@/components/chat/mode-selector';
 import { ModelPicker } from '@/components/chat/model-picker';
 import { Icons } from '@/components/icons';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { useAgentConfig, useSendInboxFollowUp } from '../../api/queries';
+import {
+  useAgentConfig,
+  useRewriteAgentDraft,
+  useSendInboxFollowUp,
+  useWorkspaceGeneralSettings
+} from '../../api/queries';
 import type { AgentConfig, CollectionStatus, Customer } from '../../types';
 import {
   COLLECTION_PLAYBOOKS,
@@ -29,7 +31,8 @@ import {
   type CollectionTone
 } from '../composer-options';
 import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
-import { followUpDecision } from '../../lib/relationship-policy';
+import { isDeliverableCustomerEmail } from '../../lib/customer-email';
+import { followUpDecision, policyFromCustomer } from '../../lib/relationship-policy';
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
 import { buildCollectionDraft } from '../lib/build-collection-draft';
@@ -39,6 +42,34 @@ import {
   findInboxThreadScrollContainer,
   scrollInboxThreadToBottomAfterLayout
 } from '../lib/scroll-inbox-reply-target';
+
+function draftStorageKey(messageId?: string, customerId?: string): string | null {
+  if (messageId) return `revcollect:draft:${messageId}`;
+  if (customerId) return `revcollect:draft:customer:${customerId}`;
+  return null;
+}
+
+function readStoredDraft(key: string | null): string {
+  if (!key || typeof window === 'undefined') return '';
+  try {
+    return sessionStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeStoredDraft(key: string | null, value: string): void {
+  if (!key || typeof window === 'undefined') return;
+  try {
+    if (!value.trim()) {
+      sessionStorage.removeItem(key);
+      return;
+    }
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore quota / private mode failures.
+  }
+}
 
 function InboxDraftButton({
   isLoading,
@@ -75,41 +106,21 @@ function InboxDraftButton({
   );
 }
 
-function makeDraftBody(
-  draft: string,
-  tone: CollectionTone,
-  playbook: CollectionPlaybook,
-  signature: string
-): string {
-  return buildCollectionDraft({
-    baseDraft: draft,
-    tone,
-    playbook,
-    signature
-  });
-}
-
 interface ComposerToolbarProps {
-  autoRunId: string;
-  autoRun: boolean;
   tone: CollectionTone;
   playbook: CollectionPlaybook;
   isDrafting: boolean;
   isDrafted: boolean;
-  onAutoRunChange: (checked: boolean) => void;
   onToneChange: (toneId: string) => void;
   onPlaybookChange: (playbookId: string) => void;
   onDraftClick: () => void;
 }
 
 const ComposerToolbar = memo(function ComposerToolbar({
-  autoRunId,
-  autoRun,
   tone,
   playbook,
   isDrafting,
   isDrafted,
-  onAutoRunChange,
   onToneChange,
   onPlaybookChange,
   onDraftClick
@@ -124,20 +135,6 @@ const ComposerToolbar = memo(function ComposerToolbar({
         onChange={onPlaybookChange}
         placeholder='Playbook'
       />
-      <div className='border-border ml-0.5 flex shrink-0 items-center gap-1.5 border-l pl-2.5'>
-        <Switch
-          id={autoRunId}
-          checked={autoRun}
-          onCheckedChange={onAutoRunChange}
-          className='scale-90'
-        />
-        <Label
-          htmlFor={autoRunId}
-          className='text-muted-foreground cursor-pointer text-xs font-normal whitespace-nowrap'
-        >
-          Auto-run
-        </Label>
-      </div>
     </>
   );
 });
@@ -172,7 +169,6 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       customer,
       defaultTone,
       initialBody,
-      defaultAutoRun = false,
       bodyCollapsed = false,
       variant = 'default',
       className,
@@ -181,12 +177,14 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     ref
   ) {
     const isAgentDraft = variant === 'agent-draft';
-    const autoRunId = useId();
     const rootRef = useRef<HTMLDivElement>(null);
     const { data: agentConfig } = useAgentConfig();
+    const { data: workspaceSettings } = useWorkspaceGeneralSettings();
     const sendFollowUp = useSendInboxFollowUp();
+    const rewriteDraft = useRewriteAgentDraft();
     const attachment = useOptionalInboxThreadAttachment();
-    const signature = agentConfig?.signature ?? 'Best regards,\nRevCollect Collections Team';
+    const signature =
+      workspaceSettings?.emailSignature?.trim() || agentConfig?.signature?.trim() || 'Best regards';
     const resolvedDefaultTone = defaultTone ?? agentConfig?.tone ?? 'professional';
     const resolvedPlaybook = defaultPlaybookForCustomer(customerStatus, {
       paymentClaimed: customer
@@ -194,21 +192,25 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
         : false,
       allowLegalLanguage: agentConfig?.behaviors.allowLegalLanguage
     });
+    const storageKey = draftStorageKey(messageId, customerId);
+    const deliverableEmail = isDeliverableCustomerEmail(
+      customer ? (policyFromCustomer(customer).preferredEmail ?? customer.email) : undefined
+    );
 
     const [tone, setTone] = useState<CollectionTone>(resolvedDefaultTone);
     const [playbook, setPlaybook] = useState<CollectionPlaybook>(resolvedPlaybook);
-    const [body, setBody] = useState(initialBody ?? '');
-    const [autoRun, setAutoRun] = useState(defaultAutoRun);
+    const [body, setBody] = useState(() => initialBody ?? readStoredDraft(storageKey));
     const [isDrafting, startDrafting] = useTransition();
 
     const isDrafted = body.trim().length > 0;
-    const placeholder = 'Write your reply...';
+    const placeholder = deliverableEmail
+      ? 'Write your reply...'
+      : 'Add a deliverable email before sending';
 
     const baseDraftRef = useRef(baseDraft);
     const toneRef = useRef(tone);
     const playbookRef = useRef(playbook);
     const signatureRef = useRef(signature);
-    const skipNextAutoRunRef = useRef(Boolean(initialBody));
 
     baseDraftRef.current = baseDraft;
     toneRef.current = tone;
@@ -219,35 +221,67 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       setBody((prev) => (prev === next ? prev : next));
     }, []);
 
-    const applyDraft = useCallback(
-      (options?: {
-        tone?: CollectionTone;
-        playbook?: CollectionPlaybook;
-        notify?: boolean;
-        showLoading?: boolean;
-      }) => {
+    useEffect(() => {
+      writeStoredDraft(storageKey, body);
+    }, [body, storageKey]);
+
+    const applyLocalDraft = useCallback(
+      (options?: { notify?: boolean; showLoading?: boolean }) => {
         const run = () => {
           setBodyIfChanged(
-            makeDraftBody(
-              baseDraftRef.current,
-              options?.tone ?? toneRef.current,
-              options?.playbook ?? playbookRef.current,
-              signatureRef.current
-            )
+            buildCollectionDraft({
+              baseDraft: baseDraftRef.current,
+              tone: toneRef.current,
+              playbook: playbookRef.current,
+              signature: signatureRef.current,
+              customerName: customer?.name
+            })
           );
           if (options?.notify) {
             toast.message('Draft ready — review and edit before sending');
           }
         };
-
         if (options?.showLoading) {
           startDrafting(run);
         } else {
           run();
         }
       },
-      [setBodyIfChanged]
+      [customer?.name, setBodyIfChanged]
     );
+
+    const handleDraftClick = useCallback(() => {
+      if (!customerId) {
+        applyLocalDraft({ notify: true, showLoading: true });
+        return;
+      }
+      startDrafting(() => {
+        const seeded = buildCollectionDraft({
+          baseDraft: baseDraftRef.current,
+          tone: toneRef.current,
+          playbook: playbookRef.current,
+          signature: signatureRef.current,
+          customerName: customer?.name
+        });
+        rewriteDraft.mutate(
+          {
+            customerId,
+            body: seeded,
+            instruction: `Rewrite this collections follow-up in a ${toneRef.current} tone for this specific customer. Keep their name, invoice numbers, amounts, and due dates. Do not invent facts. One greeting, one body, one sign-off.`
+          },
+          {
+            onSuccess: (result) => {
+              setBodyIfChanged(result.body);
+              toast.message('Draft ready — review and edit before sending');
+            },
+            onError: () => {
+              setBodyIfChanged(seeded);
+              toast.message('Draft ready — review and edit before sending');
+            }
+          }
+        );
+      });
+    }, [applyLocalDraft, customer?.name, customerId, rewriteDraft, setBodyIfChanged]);
 
     useEffect(() => {
       const nextTone = resolvedDefaultTone;
@@ -259,21 +293,20 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       });
       setTone(nextTone);
       setPlaybook(nextPlaybook);
-      setAutoRun(defaultAutoRun);
-      skipNextAutoRunRef.current = Boolean(initialBody);
       if (initialBody) {
         setBodyIfChanged(initialBody);
       } else {
-        setBodyIfChanged('');
+        const stored = readStoredDraft(draftStorageKey(messageId, customerId));
+        setBodyIfChanged(stored);
       }
     }, [
-      baseDraft,
       customerStatus,
       customer,
       agentConfig?.behaviors.allowLegalLanguage,
       resolvedDefaultTone,
       initialBody,
-      defaultAutoRun,
+      messageId,
+      customerId,
       setBodyIfChanged
     ]);
 
@@ -286,25 +319,6 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       void scrollInboxThreadToBottomAfterLayout(container, { behavior: 'auto' });
     }, [isDrafted, isAgentDraft, body]);
 
-    useEffect(() => {
-      if (!autoRun) return;
-      if (skipNextAutoRunRef.current) {
-        skipNextAutoRunRef.current = false;
-        return;
-      }
-      setBodyIfChanged(makeDraftBody(baseDraft, tone, playbook, signature));
-    }, [autoRun, baseDraft, tone, playbook, signature, setBodyIfChanged]);
-
-    const handleAutoRunChange = useCallback(
-      (checked: boolean) => {
-        setAutoRun((prev) => (prev === checked ? prev : checked));
-        if (!checked) {
-          setBodyIfChanged(initialBody ?? '');
-        }
-      },
-      [initialBody, setBodyIfChanged]
-    );
-
     const handleToneChange = useCallback((toneId: string) => {
       setTone(toneId as CollectionTone);
     }, []);
@@ -313,10 +327,6 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       setPlaybook(playbookId as CollectionPlaybook);
     }, []);
 
-    const handleDraftClick = useCallback(() => {
-      applyDraft({ notify: true, showLoading: true });
-    }, [applyDraft]);
-
     const handleSend = useCallback(() => {
       const sentBody = body.trim();
       if (!sentBody || sendFollowUp.isPending) return;
@@ -324,7 +334,12 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
         toast.error('No customer on this thread');
         return;
       }
+      if (!deliverableEmail) {
+        toast.error('Add a deliverable email address before sending');
+        return;
+      }
       setBody('');
+      writeStoredDraft(storageKey, '');
       sendFollowUp.mutate(
         {
           customerId,
@@ -338,7 +353,16 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           onError: () => setBody(sentBody)
         }
       );
-    }, [attachment?.attachedInvoiceIds, baseDraft, body, customerId, messageId, sendFollowUp]);
+    }, [
+      attachment?.attachedInvoiceIds,
+      baseDraft,
+      body,
+      customerId,
+      deliverableEmail,
+      messageId,
+      sendFollowUp,
+      storageKey
+    ]);
 
     useImperativeHandle(
       ref,
@@ -350,6 +374,8 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       }),
       [handleSend]
     );
+
+    const drafting = isDrafting || rewriteDraft.isPending;
 
     return (
       <div ref={rootRef} className={cn('space-y-2', className)}>
@@ -374,13 +400,10 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           leftActions={
             isAgentDraft ? undefined : (
               <ComposerToolbar
-                autoRunId={autoRunId}
-                autoRun={autoRun}
                 tone={tone}
                 playbook={playbook}
-                isDrafting={isDrafting}
+                isDrafting={drafting}
                 isDrafted={isDrafted}
-                onAutoRunChange={handleAutoRunChange}
                 onToneChange={handleToneChange}
                 onPlaybookChange={handlePlaybookChange}
                 onDraftClick={handleDraftClick}
@@ -388,9 +411,15 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
             )
           }
         />
-        <p className='text-muted-foreground px-1 text-[11px] leading-relaxed'>
-          {CAN_SPAM_SEND_NOTE}
-        </p>
+        {!deliverableEmail ? (
+          <p className='text-destructive px-1 text-[11px] leading-relaxed'>
+            This customer has no deliverable email address. Update the contact before sending.
+          </p>
+        ) : (
+          <p className='text-muted-foreground px-1 text-[11px] leading-relaxed'>
+            {CAN_SPAM_SEND_NOTE}
+          </p>
+        )}
       </div>
     );
   }

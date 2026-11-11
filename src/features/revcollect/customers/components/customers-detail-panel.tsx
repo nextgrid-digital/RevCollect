@@ -22,9 +22,12 @@ import {
   useCustomerInboxContext,
   useInboxThreadForCustomer,
   useInvoicesForCustomer,
+  useRecordRelationshipPolicy,
+  useCustomers,
   useThreadEmails,
   useTimelineForCustomer
 } from '../../api/queries';
+import { expireRelationshipPolicy, policyFromCustomer } from '../../lib/relationship-policy';
 import { InboxActivityCard } from '../../inbox/components/inbox-activity-card';
 import { InboxAiInsightCard } from '../../inbox/components/inbox-ai-insight-card';
 import { InboxContextSectionLabel } from '../../inbox/components/inbox-context-section-label';
@@ -95,16 +98,31 @@ export function CustomersDetailPanel({
 }: CustomersDetailPanelProps) {
   const router = useRouter();
   const [activityOpen, setActivityOpen] = useState(false);
+  const { data: customers = [] } = useCustomers();
   const { data: customer, isPending } = useCustomer(customerId);
   const { data: inboxContext } = useCustomerInboxContext(customerId);
   const { data: invoices = [] } = useInvoicesForCustomer(customerId);
   const { data: timeline = [] } = useTimelineForCustomer(customerId);
   const { data: inboxThread } = useInboxThreadForCustomer(customerId);
   const { data: threadEmails = [] } = useThreadEmails(inboxThread?.id);
+  const resumePolicy = useRecordRelationshipPolicy();
+  const relationshipPolicy = customer
+    ? expireRelationshipPolicy(policyFromCustomer(customer))
+    : null;
+  const isPaused =
+    relationshipPolicy?.state === 'paused_until_date' ||
+    relationshipPolicy?.state === 'manual_only' ||
+    relationshipPolicy?.state === 'founder_only' ||
+    relationshipPolicy?.state === 'sensitive_event' ||
+    relationshipPolicy?.state === 'resume_review';
 
   useEffect(() => {
     setActivityOpen(false);
   }, [customerId]);
+
+  if (customers.length > 0 && !customers.some((item) => item.id === customerId)) {
+    notFound();
+  }
 
   if (isPending) {
     return (
@@ -193,7 +211,24 @@ export function CustomersDetailPanel({
                           {activityAside}
                         </SheetContent>
                       </Sheet>
-                      <RelationshipPauseSheet customer={customer} />
+                      {isPaused ? (
+                        <Button
+                          type='button'
+                          size='sm'
+                          variant='outline'
+                          className='rounded-full'
+                          isLoading={
+                            resumePolicy.isPending && resumePolicy.variables?.action === 'resume'
+                          }
+                          onClick={() =>
+                            resumePolicy.mutate({ customerId: customer.id, action: 'resume' })
+                          }
+                        >
+                          Resume
+                        </Button>
+                      ) : (
+                        <RelationshipPauseSheet customer={customer} />
+                      )}
                       <Button asChild>
                         <Link href={followUpHref}>Follow up</Link>
                       </Button>

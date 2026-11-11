@@ -9,7 +9,7 @@ import {
   BOOKS_RESYNC_MUTATION_KEY,
   integrationStatusQueryOptions
 } from '@/features/revcollect/api/queries';
-import { formatLastSyncLabel } from '@/features/revcollect/utils';
+import { formatLastSyncLabel, syncFreshness } from '@/features/revcollect/utils';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
 import type { IntegrationStatus } from '@/features/revcollect/types';
 
@@ -78,7 +78,11 @@ export function WorkspaceConnectionStatus() {
         className={cn(
           'inline-flex max-w-[11rem] items-center gap-1 truncate rounded-full px-2 py-1 text-xs font-medium',
           lastSyncAt
-            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+            ? syncFreshness(lastSyncAt, now) === 'fresh'
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              : syncFreshness(lastSyncAt, now) === 'stale'
+                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-400'
+                : 'bg-red-500/10 text-red-700 dark:text-red-400'
             : 'bg-muted text-muted-foreground'
         )}
       >

@@ -58,17 +58,35 @@ function AttentionCard({
       <p className='bg-muted/50 text-muted-foreground mt-auto rounded-lg px-3 py-2.5 text-xs leading-relaxed'>
         {card.summary}
       </p>
-      <div className='flex flex-wrap items-center justify-end gap-1.5'>
-        {card.actions.map((label) => (
-          <span
-            key={label}
-            className='border-border text-muted-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium'
-          >
-            {label.toLowerCase().startsWith('call') ? <Icons.phone className='size-3' /> : null}
-            {label}
-          </span>
-        ))}
-      </div>
+      {card.actions.length > 0 ? (
+        <div className='flex flex-wrap items-center justify-end gap-1.5'>
+          {card.actions.map((label) =>
+            messageId ? (
+              <button
+                key={label}
+                type='button'
+                className='text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none'
+                aria-label={`Open ${card.company} thread`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenThread(messageId);
+                }}
+              >
+                {label.toLowerCase().startsWith('call') ? <Icons.phone className='size-3' /> : null}
+                {label}
+              </button>
+            ) : (
+              <span
+                key={label}
+                className='text-muted-foreground inline-flex shrink-0 items-center gap-1 text-[11px] font-medium'
+              >
+                {label.toLowerCase().startsWith('call') ? <Icons.phone className='size-3' /> : null}
+                {label}
+              </span>
+            )
+          )}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -81,14 +99,21 @@ function AttentionCard({
   }
 
   return (
-    <button
-      type='button'
+    <div
       className={className}
       aria-label={`Open ${card.company} thread`}
       onClick={() => onOpenThread(messageId)}
+      role='button'
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenThread(messageId);
+        }
+      }}
     >
       {body}
-    </button>
+    </div>
   );
 }
 

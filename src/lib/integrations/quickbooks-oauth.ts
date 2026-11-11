@@ -19,7 +19,10 @@ export interface QuickBooksOAuthConfig {
 }
 
 function envSecret(value: string | undefined): string {
-  return (value ?? '').trim().replace(/^['"]|['"]$/g, '').trim();
+  return (value ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
 }
 
 export function getQuickBooksOAuthConfig(): QuickBooksOAuthConfig | null {
@@ -234,9 +237,9 @@ export async function fetchQuickBooksCompanyNameWithToken(
     }
   });
   captureIntuitTid('qbo.company', response);
-  if (!response.ok) return realmId;
+  if (!response.ok) return 'QuickBooks company';
   const payload = (await response.json()) as {
     QueryResponse?: { CompanyInfo?: Array<{ CompanyName?: string }> };
   };
-  return payload.QueryResponse?.CompanyInfo?.[0]?.CompanyName ?? realmId;
+  return payload.QueryResponse?.CompanyInfo?.[0]?.CompanyName ?? 'QuickBooks company';
 }

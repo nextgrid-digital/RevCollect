@@ -48,7 +48,7 @@ import {
 } from '@/lib/ari/queue-follow-up-draft';
 import type { DecisionTrace } from '@/lib/ari/decision-trace-types';
 import { applyRelationshipSignals } from '@/lib/ari/apply-relationship-signals';
-import { templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
+import { templateFollowUpDraft, templatePaymentVerificationDraft } from '@/lib/ai/template-draft';
 import { getLatestAriRun as readLatestAriRun } from '@/lib/ari/record-ari-run';
 import { syncAgentConfigTone } from '../agent/lib/follow-up-style';
 import { DEFAULT_WORKSPACE_GENERAL_SETTINGS } from '../settings/lib/workspace-settings-defaults';
@@ -100,6 +100,8 @@ import {
   setArDataMemoEntry
 } from '@/lib/canonical/ar-data-memo';
 import { MOCK_TENANT_ID as TENANT_ID } from './types';
+import { isDeliverableCustomerEmail } from '../lib/customer-email';
+import { withLiveAging } from '../lib/live-aging';
 import {
   agingChartBucketsFromInvoices,
   agingCustomerBreakdownFromInvoices,
@@ -209,7 +211,7 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
     }
   }
 
-  const customers = snapshot.customers.map((customer) => {
+  const relationshipCustomers = snapshot.customers.map((customer) => {
     const intelligence = snapshot.intelligenceByCustomerId[customer.id];
     return expireCustomerRelationship({
       ...customer,
@@ -219,6 +221,10 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
         emptyIntelligence().relationshipState,
       relationshipPolicy: customer.relationshipPolicy ?? intelligence?.relationshipPolicy
     });
+  });
+  const { customers, invoices } = withLiveAging({
+    customers: relationshipCustomers,
+    invoices: snapshot.invoices
   });
   const sentEmails = rehomeSentEmails(snapshot.sentEmails ?? [], customers);
 
@@ -234,12 +240,9 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
   return {
     tenantId,
     customers,
-    invoices: snapshot.invoices,
+    invoices,
     inboxMessages: overlayDrafts(
-      overlayInboxWithSentEmails(
-        buildSyntheticInboxFromInvoices(snapshot.invoices, customers),
-        sentEmails
-      ),
+      overlayInboxWithSentEmails(buildSyntheticInboxFromInvoices(invoices, customers), sentEmails),
       snapshot.drafts
     ),
     sentEmails
@@ -289,10 +292,17 @@ export class XeroRevCollectService implements RevCollectService {
     return messages.find((message) => message.customerId === customerId);
   }
 
-  async getInboxSelectionData(messageId: string): Promise<InboxSelectionData | null> {
+  async getInboxSelectionData(
+    messageId: string,
+    options?: { soft?: boolean }
+  ): Promise<InboxSelectionData | null> {
     const tenantId = await getIntegrationTenantId();
-    // Await a forced Gmail pull so inbound replies show while the thread is open.
-    await refreshInboxFromGmail(tenantId, { force: true });
+    // Return AR immediately; refresh Gmail in the background unless this is a soft prefetch.
+    if (!options?.soft) {
+      after(() => {
+        void refreshInboxFromGmail(tenantId);
+      });
+    }
     const { customers, invoices, inboxMessages, sentEmails } = await loadArData();
     const legacyCustomerId = messageId.startsWith('xero-customer-')
       ? messageId.slice('xero-customer-'.length)
@@ -330,15 +340,25 @@ export class XeroRevCollectService implements RevCollectService {
     const agentDraftMeta = await this.getAgentDraftMetaForMessage(message.id);
     const timelineEvents = await this.getTimelineForCustomer(customer.id);
     const decision = followUpDecision(customer);
+    const settingsSnapshot = await (await getCanonicalStore()).read(tenantId);
+    const workspaceSignature =
+      settingsSnapshot.workspaceSettings?.emailSignature?.trim() ||
+      settingsSnapshot.agentConfig?.signature?.trim() ||
+      undefined;
     const aiDraftBase =
       decision.draftKind === 'payment_verification'
         ? templatePaymentVerificationDraft({
             customer,
-            invoices: openInvoices
+            invoices: openInvoices,
+            signoff: workspaceSignature
           })
         : customer.status === 'in_dispute'
-          ? `Hi ${customer.name},\n\nThanks for flagging this. We have paused collection while we review the dispute${focusInvoice ? ` on ${focusInvoice.number}` : ''}. Please share any supporting detail so we can resolve it.\n\nThank you`
-          : `Hi ${customer.name},\n\nFollowing up on overdue invoice${focusInvoice ? ` ${focusInvoice.number}` : 's'}. Please let us know if you need anything to process payment.\n\nThank you`;
+          ? `Hi ${customer.name},\n\nThanks for flagging this. We have paused collection while we review the dispute${focusInvoice ? ` on ${focusInvoice.number}` : ''}. Please share any supporting detail so we can resolve it.\n\n${workspaceSignature ?? 'Thank you'}`
+          : templateFollowUpDraft({
+              customer,
+              invoices: openInvoices,
+              signoff: workspaceSignature
+            });
 
     return {
       message,
@@ -380,7 +400,12 @@ export class XeroRevCollectService implements RevCollectService {
     const { tenantId, customers, invoices } = await loadArData();
     const customer = customers.find((item) => item.id === customerId);
     if (!customer) return null;
-    return buildCustomerContextFromInvoices(customer, invoices, await booksSourceLabel(tenantId));
+    const customerInvoices = invoices.filter((invoice) => invoice.customerId === customerId);
+    return buildCustomerContextFromInvoices(
+      customer,
+      customerInvoices,
+      await booksSourceLabel(tenantId)
+    );
   }
 
   async getCustomerStatusSummary() {
@@ -565,11 +590,21 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async updateWorkspaceGeneralSettings(settings: WorkspaceGeneralSettings) {
+    await assertCanWrite();
     const tenantId = await getIntegrationTenantId();
     const store = await getCanonicalStore();
     const snapshot = await store.read(tenantId);
     snapshot.workspaceSettings = structuredClone(settings);
+    if (snapshot.agentConfig && settings.emailSignature?.trim()) {
+      snapshot.agentConfig = {
+        ...snapshot.agentConfig,
+        signature: settings.emailSignature.trim()
+      };
+    }
+    // Avoid rewriting synthetic inbox on settings saves (can 500 on schema drift).
+    snapshot.inboxMessages = [];
     await store.write(tenantId, snapshot);
+    clearArDataMemo(tenantId);
     return structuredClone(settings);
   }
 
@@ -675,7 +710,18 @@ export class XeroRevCollectService implements RevCollectService {
       pauseDays: input.pauseDays ?? config.behaviors.defaultPauseDays
     });
     persistCustomerOnSnapshot(snapshot, updated);
-    await store.write(tenantId, snapshot);
+    // Skip synthetic inbox rewrite so pause/resume cannot fail after the customer saves.
+    snapshot.inboxMessages = [];
+    try {
+      await store.write(tenantId, snapshot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not update pause state';
+      throw new Error(
+        message.includes('inbox') || message.includes('public_id')
+          ? 'Could not update pause state. Please try again.'
+          : message.replace(/relation "[^"]+"|column "[^"]+"/gi, 'the database')
+      );
+    }
     clearArDataMemo(tenantId);
     return structuredClone(updated);
   }
@@ -690,8 +736,8 @@ export class XeroRevCollectService implements RevCollectService {
     }
     const policy = policyFromCustomer(customer);
     const to = (policy.preferredEmail ?? customer.email).trim();
-    if (!to || !to.includes('@')) {
-      throw new Error('This customer has no email address');
+    if (!isDeliverableCustomerEmail(to)) {
+      throw new Error('This customer has no deliverable email address');
     }
     const blocked = new Set(policy.doNotContact.map((email) => email.trim().toLowerCase()));
     if (policy.state === 'do_not_contact' || blocked.has(to.toLowerCase())) {

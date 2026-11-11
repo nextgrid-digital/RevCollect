@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
+import { parseAsInteger, useQueryState } from 'nuqs';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/table/data-table';
 import { useDataTable } from '@/hooks/use-data-table';
@@ -12,6 +13,8 @@ import { getInboxMessageIdForCustomer } from '../../lib/customer-actions';
 import { formatCurrency } from '../../utils';
 import type { AgingCustomerBreakdownRow } from '../../types';
 import { AgingRiskBadge } from './aging-risk-badge';
+
+const AGING_PAGE_SIZE = 10;
 
 interface AgingCustomerBreakdownTableProps {
   rows: AgingCustomerBreakdownRow[];
@@ -182,14 +185,23 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
     [inboxMessages, router]
   );
 
+  const [agingPage] = useQueryState('agingPage', parseAsInteger.withDefault(1));
+  const [agingPerPage] = useQueryState('agingPerPage', parseAsInteger.withDefault(AGING_PAGE_SIZE));
+  const pageIndex = Math.max(0, agingPage - 1);
+  const pagedRows = useMemo(() => {
+    const start = pageIndex * agingPerPage;
+    return rows.slice(start, start + agingPerPage);
+  }, [agingPerPage, pageIndex, rows]);
+
   const { table } = useDataTable({
-    data: rows,
+    data: pagedRows,
     columns,
-    pageCount: Math.max(1, Math.ceil(rows.length / 10)),
+    pageCount: Math.max(1, Math.ceil(rows.length / agingPerPage)),
     pageKey: 'agingPage',
     perPageKey: 'agingPerPage',
     initialState: {
-      columnPinning: { left: ['company'] }
+      columnPinning: { left: ['company'] },
+      pagination: { pageIndex: 0, pageSize: agingPerPage }
     }
   });
 

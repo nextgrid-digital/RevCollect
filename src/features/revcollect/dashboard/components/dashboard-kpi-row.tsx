@@ -19,9 +19,9 @@ export function DashboardKpiRow({ kpis }: DashboardKpiRowProps) {
       hint: `Terms ${kpis.termsDays}d`
     },
     {
-      label: 'Cash locked by the gap',
+      label: 'Cash locked in overdue AR',
       value: formatCurrencyWhole(kpis.cashLockedCents),
-      hint: `${formatCurrencyWhole(kpis.overdueCents)} past due`
+      hint: `Past due: ${formatCurrencyWhole(kpis.overdueCents)}`
     },
     {
       label: 'Collected this week',

@@ -15,10 +15,56 @@ interface InboxRelationshipBannerProps {
   invoiceId?: string;
 }
 
+function isActivelyPaused(state: string): boolean {
+  return (
+    state === 'paused_until_date' ||
+    state === 'manual_only' ||
+    state === 'founder_only' ||
+    state === 'sensitive_event'
+  );
+}
+
 export function InboxRelationshipBanner({ customer }: InboxRelationshipBannerProps) {
   const mutation = useRecordRelationshipPolicy();
   const policy = expireRelationshipPolicy(policyFromCustomer(customer));
   const suggestion = policy.pendingSuggestion;
+
+  if (isActivelyPaused(policy.state)) {
+    const untilLabel = policy.pauseUntil ? ` until ${policy.pauseUntil}` : ' until you resume';
+    return (
+      <div className='border-border bg-muted/40 mb-3 rounded-xl border px-3 py-3'>
+        <p className='text-sm font-medium'>Paused{untilLabel}</p>
+        <p className='text-muted-foreground mt-1 text-xs'>
+          Overnight drafts are stopped for this account. You can still send a manual follow-up.
+        </p>
+        <div className='mt-3 flex flex-wrap gap-2'>
+          <Button
+            type='button'
+            size='sm'
+            className='rounded-full'
+            isLoading={mutation.isPending && mutation.variables?.action === 'resume'}
+            onClick={() => mutation.mutate({ customerId: customer.id, action: 'resume' })}
+          >
+            Resume
+          </Button>
+          {policy.pauseUntil ? (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='rounded-full'
+              isLoading={mutation.isPending && mutation.variables?.action === 'extend'}
+              onClick={() =>
+                mutation.mutate({ customerId: customer.id, action: 'extend', pauseDays: 14 })
+              }
+            >
+              Extend 14 days
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   if (policy.state === 'resume_review') {
     return (

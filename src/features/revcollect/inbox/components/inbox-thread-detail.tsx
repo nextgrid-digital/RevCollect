@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
+import { notFound } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
+import { useInboxMessages } from '../../api/queries';
 import { getLatestCustomerEmail } from '../lib/get-latest-customer-email';
 import { InboxContextSidebar } from './inbox-context-sidebar';
 import { InboxThreadComposer } from './inbox-thread-composer';
@@ -57,6 +59,7 @@ export function InboxThreadDetail({
 }: InboxThreadDetailProps) {
   const reduceMotion = useReducedMotion();
   const isMobile = useIsMobile();
+  const { data: inboxMessages = [] } = useInboxMessages();
   const {
     data: selection,
     isLoading,
@@ -67,6 +70,15 @@ export function InboxThreadDetail({
   const [activityScrollEmailId, setActivityScrollEmailId] = useState<string | null>(null);
   const scrollToEmailId = scrollToEmailIdProp ?? activityScrollEmailId;
   const selectionMatchesMessage = selection?.message.id === messageId;
+
+  if (inboxMessages.length > 0) {
+    const messageExists = inboxMessages.some(
+      (message) => message.id === messageId || message.customerId === messageId
+    );
+    if (!messageExists) {
+      notFound();
+    }
+  }
 
   const replyToEmail = useMemo(
     () =>
@@ -192,16 +204,30 @@ export function InboxThreadDetail({
     if (!isLoading && !isFetching && !isPlaceholderData) {
       return (
         <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
-          Message not found
+          Thread not found
         </div>
       );
     }
 
-    return <div className='bg-background min-h-0 flex-1' aria-hidden />;
+    return (
+      <div
+        className='bg-background flex min-h-0 flex-1 flex-col gap-3 p-6'
+        aria-busy='true'
+        aria-label='Loading thread'
+      >
+        <div className='bg-muted h-5 w-40 animate-pulse rounded' />
+        <div className='bg-muted h-4 w-64 animate-pulse rounded' />
+        <div className='bg-muted mt-4 h-32 w-full animate-pulse rounded-xl' />
+      </div>
+    );
   }
 
   if (!selection) {
-    return <div className='bg-background min-h-0 flex-1' aria-hidden />;
+    return (
+      <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
+        Thread not found
+      </div>
+    );
   }
 
   const { customer, message, threadEmails, inboxContext, deepAnalysisText, aiInsightText } =

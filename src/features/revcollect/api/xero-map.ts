@@ -24,8 +24,11 @@ import type {
   Invoice
 } from '../types';
 import { deriveCustomerStatus } from '../lib/collection-decision';
+import { agingBucketFromDays as toAgingBucket } from '../lib/live-aging';
 import { getDaysOverdueFromDueDate } from '../utils';
 import type { CustomerStatusSummary } from './types';
+
+export { toAgingBucket };
 
 const AGING_BUCKET_LABELS: Record<AgingBucket, string> = {
   current: 'Current',
@@ -36,14 +39,6 @@ const AGING_BUCKET_LABELS: Record<AgingBucket, string> = {
 };
 
 const OPEN_INVOICE_STATUSES = new Set(['AUTHORISED', 'SUBMITTED']);
-
-export function toAgingBucket(daysOverdue: number): AgingBucket {
-  if (daysOverdue <= 0) return 'current';
-  if (daysOverdue <= 30) return '1-30';
-  if (daysOverdue <= 60) return '31-60';
-  if (daysOverdue <= 90) return '61-90';
-  return '90+';
-}
 
 export function parseXeroDate(value: string | undefined): string {
   if (!value) {
@@ -337,7 +332,9 @@ export function buildAgingBucketsFromInvoices(invoices: Invoice[]): AgingBucketS
   const open = invoices.filter(isOpenCanonicalInvoice);
   const buckets: AgingBucket[] = ['current', '1-30', '31-60', '61-90', '90+'];
   return buckets.map((bucket) => {
-    const bucketInvoices = open.filter((invoice) => invoice.agingBucket === bucket);
+    const bucketInvoices = open.filter(
+      (invoice) => toAgingBucket(getDaysOverdueFromDueDate(invoice.dueDate)) === bucket
+    );
     return {
       bucket,
       label: AGING_BUCKET_LABELS[bucket],
@@ -430,6 +427,15 @@ export function buildSyntheticInboxFromInvoices(
           ? `Invoice ${customerInvoices[0].number}`
           : `${customerInvoices.length} invoices`;
 
+      const oldestDue = customerInvoices[0]?.dueDate;
+      const latestIssue = customerInvoices.reduce(
+        (latest, invoice) => {
+          const issue = invoice.issueDate ?? invoice.dueDate;
+          return issue > latest ? issue : latest;
+        },
+        oldestDue ?? new Date().toISOString().slice(0, 10)
+      );
+
       return {
         id: `xero-customer-${customer.id}`,
         customerId: customer.id,
@@ -438,8 +444,10 @@ export function buildSyntheticInboxFromInvoices(
             ? `${customer.name} · ${invoiceLabel} overdue`
             : `${customer.name} · ${invoiceLabel} outstanding`,
         preview: `${total} open · ${customerInvoices.map((invoice) => invoice.number).join(', ')}`,
-        receivedAt: new Date().toISOString(),
-        unread: overdueCount > 0,
+        // Stamp from ledger dates — not wall-clock "now" (B26).
+        receivedAt: `${latestIssue}T12:00:00.000Z`,
+        // Overdue alone is not "awaiting reply" — that requires a prior send (B14).
+        unread: false,
         channel: 'email' as const,
         suggestedAction: overdueCount > 0 ? 'Draft follow-up' : 'Review invoices',
         agentDraftReady: false

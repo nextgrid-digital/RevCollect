@@ -76,6 +76,12 @@ function getInboxThreadStatusDisplay(
         variant: 'attention',
         icon: Icons.inbox
       };
+    case 'needs_follow_up':
+      return {
+        label: customer.daysOverdue > 0 ? 'Needs follow-up' : 'Not contacted',
+        variant: 'attention',
+        icon: Icons.inbox
+      };
     case 'promise_missed':
       return {
         label: customer.promisedDate
@@ -121,7 +127,12 @@ function getSecondaryOverdueChip(
   daysOverdue: number
 ): InboxListPillItem | null {
   if (daysOverdue <= 0) return null;
-  if (status !== 'ai_draft_ready' && status !== 'awaiting_reply' && status !== 'promise_missed') {
+  if (
+    status !== 'ai_draft_ready' &&
+    status !== 'awaiting_reply' &&
+    status !== 'needs_follow_up' &&
+    status !== 'promise_missed'
+  ) {
     return null;
   }
 

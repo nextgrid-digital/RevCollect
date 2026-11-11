@@ -209,7 +209,7 @@ export function OnboardingSteps() {
                 Open your dashboard
               </h2>
               <p className='text-muted-foreground text-sm'>
-                See who needs attention and what ARI ran overnight.
+                See who needs attention and what RevCollect ran overnight.
               </p>
             </div>
             <div className='mt-4 flex flex-wrap gap-2'>

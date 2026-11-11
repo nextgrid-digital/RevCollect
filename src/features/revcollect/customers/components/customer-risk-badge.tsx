@@ -4,7 +4,7 @@ import type { CustomerRiskTier } from '../lib/classify-customer-risk-tier';
 const riskConfig: Record<CustomerRiskTier, { label: string; tone: StatusBadgeTone }> = {
   healthy: { label: 'Healthy', tone: 'success' },
   watch: { label: 'Watch', tone: 'warning' },
-  high: { label: 'High', tone: 'danger' }
+  high: { label: 'Urgent', tone: 'danger' }
 };
 
 export function CustomerRiskBadge({ tier }: { tier: CustomerRiskTier }) {

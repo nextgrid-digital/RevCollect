@@ -110,6 +110,26 @@ export function formatRelativeDate(iso: string): string {
   return formatDate(iso);
 }
 
+/** Sync older than this is treated as stale in the header pill. */
+export const SYNC_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+/** Sync older than this is treated as critically stale. */
+export const SYNC_CRITICAL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function syncAgeMs(iso: string, nowMs: number = Date.now()): number {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return Number.POSITIVE_INFINITY;
+  return Math.max(0, nowMs - date.getTime());
+}
+
+export type SyncFreshness = 'fresh' | 'stale' | 'critical';
+
+export function syncFreshness(iso: string, nowMs: number = Date.now()): SyncFreshness {
+  const age = syncAgeMs(iso, nowMs);
+  if (age >= SYNC_CRITICAL_AFTER_MS) return 'critical';
+  if (age >= SYNC_STALE_AFTER_MS) return 'stale';
+  return 'fresh';
+}
+
 export function formatLastSyncLabel(iso: string, nowMs: number = Date.now()): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'unknown';
@@ -121,6 +141,5 @@ export function formatLastSyncLabel(iso: string, nowMs: number = Date.now()): st
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days === 1) return 'yesterday';
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${days}d ago`;
 }

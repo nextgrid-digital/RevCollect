@@ -36,7 +36,7 @@ export function CustomersListHeader({
 }: CustomersListHeaderProps) {
   const filterPills = [
     { id: 'all', label: 'All', count: allCount },
-    { id: 'high', label: 'High risk', count: highCount },
+    { id: 'high', label: 'High', count: highCount },
     { id: 'watch', label: 'Watch', count: watchCount },
     { id: 'healthy', label: 'Healthy', count: healthyCount }
   ];

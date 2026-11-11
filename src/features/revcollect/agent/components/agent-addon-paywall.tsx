@@ -9,7 +9,7 @@ import { AgentJobStory } from './agent-job-story';
 
 const INCLUDED = [
   'Overnight reminder drafts for overdue invoices',
-  'You review and send from Inbox — nothing goes out on its own',
+  'You review and send from Inbox, nothing goes out on its own',
   'Morning summary of what needs you'
 ] as const;
 

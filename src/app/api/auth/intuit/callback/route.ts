@@ -52,11 +52,12 @@ export async function GET(request: NextRequest) {
     const email = emailFromIdToken(tokens.id_token);
     if (!email) return redirectHome('missing_intuit_email');
 
-    const organisationName = await fetchQuickBooksCompanyNameWithToken(
-      tokens.access_token,
-      realmId,
-      config.environment
-    );
+    const organisationName =
+      (await fetchQuickBooksCompanyNameWithToken(
+        tokens.access_token,
+        realmId,
+        config.environment
+      )) ?? 'QuickBooks company';
 
     const nextUrl = new URL('/onboarding/connect-gmail', APP_URL);
     nextUrl.searchParams.set('connected', '1');

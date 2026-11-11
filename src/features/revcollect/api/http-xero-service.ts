@@ -103,7 +103,7 @@ export class HttpXeroRevCollectService implements RevCollectService {
     return getJson<InboxMessage | undefined>('getInboxThreadForCustomer', { customerId });
   }
 
-  getInboxSelectionData(messageId: string) {
+  getInboxSelectionData(messageId: string, _options?: { soft?: boolean }) {
     return getJson<InboxSelectionData | null>('getInboxSelectionData', { messageId });
   }
 

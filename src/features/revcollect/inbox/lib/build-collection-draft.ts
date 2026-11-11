@@ -1,26 +1,9 @@
 import type { CollectionPlaybook, CollectionTone } from '../composer-options';
 
-const TONE_OPENERS: Record<CollectionTone, string> = {
-  professional: 'Thank you for your message.',
-  friendly: 'Hi — thanks for getting back to us.',
-  firm: 'Please note the following regarding your account.'
-};
-
 const TONE_CLOSERS: Record<CollectionTone, string> = {
   professional: 'Please let us know if you have any questions.',
   friendly: 'Happy to help if anything else comes up on your side.',
-  firm: 'We need a confirmed payment date within two business days to avoid further escalation.'
-};
-
-const PLAYBOOK_BODIES: Record<CollectionPlaybook, string> = {
-  standard:
-    'We are following up on the open balance on your account. Please confirm when payment will be released or if any invoices require clarification from our billing team.',
-  final_notice:
-    'Please confirm when payment will be released. If you need copies of the invoices or a statement, we can send those today.',
-  payment_verification:
-    'Thank you — we saw that payment may already be on the way. A payment reference or remittance advice helps us match it to the open invoice.',
-  dispute_hold:
-    'Thanks for flagging this. We have paused collection while we review. Please share any supporting detail so we can resolve it.'
+  firm: 'Please confirm a payment date within two business days.'
 };
 
 export type BuildCollectionDraftInput = {
@@ -28,6 +11,7 @@ export type BuildCollectionDraftInput = {
   tone: CollectionTone;
   playbook: CollectionPlaybook;
   signature?: string;
+  customerName?: string;
 };
 
 function stripTrailingSignature(text: string, signature: string): string {
@@ -39,25 +23,33 @@ function stripTrailingSignature(text: string, signature: string): string {
   return text.trim();
 }
 
+/**
+ * Prefer the account-specific base draft (invoice numbers, amounts, due dates).
+ * Only soft-adjust the closer for tone/playbook — never stitch unrelated fragments.
+ */
 export function buildCollectionDraft({
   baseDraft,
   tone,
   playbook,
-  signature = 'Best regards,\nRevCollect Collections Team'
+  signature = 'Best regards',
+  customerName
 }: BuildCollectionDraftInput): string {
-  const core = stripTrailingSignature(baseDraft, signature);
-  const middle = PLAYBOOK_BODIES[playbook];
-  const opener = TONE_OPENERS[tone];
+  const core = stripTrailingSignature(baseDraft, signature).trim();
+  if (core) {
+    return `${core}\n\n${signature.trim()}`;
+  }
+
+  const greeting = customerName ? `Hi ${customerName},` : 'Hello,';
+  const middle =
+    playbook === 'payment_verification'
+      ? 'Thank you for noting that payment may be on the way. A payment reference or remittance advice helps us match it to the open invoice.'
+      : playbook === 'dispute_hold'
+        ? 'Thanks for flagging this. We have paused collection while we review. Please share any supporting detail so we can resolve it.'
+        : 'We are following up on the open balance on your account. Please confirm when payment will be released, or if any invoices need clarification.';
   const closer =
     playbook === 'payment_verification' || playbook === 'dispute_hold'
       ? 'Please let us know if you have any questions.'
       : TONE_CLOSERS[tone];
 
-  const parts = [opener, middle, closer];
-  if (core && !parts.some((p) => core.includes(p.slice(0, 24)))) {
-    parts.splice(1, 0, core);
-  }
-
-  const body = parts.join('\n\n');
-  return `${body}\n\n${signature.trim()}`;
+  return `${greeting}\n\n${middle}\n\n${closer}\n\n${signature.trim()}`;
 }

@@ -22,8 +22,11 @@ interface DashboardAgingBarsProps {
 }
 
 export function DashboardAgingBars({ bars, actionCount }: DashboardAgingBarsProps) {
-  const maxTotal = Math.max(...bars.map((bar) => bar.totalCents), 1);
-  const past60Bars = bars.filter((bar) => bar.bucket === '61-90' || bar.bucket === '90+');
+  const visibleBars = bars.filter((bar) => bar.totalCents > 0);
+  if (visibleBars.length === 0) return null;
+
+  const maxTotal = Math.max(...visibleBars.map((bar) => bar.totalCents), 1);
+  const past60Bars = visibleBars.filter((bar) => bar.bucket === '61-90' || bar.bucket === '90+');
   const past60 = past60Bars.reduce((sum, bar) => sum + bar.totalCents, 0);
   const actionSentence =
     actionCount === 1
@@ -36,7 +39,7 @@ export function DashboardAgingBars({ bars, actionCount }: DashboardAgingBarsProp
     <WorkspaceCard className='p-4 md:p-5'>
       <h2 className='mb-4 text-sm font-semibold sm:text-base'>Outstanding by aging</h2>
       <div className='space-y-4 sm:space-y-3'>
-        {bars.map((bar, index) => {
+        {visibleBars.map((bar, index) => {
           const widthPct = Math.max((bar.totalCents / maxTotal) * 100, bar.totalCents > 0 ? 8 : 0);
 
           return (

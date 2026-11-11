@@ -85,6 +85,7 @@ interface TenantRow {
   last_synced_at?: string | null;
   sent_emails?: ThreadEmail[];
   decision_traces?: DecisionTrace[];
+  workspace_settings?: CanonicalSnapshot['workspaceSettings'];
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   agent_addon_subscribed?: boolean | null;
@@ -280,8 +281,36 @@ async function readSnapshot(tenantId: string): Promise<CanonicalSnapshot> {
       : Boolean((tenantRes.data as TenantRow | null)?.base_subscribed),
     agentAddonStatus: tenantRes.error
       ? null
-      : addonStatusFromTenant(tenantRes.data as TenantRow | null)
+      : addonStatusFromTenant(tenantRes.data as TenantRow | null),
+    workspaceSettings: tenantRes.error
+      ? null
+      : ((tenantRes.data as TenantRow | null)?.workspace_settings ?? null)
   };
+}
+
+async function softDeleteOrphans(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: 'customers' | 'invoices' | 'inbox_threads',
+  tenantId: string,
+  keepIds: string[],
+  now: string
+): Promise<void> {
+  const { data, error: listError } = await supabase
+    .from(table)
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null);
+  if (listError) {
+    console.error(`[canonical] list ${table} for prune failed:`, listError.message);
+    return;
+  }
+  const keep = new Set(keepIds);
+  const orphanIds = (data ?? []).map((row) => row.id as string).filter((id) => !keep.has(id));
+  if (orphanIds.length === 0) return;
+  const { error } = await supabase.from(table).update({ deleted_at: now }).in('id', orphanIds);
+  if (error) {
+    console.error(`[canonical] soft-delete ${table} orphans failed:`, error.message);
+  }
 }
 
 async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Promise<void> {
@@ -289,13 +318,17 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
+  const customerIds = snapshot.customers.map((customer) =>
+    isUuid(customer.id)
+      ? customer.id
+      : ledgerEntityUuid(tenantId, 'customer', customer.externalId ?? customer.id)
+  );
+
   if (snapshot.customers.length > 0) {
     const { error } = await supabase.from('customers').upsert(
-      snapshot.customers.map((customer) => {
+      snapshot.customers.map((customer, index) => {
         const intelligence = snapshot.intelligenceByCustomerId[customer.id] ?? emptyIntelligence();
-        const id = isUuid(customer.id)
-          ? customer.id
-          : ledgerEntityUuid(tenantId, 'customer', customer.externalId ?? customer.id);
+        const id = customerIds[index]!;
         return {
           id,
           tenant_id: tenantId,
@@ -325,20 +358,26 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
             classifiedReplyId: customer.classifiedReplyId,
             relationshipState: customer.relationshipState ?? intelligence.relationshipState,
             relationshipPolicy: customer.relationshipPolicy ?? intelligence.relationshipPolicy
-          }
+          },
+          deleted_at: null
         };
       }),
       { onConflict: 'id' }
     );
     if (error) throw new Error(`Failed to upsert customers: ${error.message}`);
   }
+  await softDeleteOrphans(supabase, 'customers', tenantId, customerIds, now);
+
+  const invoiceIdList = snapshot.invoices.map((invoice) =>
+    isUuid(invoice.id)
+      ? invoice.id
+      : ledgerEntityUuid(tenantId, 'invoice', invoice.externalId ?? invoice.id)
+  );
 
   if (snapshot.invoices.length > 0) {
     const { error } = await supabase.from('invoices').upsert(
-      snapshot.invoices.map((invoice) => {
-        const id = isUuid(invoice.id)
-          ? invoice.id
-          : ledgerEntityUuid(tenantId, 'invoice', invoice.externalId ?? invoice.id);
+      snapshot.invoices.map((invoice, index) => {
+        const id = invoiceIdList[index]!;
         const customerId = isUuid(invoice.customerId)
           ? invoice.customerId
           : ledgerEntityUuid(tenantId, 'customer', invoice.customerId);
@@ -356,21 +395,17 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           paid_cents: invoice.paidCents ?? 0,
           xero_status: invoice.xeroStatus ?? null,
           amount_due_cents: invoice.amountDueCents ?? invoice.amountCents,
-          paid_at: invoice.paidAt ?? null
+          paid_at: invoice.paidAt ?? null,
+          deleted_at: null
         };
       }),
       { onConflict: 'id' }
     );
     if (error) throw new Error(`Failed to upsert invoices: ${error.message}`);
   }
+  await softDeleteOrphans(supabase, 'invoices', tenantId, invoiceIdList, now);
 
-  const invoiceIds = new Set(
-    snapshot.invoices.map((invoice) =>
-      isUuid(invoice.id)
-        ? invoice.id
-        : ledgerEntityUuid(tenantId, 'invoice', invoice.externalId ?? invoice.id)
-    )
-  );
+  const invoiceIds = new Set(invoiceIdList);
   const paymentRows = toPaymentRows(tenantId, snapshot.payments, invoiceIds);
   if (paymentRows.length > 0) {
     const { error } = await supabase
@@ -379,12 +414,13 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     if (error) throw new Error(`Failed to upsert payments: ${error.message}`);
   }
 
+  const inboxIds = snapshot.inboxMessages.map((message) =>
+    isUuid(message.id) ? message.id : ledgerEntityUuid(tenantId, 'inbox', message.id)
+  );
   if (snapshot.inboxMessages.length > 0) {
     const { error } = await supabase.from('inbox_threads').upsert(
-      snapshot.inboxMessages.map((message) => {
-        const id = isUuid(message.id)
-          ? message.id
-          : ledgerEntityUuid(tenantId, 'inbox', message.id);
+      snapshot.inboxMessages.map((message, index) => {
+        const id = inboxIds[index]!;
         const customerId = isUuid(message.customerId)
           ? message.customerId
           : ledgerEntityUuid(tenantId, 'customer', message.customerId);
@@ -400,12 +436,30 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           reply_intent: message.replyIntent ?? null,
           reply_intent_label: message.replyIntentLabel ?? null,
           agent_draft_ready: Boolean(message.agentDraftReady),
-          suggested_action: message.suggestedAction ?? null
+          suggested_action: message.suggestedAction ?? null,
+          deleted_at: null
         };
       }),
       { onConflict: 'id' }
     );
-    if (error) throw new Error(`Failed to upsert inbox threads: ${error.message}`);
+    // Inbox is derived/synthetic — never fail customer/settings writes on thread upsert.
+    if (error) {
+      console.error('[canonical] skipped inbox thread upsert:', error.message);
+    } else {
+      await softDeleteOrphans(supabase, 'inbox_threads', tenantId, inboxIds, now);
+    }
+  } else {
+    await softDeleteOrphans(supabase, 'inbox_threads', tenantId, [], now);
+  }
+
+  if (snapshot.workspaceSettings) {
+    const { error } = await supabase
+      .from('tenants')
+      .update({ workspace_settings: snapshot.workspaceSettings, updated_at: now })
+      .eq('id', tenantId);
+    if (error) {
+      console.error('[canonical] skipped workspace_settings update:', error.message);
+    }
   }
 
   if (snapshot.drafts.length > 0) {

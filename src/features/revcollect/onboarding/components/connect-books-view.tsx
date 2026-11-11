@@ -31,7 +31,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_intuit_credentials:
     'QuickBooks OAuth is not configured. Add INTUIT_CLIENT_ID and INTUIT_CLIENT_SECRET.',
   intuit_connect_failed:
-    'Could not finish connecting QuickBooks. If Resync already works, your company is connected — reconnect is only needed to switch companies.',
+    'Could not finish connecting QuickBooks. If Resync already works, your company is connected; reconnect is only needed to switch companies.',
   intuit_invalid_client:
     'QuickBooks Client Secret does not match the Client ID. Recopy both from Intuit → Keys & credentials → Production, update Vercel Production, redeploy, then reconnect.',
   intuit_redirect_mismatch:

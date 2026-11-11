@@ -59,13 +59,17 @@ export async function GET(request: NextRequest) {
     if (!tokens.refresh_token) return redirectWithError('missing_refresh_token');
 
     const tenantId = await getIntegrationTenantId();
-    let organisationName = realmId;
+    let organisationName = 'QuickBooks company';
     try {
-      organisationName = await fetchQuickBooksCompanyNameWithToken(
+      const fetched = await fetchQuickBooksCompanyNameWithToken(
         tokens.access_token,
         realmId,
         config.environment
       );
+      // Never persist the raw realm ID as the display name (B31).
+      if (fetched && fetched !== realmId) {
+        organisationName = fetched;
+      }
     } catch (companyError) {
       console.error('[quickbooks/callback] company name failed:', companyError);
     }
@@ -112,10 +116,7 @@ export async function GET(request: NextRequest) {
       }
       url.searchParams.set('detail', hint.slice(0, 80));
     } else if (message) {
-      url.searchParams.set(
-        'detail',
-        message.replace(/[A-Za-z0-9+/=]{20,}/g, '…').slice(0, 80)
-      );
+      url.searchParams.set('detail', message.replace(/[A-Za-z0-9+/=]{20,}/g, '…').slice(0, 80));
     }
     return NextResponse.redirect(url);
   }

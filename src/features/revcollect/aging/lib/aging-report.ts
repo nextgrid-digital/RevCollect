@@ -40,29 +40,28 @@ export function toReportChartBucket(daysPastDueValue: number): AgingReportBucket
   return '60+';
 }
 
-export function toTableBucketColumns(invoice: Invoice): {
+export function toTableBucketColumns(
+  invoice: Invoice,
+  asOfDate: string = AGING_REPORT_AS_OF_DATE
+): {
   currentCents: number;
   days1to30Cents: number;
   days31to60Cents: number;
   days60PlusCents: number;
 } {
   const amount = invoiceAmountDueCents(invoice);
+  const days = daysPastDue(invoice.dueDate, asOfDate);
 
-  switch (invoice.agingBucket) {
-    case 'current':
-      return { currentCents: amount, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: 0 };
-    case '1-30':
-      return { currentCents: 0, days1to30Cents: amount, days31to60Cents: 0, days60PlusCents: 0 };
-    case '31-60':
-      return { currentCents: 0, days1to30Cents: 0, days31to60Cents: amount, days60PlusCents: 0 };
-    case '61-90':
-    case '90+':
-      return { currentCents: 0, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: amount };
-    default: {
-      const _exhaustive: never = invoice.agingBucket;
-      return _exhaustive;
-    }
+  if (days <= 0) {
+    return { currentCents: amount, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: 0 };
   }
+  if (days <= 30) {
+    return { currentCents: 0, days1to30Cents: amount, days31to60Cents: 0, days60PlusCents: 0 };
+  }
+  if (days <= 60) {
+    return { currentCents: 0, days1to30Cents: 0, days31to60Cents: amount, days60PlusCents: 0 };
+  }
+  return { currentCents: 0, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: amount };
 }
 
 function isInPeriod(dueDate: string, period: AgingReportPeriod, asOfDate: string): boolean {
@@ -120,34 +119,17 @@ export function buildAgingChartBuckets(
 }
 
 export function deriveCustomerRisk(
-  row: Pick<
+  _row: Pick<
     AgingCustomerBreakdownRow,
     'currentCents' | 'days1to30Cents' | 'days31to60Cents' | 'days60PlusCents' | 'totalCents'
   >,
   customer: Customer
 ): AgingRiskLevel {
-  if (customer.status === 'overdue' || customer.status === 'in_dispute') {
-    return 'high';
-  }
-
-  if (row.totalCents === 0) return 'low';
-
-  const overdueShare =
-    (row.days1to30Cents + row.days31to60Cents + row.days60PlusCents) / row.totalCents;
-
-  if (row.days60PlusCents > 0 || row.days31to60Cents >= row.totalCents * 0.5) {
-    return 'high';
-  }
-
-  if (row.currentCents === row.totalCents) {
-    return 'low';
-  }
-
-  if (overdueShare >= 0.5 || customer.status === 'due_soon') {
-    return 'medium';
-  }
-
-  return row.days31to60Cents > 0 || row.days1to30Cents > 0 ? 'medium' : 'low';
+  // Prefer live days overdue (aligned with Customers Healthy/Watch/High).
+  const days = customer.daysOverdue;
+  if (days <= 7) return 'low';
+  if (days <= 15) return 'medium';
+  return 'high';
 }
 
 function sortCustomerRows(
@@ -188,7 +170,7 @@ export function buildAgingCustomerRows(
     const customer = customerById.get(invoice.customerId);
     if (!customer) continue;
 
-    const columns = toTableBucketColumns(invoice);
+    const columns = toTableBucketColumns(invoice, asOfDate);
     const existing = grouped.get(invoice.customerId) ?? {
       customerId: invoice.customerId,
       company: customer.company,

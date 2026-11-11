@@ -64,14 +64,14 @@ export function AgentRiskThresholdsSection({
   return (
     <SettingsSection
       title='When to start chasing (days overdue)'
-      description='These are days past due, same idea as Xero aging.'
+      description='These are days past due, same idea as aging in your connected ledger.'
     >
       <ul className='space-y-6'>
         {THRESHOLD_ROWS.map((row) => {
           const sliderId = `agent-threshold-${row.key}`;
           return (
             <li key={row.key} className='space-y-3'>
-              <div className='flex items-center justify-between gap-3'>
+              <div className='flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3'>
                 <div className='flex min-w-0 items-center gap-2'>
                   <span className={cn('size-2 shrink-0 rounded-full', row.dotClass)} aria-hidden />
                   <div className='min-w-0'>
@@ -81,7 +81,7 @@ export function AgentRiskThresholdsSection({
                     <p className='text-muted-foreground text-xs'>{row.hint}</p>
                   </div>
                 </div>
-                <span className='text-muted-foreground shrink-0 text-sm tabular-nums'>
+                <span className='text-muted-foreground shrink-0 text-sm tabular-nums sm:text-right'>
                   {row.format(thresholds)}
                 </span>
               </div>

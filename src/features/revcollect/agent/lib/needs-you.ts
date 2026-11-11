@@ -8,8 +8,9 @@ const RANK: Record<InboxThreadActionStatus, number> = {
   promise_missed: 0,
   ai_draft_ready: 1,
   awaiting_reply: 2,
-  monitoring: 3,
-  up_to_date: 4
+  needs_follow_up: 3,
+  monitoring: 4,
+  up_to_date: 5
 };
 
 export interface NeedsYouRow {

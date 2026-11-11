@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { cn } from '@/lib/utils';
 import type { AgentDraftMeta, Customer, InboxMessage } from '../../types';
 import { preserveInboxListQueryPath } from '../lib/inbox-list-query';
+import { getInboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 import { InboxThreadHeroAction } from './inbox-thread-hero-action';
 
 interface InboxThreadToolbarProps {
@@ -36,6 +37,7 @@ export function InboxThreadToolbar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [contextOpen, setContextOpen] = useState(false);
+  const actionStatus = getInboxThreadActionStatus(message, customer);
 
   useEffect(() => {
     setContextOpen(false);
@@ -85,6 +87,7 @@ export function InboxThreadToolbar({
             companyName={customer.company}
             agentDraftMeta={agentDraftMeta}
             unread={message.unread}
+            actionStatus={actionStatus}
             className='max-w-[14rem] py-0 sm:max-w-xs'
           />
         ) : null}

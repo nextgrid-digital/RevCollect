@@ -1,5 +1,6 @@
 import { getDaysOverdueFromDueDate } from '@/features/revcollect/utils';
 import { isOpenCanonicalInvoice } from '@/features/revcollect/lib/invoice-open';
+import { withLiveAging } from '@/features/revcollect/lib/live-aging';
 import {
   formatPromisedDateLabel,
   isBrokenPromise
@@ -41,7 +42,8 @@ export async function runOvernightAri(
   await applyAutoPromises(tenantId);
   await applyRelationshipSignals(tenantId);
   const store = await getCanonicalStore();
-  const snapshot = await store.read(tenantId);
+  const rawSnapshot = await store.read(tenantId);
+  const snapshot = withLiveAging(rawSnapshot);
   const config = snapshot.agentConfig ?? defaultWorkspaceAgentConfig(DEFAULT_AGENT_CONFIG);
   const digestHour = config.behaviors.digestHour;
   const currentHour = new Date().getUTCHours();

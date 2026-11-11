@@ -49,12 +49,19 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
     ];
   });
 
-  const contacts = rawCustomers.map((customer) => ({
-    id: customer.Id,
-    name: customer.DisplayName ?? 'Customer',
-    email: customer.PrimaryEmailAddr?.Address ?? '',
-    company: customer.CompanyName ?? customer.DisplayName
-  }));
+  const contacts = rawCustomers.map((customer) => {
+    const displayName = customer.DisplayName?.trim();
+    const fullyQualified = (customer as { FullyQualifiedName?: string }).FullyQualifiedName?.trim();
+    const companyName = customer.CompanyName?.trim();
+    // Prefer DisplayName / FQN so sub-customers (jobs) stay distinguishable (B17).
+    const label = displayName || fullyQualified || companyName || 'Customer';
+    return {
+      id: customer.Id,
+      name: label,
+      email: customer.PrimaryEmailAddr?.Address ?? '',
+      company: label
+    };
+  });
   const customers = mapLedgerCustomers(contacts, invoices);
   const payments: CanonicalPayment[] = rawPayments.flatMap((payment) => {
     const customerId = payment.CustomerRef?.value;

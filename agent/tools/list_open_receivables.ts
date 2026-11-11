@@ -5,6 +5,7 @@ import {
   invoiceAmountDueCents,
   isOpenCanonicalInvoice
 } from '../../src/features/revcollect/lib/invoice-open';
+import { withLiveAging } from '../../src/features/revcollect/lib/live-aging';
 import { getCanonicalStore } from '../../src/lib/canonical/store';
 import { getAriWorkspaceTenantId } from '../../src/lib/integrations/tenant-ids';
 
@@ -15,7 +16,7 @@ export default defineTool({
   }),
   async execute({ overdueOnly }) {
     const tenantId = await getAriWorkspaceTenantId();
-    const snapshot = await (await getCanonicalStore()).read(tenantId);
+    const snapshot = withLiveAging(await (await getCanonicalStore()).read(tenantId));
     const rows = snapshot.customers
       .filter((customer) => customer.balanceCents > 0)
       .filter((customer) => (overdueOnly === false ? true : customer.daysOverdue > 0))

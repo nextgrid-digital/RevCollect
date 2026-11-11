@@ -35,7 +35,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-1',
     name: 'Sarah Chen',
-    email: 'sarah@northwindlogistics.com',
+    email: 'sarah@example.com',
     company: 'Northwind Logistics',
     status: 'overdue',
     daysOverdue: 42
@@ -43,7 +43,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-2',
     name: 'Marcus Webb',
-    email: 'marcus@brightstudio.io',
+    email: 'marcus@example.com',
     company: 'Bright Studio',
     status: 'due_soon',
     daysOverdue: 0
@@ -51,7 +51,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-3',
     name: 'Elena Rodriguez',
-    email: 'elena@harborfoods.co',
+    email: 'elena@example.com',
     company: 'Harbor Foods Co.',
     status: 'in_dispute',
     daysOverdue: 18
@@ -59,7 +59,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-4',
     name: 'James Okonkwo',
-    email: 'james@apexmechanical.com',
+    email: 'james@example.com',
     company: 'Apex Mechanical',
     status: 'promised',
     daysOverdue: 12
@@ -67,7 +67,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-5',
     name: 'Priya Nair',
-    email: 'priya@cloudstack.dev',
+    email: 'priya@example.com',
     company: 'CloudStack Dev',
     status: 'current',
     daysOverdue: 0
@@ -75,7 +75,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-6',
     name: 'Tom Bradley',
-    email: 'tom@ridgelinebuilders.com',
+    email: 'tom@example.com',
     company: 'Ridgeline Builders',
     status: 'overdue',
     daysOverdue: 67
@@ -83,7 +83,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-7',
     name: 'Liam Patel',
-    email: 'liam@quantumbio.ai',
+    email: 'liam@example.com',
     company: 'QuantumBio Labs',
     status: 'due_soon',
     daysOverdue: 0
@@ -91,7 +91,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-8',
     name: 'Nora Schmidt',
-    email: 'nora@eurofreight.de',
+    email: 'nora@example.com',
     company: 'EuroFreight GmbH',
     status: 'overdue',
     daysOverdue: 29
@@ -99,7 +99,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-9',
     name: 'David Kim',
-    email: 'david@signalforge.com',
+    email: 'david@example.com',
     company: 'SignalForge',
     status: 'promised',
     daysOverdue: 9
@@ -107,7 +107,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-10',
     name: 'Maya Singh',
-    email: 'maya@orchardretail.co',
+    email: 'maya@example.com',
     company: 'Orchard Retail',
     status: 'in_dispute',
     daysOverdue: 21
@@ -115,7 +115,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-11',
     name: 'Felix Adler',
-    email: 'felix@alpineparts.ch',
+    email: 'felix@example.com',
     company: 'Alpine Parts AG',
     status: 'current',
     daysOverdue: 0
@@ -123,7 +123,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-12',
     name: 'Ava Johnson',
-    email: 'ava@metroprint.us',
+    email: 'ava@example.com',
     company: 'MetroPrint',
     status: 'due_soon',
     daysOverdue: 0
@@ -131,7 +131,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-13',
     name: 'Omar Hassan',
-    email: 'omar@novaenergy.ae',
+    email: 'omar@example.com',
     company: 'Nova Energy',
     status: 'overdue',
     daysOverdue: 54
@@ -139,7 +139,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-14',
     name: 'Sofia Rossi',
-    email: 'sofia@bellacucina.it',
+    email: 'sofia@example.com',
     company: 'Bella Cucina Imports',
     status: 'promised',
     daysOverdue: 6
@@ -147,7 +147,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-15',
     name: 'Noah Williams',
-    email: 'noah@pinnaclelegal.io',
+    email: 'noah@example.com',
     company: 'Pinnacle Legal Ops',
     status: 'current',
     daysOverdue: 0
@@ -155,7 +155,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-16',
     name: 'Iris Tan',
-    email: 'iris@harborline.sg',
+    email: 'iris@example.com',
     company: 'Harborline Shipping',
     status: 'overdue',
     daysOverdue: 73
@@ -163,7 +163,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-17',
     name: 'Mateo Alvarez',
-    email: 'mateo@solarspark.mx',
+    email: 'mateo@example.com',
     company: 'SolarSpark',
     status: 'due_soon',
     daysOverdue: 0
@@ -171,7 +171,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-18',
     name: 'Chloe Martin',
-    email: 'chloe@finedine.fr',
+    email: 'chloe@example.com',
     company: 'FineDine Group',
     status: 'in_dispute',
     daysOverdue: 14
@@ -179,7 +179,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-19',
     name: 'Yuki Sato',
-    email: 'yuki@tokyofabric.jp',
+    email: 'yuki@example.com',
     company: 'Tokyo Fabric Mills',
     status: 'overdue',
     daysOverdue: 35
@@ -187,7 +187,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-20',
     name: 'Ethan Brown',
-    email: 'ethan@vertexsystems.ca',
+    email: 'ethan@example.com',
     company: 'Vertex Systems',
     status: 'promised',
     daysOverdue: 11
@@ -195,7 +195,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-21',
     name: 'Anika Bose',
-    email: 'anika@medisphere.in',
+    email: 'anika@example.com',
     company: 'MediSphere Health',
     status: 'current',
     daysOverdue: 0
@@ -203,7 +203,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-22',
     name: 'Gabriel Costa',
-    email: 'gabriel@portofoods.br',
+    email: 'gabriel@example.com',
     company: 'Porto Foods',
     status: 'due_soon',
     daysOverdue: 0
@@ -211,7 +211,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-23',
     name: 'Hannah Lee',
-    email: 'hannah@blueridgehotels.com',
+    email: 'hannah@example.com',
     company: 'BlueRidge Hotels',
     status: 'overdue',
     daysOverdue: 46
@@ -219,7 +219,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-24',
     name: 'Oliver Grant',
-    email: 'oliver@timberlineworks.com',
+    email: 'oliver@example.com',
     company: 'Timberline Works',
     status: 'in_dispute',
     daysOverdue: 24
@@ -227,7 +227,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-25',
     name: 'Riya Kapoor',
-    email: 'riya@atlasfashion.co.uk',
+    email: 'riya@example.com',
     company: 'Atlas Fashion',
     status: 'promised',
     daysOverdue: 8
@@ -235,7 +235,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-26',
     name: 'Lucas Meyer',
-    email: 'lucas@rheinsteel.de',
+    email: 'lucas@example.com',
     company: 'Rhein Steel',
     status: 'overdue',
     daysOverdue: 91
@@ -243,7 +243,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-27',
     name: 'Zara Ahmed',
-    email: 'zara@greenleafpackaging.com',
+    email: 'zara@example.com',
     company: 'GreenLeaf Packaging',
     status: 'current',
     daysOverdue: 0
@@ -251,7 +251,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-28',
     name: 'Benjamin Cole',
-    email: 'benjamin@aurorasoft.io',
+    email: 'benjamin@example.com',
     company: 'AuroraSoft',
     status: 'due_soon',
     daysOverdue: 0
@@ -259,7 +259,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-29',
     name: 'Mina Park',
-    email: 'mina@seoulpharma.kr',
+    email: 'mina@example.com',
     company: 'Seoul Pharma',
     status: 'overdue',
     daysOverdue: 58
@@ -267,7 +267,7 @@ const customerSeeds: CustomerSeed[] = [
   {
     id: 'cust-30',
     name: 'Jacob Reed',
-    email: 'jacob@cascadewholesale.com',
+    email: 'jacob@example.com',
     company: 'Cascade Wholesale',
     status: 'in_dispute',
     daysOverdue: 19

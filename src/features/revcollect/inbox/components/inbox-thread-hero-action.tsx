@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { AgentDraftMeta } from '../../types';
+import type { InboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 
 export type InboxThreadHeroState = 'draft-ready' | 'awaiting-reply' | 'caught-up';
 
@@ -17,11 +18,13 @@ export function getInboxThreadHeroState(
 export function getInboxThreadHeroMessage(
   companyName: string,
   agentDraftMeta: AgentDraftMeta | undefined,
-  unread: boolean
+  unread: boolean,
+  actionStatus?: InboxThreadActionStatus
 ): string {
   const state = getInboxThreadHeroState(agentDraftMeta, unread);
 
   if (state === 'draft-ready') return `Reply ready for ${companyName}`;
+  if (actionStatus === 'needs_follow_up') return `Needs follow-up for ${companyName}`;
   if (state === 'awaiting-reply') return `${companyName} is waiting`;
   return "You're up to date";
 }
@@ -30,6 +33,7 @@ interface InboxThreadHeroActionProps {
   companyName: string;
   agentDraftMeta?: AgentDraftMeta;
   unread: boolean;
+  actionStatus?: InboxThreadActionStatus;
   className?: string;
 }
 
@@ -37,9 +41,10 @@ export function InboxThreadHeroAction({
   companyName,
   agentDraftMeta,
   unread,
+  actionStatus,
   className
 }: InboxThreadHeroActionProps) {
-  const message = getInboxThreadHeroMessage(companyName, agentDraftMeta, unread);
+  const message = getInboxThreadHeroMessage(companyName, agentDraftMeta, unread, actionStatus);
 
   return (
     <div className={cn('text-muted-foreground shrink-0 text-xs', className)}>

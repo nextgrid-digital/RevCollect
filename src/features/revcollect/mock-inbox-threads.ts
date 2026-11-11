@@ -602,7 +602,7 @@ const statusOverrides: Partial<Record<string, Partial<ScenarioTemplate>>> = {
         hoursBeforeLatest: 2,
         body: customerBody('Hi,', [
           'Our new AP manager is now handling overdue invoice approvals on this account.',
-          'Please route future statements and escalation notices to ap.manager@blueridgehotels.com.'
+          'Please route future statements and escalation notices to ap.manager@example.com.'
         ])
       }
     ]

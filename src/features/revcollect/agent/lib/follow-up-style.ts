@@ -9,23 +9,24 @@ export const FOLLOW_UP_STYLE_OPTIONS: {
   {
     id: 'gentle',
     label: 'Gentle',
-    description: 'Friendly reminder — good for long-term customers',
+    description: 'Friendly reminder, good for long-term customers',
     tone: 'friendly'
   },
   {
     id: 'balanced',
     label: 'Balanced',
-    description: 'Clear and professional — most accounts',
+    description: 'Clear and professional for most accounts',
     tone: 'professional'
   },
   {
     id: 'assertive',
     label: 'Assertive',
-    description: 'Direct, with a due date — accounts that ignore reminders',
+    description: 'Direct, with a due date for accounts that ignore reminders',
     tone: 'firm'
   }
 ];
 
+/** Sample bodies end without a sign-off so the preview can append one signature (B20). */
 export const FOLLOW_UP_STYLE_SAMPLES: Record<
   AgentFollowUpStyle,
   { subject: string; body: string }
@@ -34,11 +35,9 @@ export const FOLLOW_UP_STYLE_SAMPLES: Record<
     subject: 'Friendly reminder: invoice INV-1042',
     body: `Hi Sam,
 
-Just a note that invoice INV-1042 for $1,240 was due on 12 March. If you have already paid, thank you — you can ignore this.
+Just a note that invoice INV-1042 for $1,240 was due on 12 March. If you have already paid, thank you; you can ignore this.
 
-If anything is unclear, I am happy to help.
-
-Thanks so much,`
+If anything is unclear, I am happy to help.`
   },
   balanced: {
     subject: 'Invoice INV-1042 is overdue',
@@ -46,9 +45,7 @@ Thanks so much,`
 
 Invoice INV-1042 for $1,240 was due on 12 March and is now overdue. Please arrange payment at your earliest convenience.
 
-Let us know if you need a copy of the invoice or have a question.
-
-Kind regards,`
+Let us know if you need a copy of the invoice or have a question.`
   },
   assertive: {
     subject: 'Action needed: INV-1042 is 21 days overdue',
@@ -56,9 +53,7 @@ Kind regards,`
 
 Invoice INV-1042 for $1,240 is 21 days past due. Please pay by Friday 4 April to bring the account current.
 
-If payment is not received, we may pause further work until the balance is cleared.
-
-Regards,`
+If payment is not received, we may pause further work until the balance is cleared.`
   }
 };
 

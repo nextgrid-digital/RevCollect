@@ -88,7 +88,7 @@ export function DashboardActivity({
                 className='mr-1.5 size-1.5 rounded-full bg-violet-600 dark:bg-violet-300'
                 aria-hidden
               />
-              ARI
+              RevCollect
             </span>
             <p className='text-sm font-semibold tracking-tight'>Overnight run · {ariHourLabel}</p>
           </div>
@@ -153,7 +153,7 @@ export function DashboardActivity({
           {promises.length > 0 ? (
             <section className='border-border/60 rounded-xl border'>
               <h3 className='border-border/60 border-b px-3 py-2.5 text-sm font-semibold'>
-                Promises ARI is tracking
+                Promises RevCollect is tracking
               </h3>
               <ul className='divide-border divide-y'>
                 {promises.map((row) => {
