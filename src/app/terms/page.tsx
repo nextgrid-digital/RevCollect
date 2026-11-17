@@ -33,6 +33,9 @@ export default function TermsPage() {
         vendor.
       </p>
       <p>Questions: admin@revcollect.ai.</p>
+      <p className='text-muted-foreground pt-4 text-xs leading-relaxed'>
+        Intuit and QuickBooks are registered trademarks of Intuit Inc. Used with permission.
+      </p>
     </LegalPage>
   );
 }

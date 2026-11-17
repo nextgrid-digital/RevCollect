@@ -83,8 +83,10 @@ export interface TenantDataExport {
 export interface DeletionRequestResult {
   requestId: string;
   tenantId: TenantId;
-  status: 'queued' | 'completed';
+  status: 'queued' | 'completed' | 'mailto';
   message: string;
+  /** Present when the app could not send the request and the user should send it. */
+  mailto?: string;
 }
 
 export type CustomerStatusSummary = Record<CollectionStatus, number>;

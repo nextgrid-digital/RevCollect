@@ -21,14 +21,17 @@ export default function PrivacyPage() {
       </p>
       <p>
         Disconnect from QuickBooks revokes the token and stops new syncs. The last snapshot of
-        customers, invoices, and payments stays until you delete it. To erase that snapshot, sign in
-        and choose Settings → Privacy and data → Request data deletion. That also revokes Xero,
-        Zoho, and Gmail and deletes the stored collection mail. The subscription record stays. You
-        can also email{' '}
+        customers, invoices, and payments stays until you ask us to delete it. Sign in and choose
+        Settings → Privacy and data → Request data deletion. That emails admin@revcollect.ai and
+        asks us to delete that workspace&apos;s stored books, payments, and sent collection mail,
+        and to revoke Xero, Zoho, and Gmail. The subscription record stays. You can also email{' '}
         <a className='underline underline-offset-4' href='mailto:admin@revcollect.ai'>
           admin@revcollect.ai
         </a>
         . Requests sent by email are completed within 30 days.
+      </p>
+      <p className='text-muted-foreground pt-4 text-xs leading-relaxed'>
+        Intuit and QuickBooks are registered trademarks of Intuit Inc. Used with permission.
       </p>
     </LegalPage>
   );

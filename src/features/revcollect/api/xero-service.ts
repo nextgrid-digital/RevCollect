@@ -35,7 +35,7 @@ import {
   rememberPendingSend,
   sentEmailsForThread
 } from '@/lib/canonical/sent-emails';
-import { eraseWorkspaceLedger } from '@/lib/canonical/erase-workspace-ledger';
+import { emailWorkspaceDeletionRequest } from '@/lib/privacy/request-data-deletion';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { prepareCollectionBody } from '../compliance/can-spam';
 import {
@@ -874,14 +874,7 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult> {
-    await eraseWorkspaceLedger(tenantId);
-    return {
-      requestId: `del-${Date.now()}`,
-      tenantId,
-      status: 'completed',
-      message:
-        'Books data deleted. QuickBooks, Xero, Zoho, and Gmail tokens were revoked. The subscription record stays.'
-    };
+    return emailWorkspaceDeletionRequest(tenantId);
   }
 
   async logDataAccess(event: DataAccessEvent): Promise<void> {

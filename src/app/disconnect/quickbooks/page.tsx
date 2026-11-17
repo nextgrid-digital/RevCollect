@@ -31,7 +31,8 @@ export default async function DisconnectQuickBooksPage({
       {done ? (
         <p>
           QuickBooks is disconnected. The token was revoked and sync has stopped. Invoices already
-          saved stay until you delete workspace data under Settings → Privacy and data.
+          saved stay until you request deletion under Settings → Privacy and data. That emails
+          admin@revcollect.ai.
         </p>
       ) : (
         <p>

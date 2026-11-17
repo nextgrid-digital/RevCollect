@@ -92,7 +92,7 @@ const BOOKS_COPY: Record<
     disconnectLabel: 'Disconnect from QuickBooks',
     connectPath: '/api/integrations/quickbooks/connect',
     description:
-      'Connect one QuickBooks Online company. RevCollect maps open invoices and payments into the same inbox as Xero.',
+      'Connect one QuickBooks Online company. RevCollect maps open invoices and payments into your collections inbox. You send the mail from Gmail.',
     authorize: "You'll be redirected to Intuit to authorize invoices, customers, and payments."
   },
   zoho: {

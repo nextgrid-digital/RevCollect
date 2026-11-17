@@ -32,9 +32,9 @@ Disconnect from QuickBooks revokes our token and stops new syncs. The last snaps
 
 ## How to delete it
 
-Sign in and choose Settings → Privacy and data → Request data deletion. That revokes the QuickBooks, Xero, Zoho, and Gmail tokens and deletes the stored books, payments, and sent collection mail. The subscription record stays.
+Sign in and choose Settings → Privacy and data → Request data deletion. That emails admin@revcollect.ai and asks us to delete that workspace's stored books, payments, and sent collection mail, and to revoke the QuickBooks, Xero, Zoho, and Gmail tokens. The subscription record stays.
 
-You can also email admin@revcollect.ai. Requests sent by email are completed within 30 days.
+You can also email admin@revcollect.ai directly. Requests are completed within 30 days.
 
 ## Sharing
 

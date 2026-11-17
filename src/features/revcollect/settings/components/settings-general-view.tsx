@@ -8,7 +8,6 @@ import { SettingsCompanySection } from './settings-company-section';
 import { SettingsEmailSenderSection } from './settings-email-sender-section';
 import { SettingsGeneralFooter } from './settings-general-footer';
 import { SettingsNotificationsSection } from './settings-notifications-section';
-import { SettingsPrivacySection } from './settings-privacy-section';
 
 function settingsEqual(a: WorkspaceGeneralSettings, b: WorkspaceGeneralSettings): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -67,7 +66,6 @@ export function SettingsGeneralView() {
         replyToEmailError={validation.replyToEmailError}
       />
       <SettingsNotificationsSection settings={draft} onChange={handleChange} />
-      <SettingsPrivacySection />
       <SettingsGeneralFooter
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={updateSettings.isPending}

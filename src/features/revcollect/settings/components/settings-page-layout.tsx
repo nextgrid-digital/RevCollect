@@ -13,12 +13,14 @@ import { SettingsAppearanceView } from './settings-appearance-view';
 import { SettingsBillingView } from './settings-billing-view';
 import { SettingsGeneralView } from './settings-general-view';
 import { SettingsIntegrationsView } from './settings-integrations-view';
+import { SettingsPrivacySection } from './settings-privacy-section';
 import type { SettingsTab } from './settings-peek-context';
 
 const NAV_ITEMS: { tab: SettingsTab; label: string; href: string }[] = [
   { tab: 'general', label: 'General', href: '/settings' },
   { tab: 'appearance', label: 'Appearance', href: '/settings/appearance' },
   { tab: 'integrations', label: 'Integrations', href: '/settings/integrations' },
+  { tab: 'privacy', label: 'Privacy and data', href: '/settings/privacy' },
   { tab: 'billing', label: 'Billing', href: '/settings/billing' }
 ];
 
@@ -40,6 +42,8 @@ function SettingsPageContent({ tab }: { tab: SettingsTab }) {
           <SettingsIntegrationsView />
         </Suspense>
       );
+    case 'privacy':
+      return <SettingsPrivacySection />;
     case 'billing':
       return (
         <Suspense fallback={<p className='text-muted-foreground text-sm'>Loading billing…</p>}>

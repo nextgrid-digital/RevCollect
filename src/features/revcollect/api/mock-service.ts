@@ -292,8 +292,8 @@ export class MockRevCollectService implements RevCollectService {
     return {
       requestId: `mock-del-${Date.now()}`,
       tenantId,
-      status: 'completed',
-      message: 'This demo workspace does not store a QuickBooks connection.'
+      status: 'queued',
+      message: 'This demo workspace does not email a deletion request.'
     };
   }
 

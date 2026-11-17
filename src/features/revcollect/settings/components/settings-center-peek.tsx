@@ -14,11 +14,13 @@ import { SettingsAppearanceView } from './settings-appearance-view';
 import { SettingsBillingView } from './settings-billing-view';
 import { SettingsGeneralView } from './settings-general-view';
 import { SettingsIntegrationsView } from './settings-integrations-view';
+import { SettingsPrivacySection } from './settings-privacy-section';
 
 const NAV_ITEMS: { tab: SettingsTab; label: string }[] = [
   { tab: 'general', label: 'General' },
   { tab: 'appearance', label: 'Appearance' },
   { tab: 'integrations', label: 'Integrations' },
+  { tab: 'privacy', label: 'Privacy and data' },
   { tab: 'billing', label: 'Billing' }
 ];
 
@@ -34,6 +36,8 @@ function SettingsPeekContent({ tab }: { tab: SettingsTab }) {
           <SettingsIntegrationsView />
         </Suspense>
       );
+    case 'privacy':
+      return <SettingsPrivacySection />;
     case 'billing':
       return <SettingsBillingView />;
     default: {

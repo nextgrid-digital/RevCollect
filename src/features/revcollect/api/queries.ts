@@ -688,12 +688,13 @@ export function useExportTenantData() {
 }
 
 export function useRequestTenantDeletion() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (tenantId: TenantId) => getRevCollectService().requestTenantDeletion(tenantId),
     onSuccess: (result) => {
-      toast.message(result.message);
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.all });
+      if (result.mailto) {
+        window.location.assign(result.mailto);
+      }
+      toast.success(result.message);
     },
     onError: () => {
       toast.error('Deletion request failed');

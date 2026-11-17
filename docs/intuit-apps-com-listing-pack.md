@@ -299,9 +299,9 @@ Record 1080p. Export an Intuit-only cut (no Xero/Zoho). Host on YouTube/unlisted
 
 | Asset | Spec | Status |
 | --- | --- | --- |
-| App icon / logo | Per Intuit upload form | `TODO` |
-| Screenshots 1–6 | Shot list above | `TODO` |
-| Demo video | Script above | `TODO` |
+| App icon / logo | Per Intuit upload form | Drafts exported from the existing app icon: `docs/intuit-listing-assets/app-icon-120.png`, `250`, `512`, `1024` |
+| Screenshots 1–6 | Shot list above | Drafts captured locally (dashboard, connect, customers, inbox). Not committed: they show customer invoices. Recapture after a fresh sync. No disconnect shot and no sent-mail shot yet. |
+| Demo video | Script above | `TODO` — needs a person to record Connect and Send |
 | Reviewer password | Section A4 | `TODO` |
 | Phone (if required) | US | `TODO` |
 

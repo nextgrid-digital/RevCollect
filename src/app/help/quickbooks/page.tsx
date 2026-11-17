@@ -58,8 +58,8 @@ export default function QuickBooksHelpPage() {
         <Link className='underline underline-offset-4' href='/disconnect/quickbooks'>
           Disconnect from QuickBooks
         </Link>
-        . That revokes the token and stops sync. Saved invoices stay until you delete workspace
-        data.
+        . That revokes the token and stops sync. Saved invoices stay until you request deletion
+        under Settings → Privacy and data. That emails admin@revcollect.ai.
       </p>
 
       <h2 className='text-foreground pt-2 text-base font-medium'>Pricing</h2>
