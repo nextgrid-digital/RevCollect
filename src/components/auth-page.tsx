@@ -347,6 +347,20 @@ export function AuthPage() {
         </Button>
       </form>
 
+      {mode === 'forgot' ? null : (
+        <Button
+          type='button'
+          className='w-full'
+          variant='outline'
+          isLoading={isGooglePending}
+          disabled={isPending}
+          onClick={handleGoogleSignIn}
+        >
+          <GoogleIcon data-icon='inline-start' />
+          {mode === 'signUp' ? 'Sign up with Google' : 'Continue with Google'}
+        </Button>
+      )}
+
       <p className='text-muted-foreground text-center text-sm'>
         {mode === 'signIn' ? (
           <>
@@ -383,20 +397,6 @@ export function AuthPage() {
 
       {mode === 'forgot' ? null : (
         <>
-          <AuthDivider>OR</AuthDivider>
-
-          <Button
-            type='button'
-            className='w-full'
-            variant='outline'
-            isLoading={isGooglePending}
-            disabled={isPending}
-            onClick={handleGoogleSignIn}
-          >
-            <GoogleIcon data-icon='inline-start' />
-            Continue with Google
-          </Button>
-
           <AuthDivider>OR</AuthDivider>
 
           <div className='flex flex-col items-center gap-2'>
