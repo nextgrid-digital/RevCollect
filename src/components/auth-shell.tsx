@@ -20,13 +20,8 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <div className='absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background' />
         <RevCollectMark className='relative z-10 mr-auto' />
 
-        <div className='z-10 mt-auto max-w-lg space-y-3'>
-          <p className='text-xl'>
-            Collections inbox for bookkeepers. Connect Xero, QuickBooks Online, or Zoho Books.
-          </p>
-          <p className='text-muted-foreground text-sm'>
-            Draft follow-ups, then send from Gmail. You stay the sender.
-          </p>
+        <div className='z-10 mt-auto max-w-lg'>
+          <p className='text-xl'>Collections inbox for bookkeepers.</p>
         </div>
         <div className='absolute inset-0'>
           <FloatingPaths position={1} />
