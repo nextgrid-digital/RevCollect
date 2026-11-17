@@ -18,6 +18,7 @@ import type {
   AgentDraftRecord,
   CanonicalSnapshot,
   CanonicalStore,
+  CanonicalWriteOptions,
   AriRunRecord,
   CustomerIntelligence
 } from './types';
@@ -53,6 +54,7 @@ interface InvoiceRow {
   xero_status: string | null;
   amount_due_cents: number | null;
   paid_at: string | null;
+  currency: string | null;
 }
 
 interface PaymentRow {
@@ -163,7 +165,8 @@ function mapInvoice(row: InvoiceRow): Invoice {
     paidCents: row.paid_cents,
     xeroStatus: row.xero_status ?? undefined,
     amountDueCents: row.amount_due_cents ?? undefined,
-    paidAt: row.paid_at ?? undefined
+    paidAt: row.paid_at ?? undefined,
+    currency: row.currency ?? undefined
   };
 }
 
@@ -313,7 +316,11 @@ async function softDeleteOrphans(
   }
 }
 
-async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Promise<void> {
+async function writeSnapshot(
+  tenantId: string,
+  snapshot: CanonicalSnapshot,
+  options?: CanonicalWriteOptions
+): Promise<void> {
   await ensureTenant(tenantId);
   const supabase = createAdminClient();
   const now = new Date().toISOString();
@@ -366,7 +373,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     );
     if (error) throw new Error(`Failed to upsert customers: ${error.message}`);
   }
-  await softDeleteOrphans(supabase, 'customers', tenantId, customerIds, now);
+  if (snapshot.customers.length > 0 || options?.purgeEmpty) {
+    await softDeleteOrphans(supabase, 'customers', tenantId, customerIds, now);
+  }
 
   const invoiceIdList = snapshot.invoices.map((invoice) =>
     isUuid(invoice.id)
@@ -396,6 +405,7 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           xero_status: invoice.xeroStatus ?? null,
           amount_due_cents: invoice.amountDueCents ?? invoice.amountCents,
           paid_at: invoice.paidAt ?? null,
+          currency: invoice.currency ?? null,
           deleted_at: null
         };
       }),
@@ -403,7 +413,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     );
     if (error) throw new Error(`Failed to upsert invoices: ${error.message}`);
   }
-  await softDeleteOrphans(supabase, 'invoices', tenantId, invoiceIdList, now);
+  if (snapshot.invoices.length > 0 || options?.purgeEmpty) {
+    await softDeleteOrphans(supabase, 'invoices', tenantId, invoiceIdList, now);
+  }
 
   const invoiceIds = new Set(invoiceIdList);
   const paymentRows = toPaymentRows(tenantId, snapshot.payments, invoiceIds);
@@ -428,6 +440,7 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
           id,
           tenant_id: tenantId,
           customer_id: customerId,
+          public_id: id,
           subject: message.subject,
           preview: message.preview,
           received_at: message.receivedAt,
@@ -445,10 +458,10 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
     // Inbox is derived/synthetic — never fail customer/settings writes on thread upsert.
     if (error) {
       console.error('[canonical] skipped inbox thread upsert:', error.message);
-    } else {
+    } else if (snapshot.inboxMessages.length > 0 || options?.purgeEmpty) {
       await softDeleteOrphans(supabase, 'inbox_threads', tenantId, inboxIds, now);
     }
-  } else {
+  } else if (options?.purgeEmpty) {
     await softDeleteOrphans(supabase, 'inbox_threads', tenantId, [], now);
   }
 
@@ -458,6 +471,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
       .update({ workspace_settings: snapshot.workspaceSettings, updated_at: now })
       .eq('id', tenantId);
     if (error) {
+      if (options?.strictWorkspaceSettings) {
+        throw new Error('Could not save settings');
+      }
       console.error('[canonical] skipped workspace_settings update:', error.message);
     }
   }
@@ -522,6 +538,9 @@ async function writeSnapshot(tenantId: string, snapshot: CanonicalSnapshot): Pro
       .update({ sent_emails: snapshot.sentEmails, updated_at: now })
       .eq('id', tenantId);
     if (error) {
+      if (options?.strictSentEmails) {
+        throw new Error('Could not record the sent follow-up');
+      }
       console.error('[canonical] skipped sent_emails update:', error.message);
     }
   }
@@ -602,8 +621,8 @@ export const postgresCanonicalStore: CanonicalStore = {
   read(tenantId) {
     return readSnapshot(tenantId);
   },
-  write(tenantId, snapshot) {
-    return writeSnapshot(tenantId, snapshot);
+  write(tenantId, snapshot, options) {
+    return writeSnapshot(tenantId, snapshot, options);
   },
   async replaceAr(tenantId, payload) {
     const current = await readSnapshot(tenantId);
@@ -615,7 +634,7 @@ export const postgresCanonicalStore: CanonicalStore = {
       inboxMessages: payload.inboxMessages,
       ingestedAt: new Date().toISOString()
     };
-    await writeSnapshot(tenantId, next);
+    await writeSnapshot(tenantId, next, { purgeEmpty: true });
     return next;
   }
 };

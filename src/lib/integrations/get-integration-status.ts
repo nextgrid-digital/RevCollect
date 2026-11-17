@@ -65,8 +65,30 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
     ]
   );
 
-  const booksConnected = Boolean(xeroConnection || quickbooksConnection || zohoConnection);
-  const lastSyncAt = booksConnected ? await getBooksLastSyncAt(tenantId) : null;
+  const lastSyncAt = await getBooksLastSyncAt(tenantId);
+
+  function booksStatus(
+    connection: { organisationName: string; tokenStatus?: 'expired' } | null,
+    label: string
+  ): IntegrationStatus['xero'] {
+    if (connection && connection.tokenStatus !== 'expired') {
+      return {
+        connected: true,
+        label,
+        detail: connection.organisationName,
+        lastSyncAt
+      };
+    }
+    return {
+      connected: false,
+      label,
+      detail:
+        connection?.tokenStatus === 'expired'
+          ? 'Session expired. Reconnect to refresh.'
+          : 'Not connected',
+      lastSyncAt
+    };
+  }
 
   return {
     gmail: gmailConnection
@@ -76,29 +98,8 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus> {
           detail: gmailConnection.email
         }
       : DISCONNECTED_INTEGRATION_STATUS.gmail,
-    xero: xeroConnection
-      ? {
-          connected: true,
-          label: 'Xero',
-          detail: xeroConnection.organisationName,
-          lastSyncAt
-        }
-      : DISCONNECTED_INTEGRATION_STATUS.xero,
-    quickbooks: quickbooksConnection
-      ? {
-          connected: true,
-          label: 'QuickBooks',
-          detail: quickbooksConnection.organisationName,
-          lastSyncAt
-        }
-      : DISCONNECTED_INTEGRATION_STATUS.quickbooks,
-    zoho: zohoConnection
-      ? {
-          connected: true,
-          label: 'Zoho Books',
-          detail: zohoConnection.organisationName,
-          lastSyncAt
-        }
-      : DISCONNECTED_INTEGRATION_STATUS.zoho
+    xero: booksStatus(xeroConnection, 'Xero'),
+    quickbooks: booksStatus(quickbooksConnection, 'QuickBooks'),
+    zoho: booksStatus(zohoConnection, 'Zoho Books')
   };
 }

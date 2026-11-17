@@ -11,7 +11,10 @@ interface AgingPriorityActionCardProps {
 
 export function AgingPriorityActionCard({ rows, onViewAccounts }: AgingPriorityActionCardProps) {
   const followUpCount = useMemo(
-    () => rows.filter((row) => row.risk === 'high' || row.days60PlusCents > 0).length,
+    () =>
+      rows.filter(
+        (row) => row.risk === 'high' || row.days61to90Cents > 0 || row.days90PlusCents > 0
+      ).length,
     [rows]
   );
 
@@ -20,7 +23,7 @@ export function AgingPriorityActionCard({ rows, onViewAccounts }: AgingPriorityA
   return (
     <SuggestedAction
       label='Priority this week'
-      description={`${followUpCount} ${followUpCount === 1 ? 'account needs' : 'accounts need'} follow-up based on aging risk and 60+ day balances.`}
+      description={`${followUpCount} ${followUpCount === 1 ? 'account needs' : 'accounts need'} follow-up based on aging risk and 61+ day balances.`}
       actionLabel='Review accounts'
       onAction={onViewAccounts}
     />

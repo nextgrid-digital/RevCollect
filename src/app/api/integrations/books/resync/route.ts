@@ -72,9 +72,10 @@ export async function POST() {
       return disconnectedResponse();
     }
     console.error('[books/resync] failed:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Resync failed' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Resync failed';
+    if (message === 'Sync returned no customers. Existing books were kept.') {
+      return NextResponse.json({ error: message, code: 'books_kept' as const }, { status: 409 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -25,7 +25,7 @@ export function getInboxThreadHeroMessage(
 
   if (state === 'draft-ready') return `Reply ready for ${companyName}`;
   if (actionStatus === 'needs_follow_up') return `Needs follow-up for ${companyName}`;
-  if (state === 'awaiting-reply') return `${companyName} is waiting`;
+  if (actionStatus === 'awaiting_reply') return `${companyName} is waiting`;
   return "You're up to date";
 }
 

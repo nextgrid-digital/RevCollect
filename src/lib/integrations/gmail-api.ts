@@ -41,6 +41,7 @@ export interface GmailSendInput {
   subject: string;
   body: string;
   fromName?: string;
+  replyTo?: string;
   gmailThreadId?: string;
   attachments?: GmailSendAttachment[];
 }
@@ -113,14 +114,17 @@ function buildRawMessage(input: {
   to: string;
   subject: string;
   body: string;
+  replyTo?: string;
   attachments?: GmailSendAttachment[];
 }): string {
   const plain = normalizeOutboundPlainText(input.body);
   const html = outboundEmailHtml(plain);
   const altBoundary = `revcollect_alt_${crypto.randomUUID().replaceAll('-', '')}`;
+  const replyTo = input.replyTo?.trim();
   const headers = [
     `From: ${input.fromHeader}`,
     `To: ${input.to}`,
+    ...(replyTo ? [`Reply-To: ${replyTo}`] : []),
     `Subject: ${encodeHeaderValue(input.subject)}`,
     'MIME-Version: 1.0'
   ];
@@ -217,6 +221,7 @@ export async function sendGmailMessage(input: GmailSendInput): Promise<GmailSend
     to: input.to,
     subject: input.subject,
     body,
+    replyTo: input.replyTo,
     attachments: input.attachments
   });
 

@@ -42,7 +42,7 @@ export function CustomerDetailMetricsRow({
         value={formatCurrencyWhole(outstandingCents)}
         valueClassName={isOverdue ? overdueValueClass : undefined}
       />
-      <MetricCard label='Avg DSO' value={`${avgDsoDays}d`} />
+      <MetricCard label='Days to pay' value={avgDsoDays > 0 ? `${avgDsoDays}d` : '—'} />
       <MetricCard label='Follow-ups sent' value={String(followUpsSent)} />
       <MetricCard label='Lifetime value' value={formatCompactCurrency(lifetimeValueCents)} />
     </div>

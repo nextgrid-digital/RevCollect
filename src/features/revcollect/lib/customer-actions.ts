@@ -26,6 +26,8 @@ export function getSuggestedActionLabel(customer: Customer): string {
       return 'Confirm payment promise';
     case 'current':
       return 'View customer';
+    case 'paid':
+      return 'View customer';
     default: {
       const _exhaustive: never = customer.status;
       return _exhaustive;

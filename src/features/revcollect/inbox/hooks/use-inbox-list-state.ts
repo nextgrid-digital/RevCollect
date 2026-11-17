@@ -129,7 +129,11 @@ export function useInboxListState() {
       inboxMessages.filter((message) => {
         const customer = getCustomerById(message.customerId);
         if (!customer) return false;
-        return threadNeedsAttention(getInboxThreadActionStatus(message, customer));
+        return threadNeedsAttention(
+          getInboxThreadActionStatus(message, customer),
+          customer,
+          message
+        );
       }).length,
     [inboxMessages, getCustomerById]
   );

@@ -84,10 +84,15 @@ export async function GET(request: NextRequest) {
     } catch (inboxError) {
       console.error('[quickbooks/callback] inbox clear failed:', inboxError);
     }
+    const startedAt = new Date().toISOString();
     try {
-      await ingestQuickBooksAr(tenantId);
+      const snapshot = await ingestQuickBooksAr(tenantId);
+      if (!snapshot.ingestedAt || snapshot.ingestedAt < startedAt) {
+        return redirectWithError('books_sync_failed');
+      }
     } catch (ingestError) {
       console.error('[quickbooks/callback] ingest failed:', ingestError);
+      return redirectWithError('books_sync_failed');
     }
 
     const successUrl = new URL(returnTo, APP_URL);

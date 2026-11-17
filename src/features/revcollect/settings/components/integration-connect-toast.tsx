@@ -40,6 +40,8 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   zoho_connect_failed: 'Could not connect Zoho Books. Check your Zoho credentials and try again.',
   books_already_connected:
     'This workspace already has a ledger connected. Disconnect it first to switch.',
+  books_sync_failed:
+    'The ledger connected, but the books did not sync. Open Settings and use Resync.',
   access_denied: 'Connection was cancelled.'
 };
 

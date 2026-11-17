@@ -11,6 +11,7 @@ export interface QuickBooksConnectionRecord {
   organisationName: string;
   refreshToken: EncryptedPayload;
   connectedAt: string;
+  tokenStatus?: 'expired';
 }
 
 export async function getQuickBooksConnection(
@@ -53,4 +54,13 @@ export async function updateQuickBooksRefreshToken(
 
 export async function deleteQuickBooksConnection(appTenantId: string): Promise<void> {
   await deleteIntegrationSecret('quickbooks', appTenantId);
+}
+
+export async function markQuickBooksConnectionExpired(appTenantId: string): Promise<void> {
+  const connection = await getQuickBooksConnection(appTenantId);
+  if (!connection) return;
+  await writeIntegrationSecret('quickbooks', appTenantId, {
+    ...connection,
+    tokenStatus: 'expired'
+  });
 }

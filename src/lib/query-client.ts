@@ -1,27 +1,8 @@
-import { QueryClient, defaultShouldDehydrateQuery, hydrate, isServer } from '@tanstack/react-query';
-import {
-  persistQueryClientSubscribe,
-  type PersistedClient
-} from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { QueryClient, defaultShouldDehydrateQuery, isServer } from '@tanstack/react-query';
 
 const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-/** v5: do not persist inbox — ledger switches must not restore old Gmail threads. */
+/** Drop any previously persisted customer and invoice rows. */
 const PERSIST_KEY = 'revcollect-query-cache-v5';
-
-function shouldPersistQuery(query: {
-  queryKey: readonly unknown[];
-  state: { status: string };
-}): boolean {
-  return (
-    query.state.status === 'success' &&
-    query.queryKey[0] === 'revcollect' &&
-    query.queryKey[1] !== 'agent' &&
-    query.queryKey[1] !== 'integrations' &&
-    query.queryKey[1] !== 'inbox' &&
-    query.queryKey[1] !== 'dashboard-copy'
-  );
-}
 
 function makeQueryClient() {
   return new QueryClient({
@@ -38,36 +19,12 @@ function makeQueryClient() {
   });
 }
 
-function restorePersistedQueries(queryClient: QueryClient): void {
+function clearPersistedQueries(): void {
   try {
-    const raw = window.localStorage.getItem(PERSIST_KEY);
-    if (!raw) return;
-    const persisted = JSON.parse(raw) as PersistedClient;
-    if (!persisted?.clientState || Date.now() - persisted.timestamp > PERSIST_MAX_AGE_MS) {
-      window.localStorage.removeItem(PERSIST_KEY);
-      return;
-    }
-    hydrate(queryClient, persisted.clientState);
-    void queryClient.invalidateQueries({ queryKey: ['revcollect', 'inbox'] });
-    void queryClient.invalidateQueries({ queryKey: ['revcollect', 'integrations'] });
-  } catch {
     window.localStorage.removeItem(PERSIST_KEY);
+  } catch {
+    // Private browsing can throw on storage access.
   }
-}
-
-function persistBrowserQueryClient(queryClient: QueryClient): void {
-  restorePersistedQueries(queryClient);
-  const persister = createSyncStoragePersister({
-    storage: window.localStorage,
-    key: PERSIST_KEY
-  });
-  persistQueryClientSubscribe({
-    queryClient,
-    persister,
-    dehydrateOptions: {
-      shouldDehydrateQuery: (query) => shouldPersistQuery(query)
-    }
-  });
 }
 
 let browserQueryClient: QueryClient | undefined = undefined;
@@ -85,10 +42,10 @@ export function getQueryClient() {
 }
 
 // Restore after mount so persisted cache cannot diverge from SSR HTML.
-export function initBrowserQueryPersistence(queryClient: QueryClient): void {
+export function initBrowserQueryPersistence(_queryClient: QueryClient): void {
   if (typeof window === 'undefined' || persistInitialized) {
     return;
   }
   persistInitialized = true;
-  persistBrowserQueryClient(queryClient);
+  clearPersistedQueries();
 }

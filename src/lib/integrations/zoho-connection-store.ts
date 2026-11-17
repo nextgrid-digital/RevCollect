@@ -14,6 +14,7 @@ export interface ZohoConnectionRecord {
   apiBase?: string;
   /** Accounts host for this org's DC, e.g. https://accounts.zoho.in */
   accountsUrl?: string;
+  tokenStatus?: 'expired';
 }
 
 export async function getZohoConnection(appTenantId: string): Promise<ZohoConnectionRecord | null> {
@@ -62,4 +63,13 @@ export async function updateZohoRefreshToken(
 
 export async function deleteZohoConnection(appTenantId: string): Promise<void> {
   await deleteIntegrationSecret('zoho', appTenantId);
+}
+
+export async function markZohoConnectionExpired(appTenantId: string): Promise<void> {
+  const connection = await getZohoConnection(appTenantId);
+  if (!connection) return;
+  await writeIntegrationSecret('zoho', appTenantId, {
+    ...connection,
+    tokenStatus: 'expired'
+  });
 }

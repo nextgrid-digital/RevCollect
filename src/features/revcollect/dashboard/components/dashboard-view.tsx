@@ -14,6 +14,7 @@ import {
   useCustomers,
   useInboxMessages,
   useInvoices,
+  useIntegrationStatus,
   useLatestAriRun
 } from '../../api/queries';
 import { buildDashboardSnapshot } from '../lib/build-dashboard-snapshot';
@@ -23,6 +24,8 @@ import { DashboardAgingBars } from './dashboard-aging-bars';
 import { DashboardAttentionCards } from './dashboard-attention-cards';
 import { DashboardGreeting } from './dashboard-greeting';
 import { DashboardKpiRow } from './dashboard-kpi-row';
+import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
+import { formatCurrencyWhole, formatDate } from '../../utils';
 
 const dashboardMaxWidth = 'mx-auto w-full max-w-5xl';
 
@@ -36,6 +39,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ userName }: DashboardViewProps) {
+  const { data: integrationStatus } = useIntegrationStatus();
   const customersQuery = useCustomers();
   const invoicesQuery = useInvoices();
   const inboxQuery = useInboxMessages();
@@ -92,6 +96,7 @@ export function DashboardView({ userName }: DashboardViewProps) {
     [snapshot, copyQuery.data]
   );
 
+  const ledgerConnected = Boolean(integrationStatus && connectedBooksFromStatus(integrationStatus));
   const [peekMessageId, setPeekMessageId] = useState<string | null>(null);
   const showSkeleton = !isHydrated || isPending;
 
@@ -121,8 +126,50 @@ export function DashboardView({ userName }: DashboardViewProps) {
                 cards={narrative.attentionCards}
               />
             </MotionReveal>
+            {integrationStatus &&
+            !integrationStatus.xero.connected &&
+            !integrationStatus.quickbooks.connected &&
+            !integrationStatus.zoho.connected &&
+            (integrationStatus.xero.lastSyncAt ||
+              integrationStatus.quickbooks.lastSyncAt ||
+              integrationStatus.zoho.lastSyncAt) ? (
+              <p className='rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100'>
+                Not synced. Data is from{' '}
+                {formatDate(
+                  integrationStatus.xero.lastSyncAt ??
+                    integrationStatus.quickbooks.lastSyncAt ??
+                    integrationStatus.zoho.lastSyncAt ??
+                    ''
+                )}
+                . Totals below are from that sync.
+              </p>
+            ) : null}
+            {snapshot.concentrationNote ? (
+              <p className='rounded-xl border border-border/70 bg-muted/40 px-4 py-3 text-sm'>
+                {snapshot.concentrationNote}
+              </p>
+            ) : null}
+            {snapshot.needsContact.length > 0 ? (
+              <div className='space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100'>
+                <p className='font-medium'>Needs a contact</p>
+                <ul className='space-y-1'>
+                  {snapshot.needsContact.map((item) => (
+                    <li key={item.customerId}>
+                      {item.company} ·{' '}
+                      {formatCurrencyWhole(item.balanceCents, snapshot.kpis.currency)}
+                      {item.phone ? ` · ${item.phone}` : ' · no phone on file'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <MotionReveal>
-              <DashboardAttentionCards cards={narrative.attentionCards} onOpenThread={openThread} />
+              <DashboardAttentionCards
+                cards={narrative.attentionCards}
+                currency={snapshot.kpis.currency}
+                onOpenThread={openThread}
+                ledgerConnected={ledgerConnected || snapshot.hasArData}
+              />
             </MotionReveal>
             {snapshot.agingBars.length > 0 ? (
               <MotionReveal>
@@ -132,9 +179,11 @@ export function DashboardView({ userName }: DashboardViewProps) {
                 />
               </MotionReveal>
             ) : null}
-            <MotionReveal>
-              <DashboardKpiRow kpis={snapshot.kpis} />
-            </MotionReveal>
+            {ledgerConnected || snapshot.hasArData ? (
+              <MotionReveal>
+                <DashboardKpiRow kpis={snapshot.kpis} />
+              </MotionReveal>
+            ) : null}
             <MotionReveal>
               <DashboardActivity
                 ariHourLabel={snapshot.ariHourLabel}

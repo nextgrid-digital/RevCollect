@@ -1,19 +1,13 @@
 import { MOCK_TENANT_ID } from '@/features/revcollect/api/types';
 import { clearArDataMemo } from '@/lib/canonical/ar-data-memo';
-import { clearBooksAr } from '@/lib/canonical/clear-books-ar';
 import { withTimeout } from '@/lib/auth-timeout';
 import type { BooksProvider } from './books-provider';
 import { getGmailRefreshToken, deleteGmailConnection } from './gmail-connection-store';
 import { revokeGoogleToken } from './google-oauth';
 import { getXeroOAuthConfig, revokeXeroRefreshToken } from './xero-oauth';
-import {
-  deleteXeroConnection,
-  getXeroConnection,
-  getXeroRefreshToken
-} from './xero-connection-store';
+import { deleteXeroConnection, getXeroRefreshToken } from './xero-connection-store';
 import {
   deleteQuickBooksConnection,
-  getQuickBooksConnection,
   getQuickBooksRefreshToken
 } from './quickbooks-connection-store';
 import { getQuickBooksOAuthConfig, revokeQuickBooksRefreshToken } from './quickbooks-oauth';
@@ -44,23 +38,9 @@ async function deleteWorkspaceConnection(
   }
 }
 
-async function hasAnyBooksConnection(tenantId: string): Promise<boolean> {
-  const [xero, quickbooks, zoho] = await Promise.all([
-    getXeroConnection(tenantId),
-    getQuickBooksConnection(tenantId),
-    getZohoConnection(tenantId)
-  ]);
-  return Boolean(xero || quickbooks || zoho);
-}
-
-async function clearArIfNoBooks(tenantId: string): Promise<void> {
-  if (await hasAnyBooksConnection(tenantId)) return;
-  await clearBooksAr(tenantId);
+function forgetBooksCache(tenantId: string): void {
   clearArDataMemo(tenantId);
-  if (tenantId !== MOCK_TENANT_ID) {
-    await clearBooksAr(MOCK_TENANT_ID);
-    clearArDataMemo(MOCK_TENANT_ID);
-  }
+  if (tenantId !== MOCK_TENANT_ID) clearArDataMemo(MOCK_TENANT_ID);
 }
 
 export async function disconnectXero(tenantId: string): Promise<void> {
@@ -72,7 +52,7 @@ export async function disconnectXero(tenantId: string): Promise<void> {
     await settleRevoke(revokeXeroRefreshToken(config, refreshToken), '[xero/disconnect]');
   }
 
-  await clearArIfNoBooks(tenantId);
+  forgetBooksCache(tenantId);
 }
 
 export async function disconnectQuickBooks(tenantId: string): Promise<void> {
@@ -83,7 +63,7 @@ export async function disconnectQuickBooks(tenantId: string): Promise<void> {
     await settleRevoke(revokeQuickBooksRefreshToken(config, token), '[quickbooks/disconnect]');
   }
 
-  await clearArIfNoBooks(tenantId);
+  forgetBooksCache(tenantId);
 }
 
 export async function disconnectZoho(tenantId: string): Promise<void> {
@@ -98,7 +78,7 @@ export async function disconnectZoho(tenantId: string): Promise<void> {
     );
   }
 
-  await clearArIfNoBooks(tenantId);
+  forgetBooksCache(tenantId);
 }
 
 export async function disconnectOtherBooks(tenantId: string, keep: BooksProvider): Promise<void> {

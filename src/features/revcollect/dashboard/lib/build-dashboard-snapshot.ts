@@ -11,6 +11,9 @@ import type {
 } from '../../types';
 import { formatCurrencyWhole } from '../../utils';
 import { isOpenCanonicalInvoice } from '../../lib/invoice-open';
+import { dominantOpenCurrency } from '../../lib/invoice-currency';
+import { chaseBalanceCents, concentrationLine } from '../../lib/collection-thresholds';
+import { isDeliverableCustomerEmail } from '../../lib/customer-email';
 import {
   attentionClause,
   attentionSummary,
@@ -63,6 +66,8 @@ export interface DashboardKpis {
   cashLockedCents: number;
   overdueCents: number;
   collectedThisWeekCents: number;
+  currency: string;
+  mixedCurrency: boolean;
 }
 
 export interface DashboardOvernightPayments {
@@ -86,6 +91,13 @@ export interface DashboardPromiseRow {
   inboxMessageId: string | null;
 }
 
+export interface DashboardNeedsContact {
+  customerId: string;
+  company: string;
+  phone?: string;
+  balanceCents: number;
+}
+
 export interface DashboardSnapshot {
   overnightPayments: DashboardOvernightPayments | null;
   attentionCards: DashboardAttentionCard[];
@@ -97,6 +109,8 @@ export interface DashboardSnapshot {
   activity: DashboardActivityItem[];
   promises: DashboardPromiseRow[];
   hasArData: boolean;
+  concentrationNote: string | null;
+  needsContact: DashboardNeedsContact[];
   copyFacts: DashboardCopyFacts;
 }
 
@@ -148,13 +162,17 @@ function needsAttention(customer: Customer): boolean {
   );
 }
 
-function pickAttentionCustomers(customers: Customer[]): Customer[] {
-  const preferred = pickByCompany(customers, PREFERRED_ATTENTION_COMPANIES);
+function pickAttentionCustomers(customers: Customer[], invoices: Invoice[]): Customer[] {
+  const worthChasing = (customer: Customer) =>
+    needsAttention(customer) && chaseBalanceCents(customer.id, invoices) > 0;
+  const preferred = pickByCompany(customers, PREFERRED_ATTENTION_COMPANIES).filter(worthChasing);
   const seen = new Set(preferred.map((customer) => customer.id));
   const ranked = customers
-    .filter((customer) => needsAttention(customer) && !seen.has(customer.id))
-    .toSorted((left, right) => right.balanceCents - left.balanceCents);
-  return [...preferred, ...ranked].filter(needsAttention).slice(0, 3);
+    .filter((customer) => worthChasing(customer) && !seen.has(customer.id))
+    .toSorted(
+      (left, right) => chaseBalanceCents(right.id, invoices) - chaseBalanceCents(left.id, invoices)
+    );
+  return [...preferred, ...ranked].slice(0, 3);
 }
 
 function messageText(message: InboxMessage | undefined): string {
@@ -301,11 +319,12 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
     ariRun
   } = input;
 
-  const attention = pickAttentionCustomers(customers).map((customer) =>
+  const attention = pickAttentionCustomers(customers, invoices).map((customer) =>
     buildAttentionCard(customer, inboxMessages, invoices)
   );
   const attentionCards = attention.map((item) => item.card);
 
+  const booksCurrency = dominantOpenCurrency(invoices);
   const totalArCents =
     agingSummary?.totalArCents ?? agingBuckets.reduce((sum, bucket) => sum + bucket.totalCents, 0);
   const overdueCents = agingSummary?.overdueCents ?? 0;
@@ -394,20 +413,35 @@ export function buildDashboardSnapshot(input: BuildDashboardSnapshotInput): Dash
         inboxMessages,
         digestBullets,
         overnightPayments
-      )
+      ),
+      currency: agingSummary?.currency ?? booksCurrency.code,
+      mixedCurrency: agingSummary?.mixedCurrency ?? booksCurrency.mixed
     },
     ariBullets,
     ariHourLabel,
     activity,
     promises,
     hasArData: totalArCents > 0 || customers.length > 0,
+    concentrationNote: concentrationLine(customers),
+    needsContact: customers
+      .filter(
+        (customer) => customer.balanceCents > 0 && !isDeliverableCustomerEmail(customer.email)
+      )
+      .toSorted((left, right) => right.balanceCents - left.balanceCents)
+      .slice(0, 4)
+      .map((customer) => ({
+        customerId: customer.id,
+        company: customer.company,
+        phone: customer.phone,
+        balanceCents: customer.balanceCents
+      })),
     copyFacts: {
       attention: attention.map((item) => item.account),
       activity: activityAccounts,
       promises: promiseAccounts.map(({ account }) => account),
       openInvoiceCount: invoiceCount,
-      totalArLabel: formatCurrencyWhole(totalArCents),
-      overdueLabel: formatCurrencyWhole(overdueCents),
+      totalArLabel: formatCurrencyWhole(totalArCents, agingSummary?.currency ?? booksCurrency.code),
+      overdueLabel: formatCurrencyWhole(overdueCents, agingSummary?.currency ?? booksCurrency.code),
       draftCount,
       hourLabel: ariHourLabel,
       paymentsLanded: overnightPayments

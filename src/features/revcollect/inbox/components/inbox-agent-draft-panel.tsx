@@ -7,8 +7,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
-import { useRewriteAgentDraft, useSendInboxFollowUp } from '../../api/queries';
+import { COLLECTION_SEND_NOTE } from '../../compliance/can-spam';
+import {
+  useCustomers,
+  useInboxMessages,
+  useRewriteAgentDraft,
+  useSendInboxFollowUp
+} from '../../api/queries';
+import { confirmSameDayRecipientSend } from '../lib/same-day-recipient';
+import { isDeliverableCustomerEmail } from '../../lib/customer-email';
+import { policyFromCustomer } from '../../lib/relationship-policy';
 import type { AgentDraftMeta } from '../../types';
 import { InboxAttachedInvoiceChips } from './inbox-attached-invoice-chips';
 import { useOptionalInboxThreadAttachment } from './inbox-thread-attachment-context';
@@ -34,7 +42,12 @@ export function InboxAgentDraftPanel({
   const [aiPrompt, setAiPrompt] = useState('');
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const sendFollowUp = useSendInboxFollowUp();
+  const { data: customers = [] } = useCustomers();
+  const { data: inboxMessages = [] } = useInboxMessages();
   const rewriteDraft = useRewriteAgentDraft();
+  const sendKeyRef = useRef<string | null>(null);
+  const recordRetryRef = useRef(false);
+  const [outboundLocked, setOutboundLocked] = useState(false);
   const isSending = sendFollowUp.isPending;
   const isRewriting = rewriteDraft.isPending;
 
@@ -53,29 +66,65 @@ export function InboxAgentDraftPanel({
   }, [body, isSent]);
 
   const handleSend = useCallback(() => {
-    if (!body.trim() || isSent || isSending) return;
-    const kind = body.trim() === draftMeta.body.trim() ? 'reply' : 'draft_edit';
-    sendFollowUp.mutate(
-      {
+    if (!body.trim() || isSent || outboundLocked || isSending) return;
+    const customer = customers.find((item) => item.id === customerId);
+    const recipientEmail = customer
+      ? (policyFromCustomer(customer).preferredEmail ?? customer.email)
+      : '';
+    if (!isDeliverableCustomerEmail(recipientEmail)) {
+      toast.error('Add a deliverable email address before sending');
+      return;
+    }
+    if (
+      !confirmSameDayRecipientSend({
+        company: customer?.company ?? 'this account',
         customerId,
-        messageId,
-        originalBody: draftMeta.body,
-        sentBody: body,
-        kind,
-        attachedInvoiceIds: attachment?.attachedInvoiceIds
-      },
-      {
-        onSuccess: () => setIsSent(true)
+        recipientEmail,
+        customers,
+        inboxMessages
+      })
+    ) {
+      return;
+    }
+    const kind = body.trim() === draftMeta.body.trim() ? 'reply' : 'draft_edit';
+    const idempotencyKey = sendKeyRef.current ?? crypto.randomUUID();
+    sendKeyRef.current = idempotencyKey;
+    recordRetryRef.current = false;
+    const payload = {
+      customerId,
+      messageId,
+      originalBody: draftMeta.body,
+      sentBody: body,
+      kind,
+      attachedInvoiceIds: attachment?.attachedInvoiceIds,
+      idempotencyKey
+    } as const;
+    const onSuccess = (result: { recorded?: boolean }) => {
+      if (result.recorded === false) {
+        setIsSent(true);
+        setOutboundLocked(true);
+        if (!recordRetryRef.current) {
+          recordRetryRef.current = true;
+          sendFollowUp.mutate(payload, { onSuccess });
+        }
+        return;
       }
-    );
+      setIsSent(true);
+      setOutboundLocked(false);
+      sendKeyRef.current = null;
+    };
+    sendFollowUp.mutate(payload, { onSuccess });
   }, [
     attachment?.attachedInvoiceIds,
     body,
+    customers,
     customerId,
     draftMeta.body,
+    inboxMessages,
     isSending,
     isSent,
     messageId,
+    outboundLocked,
     sendFollowUp
   ]);
 
@@ -208,7 +257,7 @@ export function InboxAgentDraftPanel({
             type='button'
             size='sm'
             className='rounded-full'
-            disabled={isSent || isSending || !body.trim()}
+            disabled={isSent || outboundLocked || isSending || !body.trim()}
             isLoading={isSending}
             onClick={handleSend}
           >
@@ -217,8 +266,12 @@ export function InboxAgentDraftPanel({
           </Button>
         </div>
       </div>
-      {!isSent ? (
-        <p className='text-muted-foreground text-[11px] leading-relaxed'>{CAN_SPAM_SEND_NOTE}</p>
+      {outboundLocked ? (
+        <p className='text-[11px] leading-relaxed text-amber-800 dark:text-amber-300'>
+          This follow-up went out. It is not in the thread yet, so don&apos;t send it again.
+        </p>
+      ) : !isSent ? (
+        <p className='text-muted-foreground text-[11px] leading-relaxed'>{COLLECTION_SEND_NOTE}</p>
       ) : null}
     </article>
   );

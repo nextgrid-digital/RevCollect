@@ -1242,7 +1242,7 @@ export const agentConfig: AgentConfig = {
     healthyDays: [0, 7],
     watchDays: [8, 15],
     urgentDays: [16, 30],
-    criticalDaysMin: 30
+    criticalDaysMin: 31
   },
   customerOverrides: [
     {
@@ -1346,7 +1346,7 @@ export function getCustomerInboxContext(
   ).length;
 
   return {
-    avgDsoDays: Math.max(customer.daysOverdue, 0),
+    avgDsoDays: 0,
     lifetimeValueCents: customer.balanceCents * 4,
     followUpsSent: followUpsSent || 1,
     paymentTerms: 'Net-30',
@@ -1430,7 +1430,8 @@ export function getCustomerStatusSummary(): Record<CollectionStatus, number> {
       due_soon: 0,
       overdue: 0,
       in_dispute: 0,
-      promised: 0
+      promised: 0,
+      paid: 0
     }
   );
 }

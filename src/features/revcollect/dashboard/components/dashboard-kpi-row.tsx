@@ -10,8 +10,10 @@ export function DashboardKpiRow({ kpis }: DashboardKpiRowProps) {
   const items = [
     {
       label: 'Total AR',
-      value: formatCurrencyWhole(kpis.totalArCents),
-      hint: `${kpis.invoiceCount.toLocaleString('en-US')} invoice${kpis.invoiceCount === 1 ? '' : 's'}`
+      value: formatCurrencyWhole(kpis.totalArCents, kpis.currency),
+      hint: kpis.mixedCurrency
+        ? `${kpis.invoiceCount.toLocaleString('en-US')} invoices in ${kpis.currency}. Other currencies are not included.`
+        : `${kpis.invoiceCount.toLocaleString('en-US')} invoice${kpis.invoiceCount === 1 ? '' : 's'}`
     },
     {
       label: 'You collect',
@@ -20,12 +22,12 @@ export function DashboardKpiRow({ kpis }: DashboardKpiRowProps) {
     },
     {
       label: 'Cash locked in overdue AR',
-      value: formatCurrencyWhole(kpis.cashLockedCents),
-      hint: `Past due: ${formatCurrencyWhole(kpis.overdueCents)}`
+      value: formatCurrencyWhole(kpis.cashLockedCents, kpis.currency),
+      hint: `Past due: ${formatCurrencyWhole(kpis.overdueCents, kpis.currency)}`
     },
     {
       label: 'Collected this week',
-      value: formatCurrencyWhole(kpis.collectedThisWeekCents),
+      value: formatCurrencyWhole(kpis.collectedThisWeekCents, kpis.currency),
       hint: 'Cash in from open AR'
     }
   ];

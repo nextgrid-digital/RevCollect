@@ -40,6 +40,19 @@ import type {
 } from '../types';
 import type { CustomerStatusSummary } from './types';
 
+function requestError(op: string, status: number, text: string): Error & { status: number } {
+  const detail = (() => {
+    try {
+      return parseJsonBody<{ error?: string }>(text);
+    } catch {
+      return null;
+    }
+  })();
+  const error = new Error(detail?.error ?? `Request failed: ${op}`) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
 async function getJson<T>(op: string, params?: Record<string, string | undefined>): Promise<T> {
   const url = new URL('/api/revcollect', 'http://local.invalid');
   url.searchParams.set('op', op);
@@ -51,16 +64,7 @@ async function getJson<T>(op: string, params?: Record<string, string | undefined
 
   const response = await fetch(`${url.pathname}${url.search}`);
   const text = await response.text();
-  if (!response.ok) {
-    const detail = (() => {
-      try {
-        return parseJsonBody<{ error?: string }>(text);
-      } catch {
-        return null;
-      }
-    })();
-    throw new Error(detail?.error ?? `Request failed: ${op}`);
-  }
+  if (!response.ok) throw requestError(op, response.status, text);
   return parseJsonBody<T>(text);
 }
 
@@ -71,16 +75,7 @@ async function postJson<T>(op: string, payload?: unknown): Promise<T> {
     body: JSON.stringify({ op, payload })
   });
   const text = await response.text();
-  if (!response.ok) {
-    const detail = (() => {
-      try {
-        return parseJsonBody<{ error?: string }>(text);
-      } catch {
-        return null;
-      }
-    })();
-    throw new Error(detail?.error ?? `Request failed: ${op}`);
-  }
+  if (!response.ok) throw requestError(op, response.status, text);
   return parseJsonBody<T>(text);
 }
 
@@ -112,7 +107,7 @@ export class HttpXeroRevCollectService implements RevCollectService {
   }
 
   getCustomerById(id: string) {
-    return getJson<Customer | undefined>('getCustomerById', { id });
+    return getJson<Customer | null>('getCustomerById', { id });
   }
 
   getCustomerContext(customerId: string) {

@@ -9,6 +9,13 @@ export type InboxListFilter =
   | 'up_to_date'
   | 'escalated';
 
+function foldSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/'/g, '');
+}
+
 function matchesSearch(
   message: InboxMessage,
   customer: Customer | undefined,
@@ -16,16 +23,11 @@ function matchesSearch(
 ): boolean {
   if (!normalizedQuery) return true;
 
-  const haystack = [
-    message.subject,
-    message.preview,
-    customer?.company,
-    customer?.name,
-    customer?.email
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+  const haystack = foldSearchText(
+    [message.subject, message.preview, customer?.company, customer?.name, customer?.email]
+      .filter(Boolean)
+      .join(' ')
+  );
 
   return haystack.includes(normalizedQuery);
 }
@@ -36,7 +38,7 @@ export function filterInboxMessages(
   query: string,
   getCustomer: (customerId: string) => Customer | undefined
 ): InboxMessage[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = foldSearchText(query.trim());
 
   return messages.filter((message) => {
     const customer = getCustomer(message.customerId);
@@ -50,7 +52,7 @@ export function filterInboxMessages(
 
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'needs_attention' && threadNeedsAttention(actionStatus)) ||
+      (filter === 'needs_attention' && threadNeedsAttention(actionStatus, customer, message)) ||
       (filter === 'overdue' && customer.status === 'overdue') ||
       (filter === 'drafts' && message.agentDraftReady) ||
       (filter === 'up_to_date' && actionStatus === 'up_to_date') ||

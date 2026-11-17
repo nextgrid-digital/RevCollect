@@ -4,6 +4,7 @@ import { sanitizeInvoicePdfFilename } from '@/features/revcollect/lib/invoice-pd
 import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 import { getIntegrationTenantId } from '@/lib/integrations/tenant';
 import { fetchConnectedInvoicePdf } from '@/lib/integrations/books-invoice-pdf';
+import { InvoicePdfUnavailableError } from '@/lib/integrations/quickbooks-api';
 import { XeroNotConnectedError } from '@/lib/integrations/xero-api';
 import { ZohoNotConnectedError } from '@/lib/integrations/zoho-api';
 
@@ -43,6 +44,9 @@ export async function GET(
       }
     });
   } catch (error) {
+    if (error instanceof InvoicePdfUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     if (error instanceof XeroNotConnectedError || error instanceof ZohoNotConnectedError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
     }

@@ -139,6 +139,7 @@ export function overlayInboxWithSentEmails(
   if (sentEmails.length === 0) return messages;
 
   const latestByCustomer = new Map<string, ThreadEmail>();
+  const outboundCustomers = new Set<string>();
   for (const email of sentEmails) {
     const customerId =
       email.customerId ??
@@ -146,6 +147,7 @@ export function overlayInboxWithSentEmails(
         ? email.threadId.slice('xero-customer-'.length)
         : undefined);
     if (!customerId) continue;
+    if (email.author === 'agent') outboundCustomers.add(customerId);
     const current = latestByCustomer.get(customerId);
     if (!current || email.sentAt > current.sentAt) {
       latestByCustomer.set(customerId, email);
@@ -155,11 +157,13 @@ export function overlayInboxWithSentEmails(
   return messages.map((message) => {
     const last = latestByCustomer.get(message.customerId);
     if (!last) return message;
+    const outboundSent = outboundCustomers.has(message.customerId);
     return {
       ...message,
       preview: previewFromBody(last.body),
       receivedAt: last.sentAt,
-      unread: last.author === 'customer'
+      unread: last.author === 'customer' && outboundSent,
+      outboundSent
     };
   });
 }
@@ -188,6 +192,37 @@ export async function persistRehomedSentEmails(tenantId: string): Promise<boolea
   return true;
 }
 
+const pendingSends = new Map<string, ThreadEmail>();
+
+function pendingSendKey(tenantId: string, idempotencyKey: string): string {
+  return `${tenantId}:${idempotencyKey}`;
+}
+
+export function rememberPendingSend(
+  tenantId: string,
+  idempotencyKey: string,
+  email: ThreadEmail
+): void {
+  pendingSends.set(pendingSendKey(tenantId, idempotencyKey), email);
+}
+
+export function readPendingSend(tenantId: string, idempotencyKey: string): ThreadEmail | undefined {
+  return pendingSends.get(pendingSendKey(tenantId, idempotencyKey));
+}
+
+export function clearPendingSend(tenantId: string, idempotencyKey: string): void {
+  pendingSends.delete(pendingSendKey(tenantId, idempotencyKey));
+}
+
+export function findStoredSend(
+  emails: ThreadEmail[],
+  idempotencyKey: string
+): ThreadEmail | undefined {
+  return emails.find(
+    (item) => item.idempotencyKey === idempotencyKey || item.id === idempotencyKey
+  );
+}
+
 export async function persistSentFollowUp(input: {
   tenantId: string;
   customerId: string;
@@ -195,6 +230,12 @@ export async function persistSentFollowUp(input: {
 }): Promise<CanonicalSnapshot> {
   const store = await getCanonicalStore();
   const snapshot = await store.read(input.tenantId);
+  const alreadyStored = (snapshot.sentEmails ?? []).find(
+    (item) =>
+      item.id === input.email.id ||
+      (input.email.idempotencyKey && item.idempotencyKey === input.email.idempotencyKey)
+  );
+  if (alreadyStored) return snapshot;
   const sentEmails = rehomeSentEmails(
     [...(snapshot.sentEmails ?? []), input.email],
     snapshot.customers as Customer[]
@@ -205,6 +246,6 @@ export async function persistSentFollowUp(input: {
     (message) =>
       message.customerId === input.customerId ? { ...message, agentDraftReady: false } : message
   );
-  await store.write(input.tenantId, snapshot);
+  await store.write(input.tenantId, snapshot, { strictSentEmails: true });
   return snapshot;
 }

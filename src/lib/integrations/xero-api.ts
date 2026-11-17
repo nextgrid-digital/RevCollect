@@ -1,7 +1,7 @@
 import { parseJsonBody } from '@/lib/json/parse-json-body';
 import { getIntegrationTenantId } from './tenant';
 import {
-  deleteXeroConnection,
+  markXeroConnectionExpired,
   getXeroConnection,
   getXeroRefreshToken,
   updateXeroRefreshToken
@@ -65,6 +65,7 @@ export interface XeroInvoice {
   AmountDue?: number;
   AmountPaid?: number;
   Total?: number;
+  CurrencyCode?: string;
   Contact?: XeroInvoiceContact;
   SentToContact?: boolean;
   HasErrors?: boolean;
@@ -86,6 +87,11 @@ export interface XeroPayment {
   Invoice?: XeroPaymentInvoice;
 }
 
+export interface XeroCreditNoteAllocation {
+  Amount?: number;
+  Invoice?: { InvoiceID?: string };
+}
+
 export interface XeroCreditNote {
   CreditNoteID?: string;
   CreditNoteNumber?: string;
@@ -96,6 +102,7 @@ export interface XeroCreditNote {
   RemainingCredit?: number;
   Total?: number;
   Contact?: XeroInvoiceContact;
+  Allocations?: XeroCreditNoteAllocation[];
 }
 
 export interface XeroBankTransaction {
@@ -171,6 +178,9 @@ async function refreshXeroAccessContext(appTenantId: string): Promise<XeroAccess
   if (!connection) {
     throw new XeroNotConnectedError();
   }
+  if (connection.tokenStatus === 'expired') {
+    throw new XeroNotConnectedError('Xero session expired. Reconnect Xero.', 'xero_expired');
+  }
 
   let refreshToken: string | null = null;
   try {
@@ -196,7 +206,7 @@ async function refreshXeroAccessContext(appTenantId: string): Promise<XeroAccess
     };
   } catch (error) {
     if (isXeroInvalidGrantError(error)) {
-      await deleteXeroConnection(appTenantId);
+      await markXeroConnectionExpired(appTenantId);
       clearXeroArCache();
       throw new XeroNotConnectedError('Xero session expired. Reconnect Xero.', 'xero_expired');
     }

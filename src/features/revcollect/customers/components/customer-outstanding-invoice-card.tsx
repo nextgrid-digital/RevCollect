@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate, getDaysOverdueFromDueDate } from '../../utils';
 import { invoiceAmountDueCents } from '../../lib/invoice-open';
+import { isSmallOpenBalance } from '../../lib/collection-thresholds';
 import type { Invoice } from '../../types';
 
 interface CustomerOutstandingInvoiceCardProps {
@@ -33,7 +34,9 @@ export function CustomerOutstandingInvoiceCard({
   followUpHref
 }: CustomerOutstandingInvoiceCardProps) {
   const daysOverdue = getDaysOverdueFromDueDate(invoice.dueDate);
+  const amountDue = invoiceAmountDueCents(invoice);
   const showOverdue = daysOverdue > 0;
+  const smallBalance = isSmallOpenBalance(amountDue);
 
   return (
     <div className='bg-card flex flex-col gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 ring-border/60 sm:flex-row sm:items-center sm:justify-between'>
@@ -50,6 +53,7 @@ export function CustomerOutstandingInvoiceCard({
           <p className='text-muted-foreground text-xs'>
             Due: {formatDate(invoice.dueDate)}
             {showOverdue ? ` · ${daysOverdue} days overdue` : null}
+            {smallBalance ? ' · Small balance' : null}
           </p>
         </div>
       </div>
@@ -60,7 +64,7 @@ export function CustomerOutstandingInvoiceCard({
             showOverdue ? 'text-red-700 dark:text-red-400' : undefined
           )}
         >
-          {formatCurrency(invoiceAmountDueCents(invoice))}
+          {formatCurrency(amountDue)}
         </span>
         <Button asChild variant='outline' size='sm' className='h-8 text-xs'>
           <Link href={followUpHref}>Follow up</Link>

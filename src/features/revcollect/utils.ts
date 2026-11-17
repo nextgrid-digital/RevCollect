@@ -1,21 +1,35 @@
-export function formatCurrency(cents: number): string {
+export function formatCurrency(cents: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD'
+    currency
   }).format(cents / 100);
 }
 
 /** Whole-dollar currency for tight metric cells (e.g. $41,200). */
-export function formatCurrencyWhole(cents: number): string {
+export function formatCurrencyWhole(cents: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     maximumFractionDigits: 0
   }).format(cents / 100);
 }
 
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.\d+)?Z)?$/;
+
+function calendarDateParts(iso: string): { year: number; month: number; day: number } | null {
+  const match = CALENDAR_DATE.exec(iso.trim());
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+}
+
+function dateFromIso(iso: string): Date {
+  const parts = calendarDateParts(iso);
+  if (parts) return new Date(parts.year, parts.month - 1, parts.day);
+  return new Date(iso);
+}
+
 export function getDaysOverdueFromDueDate(dueDate: string, asOf: Date = new Date()): number {
-  const due = new Date(dueDate);
+  const due = dateFromIso(dueDate);
   const startOfAsOf = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
   const startOfDue = new Date(due.getFullYear(), due.getMonth(), due.getDate());
   const diffMs = startOfAsOf.getTime() - startOfDue.getTime();
@@ -29,15 +43,17 @@ export function calendarDaysBetween(fromDate: string, toDate: string): number {
   return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function formatCompactCurrency(cents: number): string {
+export function formatCompactCurrency(cents: number, currency = 'USD'): string {
   const dollars = cents / 100;
-  if (dollars >= 1_000_000) {
-    return `$${(dollars / 1_000_000).toFixed(dollars % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (currency === 'USD') {
+    if (dollars >= 1_000_000) {
+      return `$${(dollars / 1_000_000).toFixed(dollars % 1_000_000 === 0 ? 0 : 1)}M`;
+    }
+    if (dollars >= 1_000) {
+      return `$${Math.round(dollars / 1_000)}K`;
+    }
   }
-  if (dollars >= 1_000) {
-    return `$${Math.round(dollars / 1_000)}K`;
-  }
-  return formatCurrency(cents);
+  return formatCurrency(cents, currency);
 }
 
 export function formatDate(iso: string): string {
@@ -45,12 +61,13 @@ export function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
-  }).format(new Date(iso));
+  }).format(dateFromIso(iso));
 }
 
 /** Stable en-US datetime for tooltips — avoids SSR/client locale hydration mismatches. */
 export function formatDateTimeTitle(iso: string | Date): string {
-  const date = typeof iso === 'string' ? new Date(iso) : iso;
+  if (typeof iso === 'string' && calendarDateParts(iso)) return formatDate(iso);
+  const date = typeof iso === 'string' ? dateFromIso(iso) : iso;
   return new Intl.DateTimeFormat('en-US', {
     month: 'numeric',
     day: 'numeric',
@@ -63,7 +80,8 @@ export function formatDateTimeTitle(iso: string | Date): string {
 
 /** Compact activity time for inbox rail — stable en-US to avoid hydration mismatches. */
 export function formatInboxActivityTime(iso: string): string {
-  const date = new Date(iso);
+  if (calendarDateParts(iso)) return formatDate(iso);
+  const date = dateFromIso(iso);
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfEvent = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -83,7 +101,8 @@ export function formatInboxActivityTime(iso: string): string {
 }
 
 export function formatInboxListTimestamp(iso: string): string {
-  const date = new Date(iso);
+  if (calendarDateParts(iso)) return formatDate(iso);
+  const date = dateFromIso(iso);
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfEvent = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -99,7 +118,7 @@ export function formatInboxListTimestamp(iso: string): string {
 }
 
 export function formatRelativeDate(iso: string): string {
-  const date = new Date(iso);
+  const date = dateFromIso(iso);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

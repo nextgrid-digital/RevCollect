@@ -11,18 +11,20 @@ import type {
   Invoice
 } from '../../types';
 import { invoiceAmountDueCents, isOpenCanonicalInvoice } from '../../lib/invoice-open';
+import { dominantOpenCurrency, invoiceCurrencyCode } from '../../lib/invoice-currency';
+import { agingBucketFromDays } from '../../lib/live-aging';
 import { relationshipBadgeLabel } from '../../lib/relationship-policy';
 
 export const AGING_REPORT_AS_OF_DATE = new Date().toISOString().slice(0, 10);
 
-const CHART_BUCKET_ORDER: AgingReportBucket[] = ['current', '1-15', '16-30', '31-60', '60+'];
+const CHART_BUCKET_ORDER: AgingReportBucket[] = ['current', '1-30', '31-60', '61-90', '90+'];
 
 const CHART_BUCKET_LABELS: Record<AgingReportBucket, string> = {
   current: 'Current',
-  '1-15': '1–15 days',
-  '16-30': '16–30 days',
+  '1-30': '1–30 days',
   '31-60': '31–60 days',
-  '60+': '60+ days'
+  '61-90': '61–90 days',
+  '90+': '90+ days'
 };
 
 export function daysPastDue(dueDate: string, asOfDate: string = AGING_REPORT_AS_OF_DATE): number {
@@ -33,11 +35,7 @@ export function daysPastDue(dueDate: string, asOfDate: string = AGING_REPORT_AS_
 }
 
 export function toReportChartBucket(daysPastDueValue: number): AgingReportBucket {
-  if (daysPastDueValue <= 0) return 'current';
-  if (daysPastDueValue <= 15) return '1-15';
-  if (daysPastDueValue <= 30) return '16-30';
-  if (daysPastDueValue <= 60) return '31-60';
-  return '60+';
+  return agingBucketFromDays(daysPastDueValue);
 }
 
 export function toTableBucketColumns(
@@ -47,21 +45,18 @@ export function toTableBucketColumns(
   currentCents: number;
   days1to30Cents: number;
   days31to60Cents: number;
-  days60PlusCents: number;
+  days61to90Cents: number;
+  days90PlusCents: number;
 } {
   const amount = invoiceAmountDueCents(invoice);
-  const days = daysPastDue(invoice.dueDate, asOfDate);
-
-  if (days <= 0) {
-    return { currentCents: amount, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: 0 };
-  }
-  if (days <= 30) {
-    return { currentCents: 0, days1to30Cents: amount, days31to60Cents: 0, days60PlusCents: 0 };
-  }
-  if (days <= 60) {
-    return { currentCents: 0, days1to30Cents: 0, days31to60Cents: amount, days60PlusCents: 0 };
-  }
-  return { currentCents: 0, days1to30Cents: 0, days31to60Cents: 0, days60PlusCents: amount };
+  const bucket = toReportChartBucket(daysPastDue(invoice.dueDate, asOfDate));
+  return {
+    currentCents: bucket === 'current' ? amount : 0,
+    days1to30Cents: bucket === '1-30' ? amount : 0,
+    days31to60Cents: bucket === '31-60' ? amount : 0,
+    days61to90Cents: bucket === '61-90' ? amount : 0,
+    days90PlusCents: bucket === '90+' ? amount : 0
+  };
 }
 
 function isInPeriod(dueDate: string, period: AgingReportPeriod, asOfDate: string): boolean {
@@ -100,7 +95,9 @@ export function buildAgingChartBuckets(
     totals.set(bucket, { invoiceCount: 0, totalCents: 0 });
   }
 
+  const { code } = dominantOpenCurrency(invoices);
   for (const invoice of invoices) {
+    if (invoiceCurrencyCode(invoice) !== code) continue;
     const bucket = toReportChartBucket(daysPastDue(invoice.dueDate, asOfDate));
     const entry = totals.get(bucket)!;
     entry.invoiceCount += 1;
@@ -121,7 +118,12 @@ export function buildAgingChartBuckets(
 export function deriveCustomerRisk(
   _row: Pick<
     AgingCustomerBreakdownRow,
-    'currentCents' | 'days1to30Cents' | 'days31to60Cents' | 'days60PlusCents' | 'totalCents'
+    | 'currentCents'
+    | 'days1to30Cents'
+    | 'days31to60Cents'
+    | 'days61to90Cents'
+    | 'days90PlusCents'
+    | 'totalCents'
   >,
   customer: Customer
 ): AgingRiskLevel {
@@ -159,6 +161,8 @@ export function buildAgingCustomerRows(
   asOfDate: string = AGING_REPORT_AS_OF_DATE
 ): AgingCustomerBreakdownRow[] {
   const filtered = filterInvoicesForReport(invoices, filters, asOfDate);
+  const { code } = dominantOpenCurrency(filtered);
+  const counted = filtered.filter((invoice) => invoiceCurrencyCode(invoice) === code);
   const customerById = new Map(customers.map((customer) => [customer.id, customer]));
 
   const grouped = new Map<
@@ -166,7 +170,7 @@ export function buildAgingCustomerRows(
     Omit<AgingCustomerBreakdownRow, 'risk' | 'company'> & { company?: string }
   >();
 
-  for (const invoice of filtered) {
+  for (const invoice of counted) {
     const customer = customerById.get(invoice.customerId);
     if (!customer) continue;
 
@@ -178,7 +182,8 @@ export function buildAgingCustomerRows(
       currentCents: 0,
       days1to30Cents: 0,
       days31to60Cents: 0,
-      days60PlusCents: 0,
+      days61to90Cents: 0,
+      days90PlusCents: 0,
       totalCents: 0
     };
 
@@ -186,7 +191,8 @@ export function buildAgingCustomerRows(
     existing.currentCents += columns.currentCents;
     existing.days1to30Cents += columns.days1to30Cents;
     existing.days31to60Cents += columns.days31to60Cents;
-    existing.days60PlusCents += columns.days60PlusCents;
+    existing.days61to90Cents += columns.days61to90Cents;
+    existing.days90PlusCents += columns.days90PlusCents;
     existing.totalCents += invoiceAmountDueCents(invoice);
 
     grouped.set(invoice.customerId, existing);
@@ -201,7 +207,8 @@ export function buildAgingCustomerRows(
       currentCents: row.currentCents,
       days1to30Cents: row.days1to30Cents,
       days31to60Cents: row.days31to60Cents,
-      days60PlusCents: row.days60PlusCents,
+      days61to90Cents: row.days61to90Cents,
+      days90PlusCents: row.days90PlusCents,
       totalCents: row.totalCents
     };
     return {
@@ -220,12 +227,14 @@ export function buildAgingReportSummary(
   asOfDate: string = AGING_REPORT_AS_OF_DATE
 ): AgingReportSummary {
   const filtered = filterInvoicesForReport(invoices, filters, asOfDate);
+  const { code, mixed } = dominantOpenCurrency(filtered);
+  const counted = filtered.filter((invoice) => invoiceCurrencyCode(invoice) === code);
 
   let totalArCents = 0;
   let currentCents = 0;
   let weightedDsoSum = 0;
 
-  for (const invoice of filtered) {
+  for (const invoice of counted) {
     totalArCents += invoiceAmountDueCents(invoice);
     const pastDue = daysPastDue(invoice.dueDate, asOfDate);
     if (pastDue <= 0) {
@@ -245,6 +254,8 @@ export function buildAgingReportSummary(
     totalArDeltaPct: 0,
     currentDeltaPct: 0,
     overdueDeltaPct: 0,
-    dsoDeltaDays: 0
+    dsoDeltaDays: 0,
+    currency: code,
+    mixedCurrency: mixed
   };
 }

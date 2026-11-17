@@ -59,7 +59,7 @@ export const fileCanonicalStore: CanonicalStore = {
   read(tenantId) {
     return readSnapshot(tenantId);
   },
-  async write(tenantId, snapshot) {
+  async write(tenantId, snapshot, _options) {
     await writeSnapshot(tenantId, snapshot);
   },
   async replaceAr(tenantId, payload) {

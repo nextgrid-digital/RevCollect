@@ -78,7 +78,7 @@ function getInboxThreadStatusDisplay(
       };
     case 'needs_follow_up':
       return {
-        label: customer.daysOverdue > 0 ? 'Needs follow-up' : 'Not contacted',
+        label: message.outboundSent ? 'Needs follow-up' : 'Not contacted',
         variant: 'attention',
         icon: Icons.inbox
       };

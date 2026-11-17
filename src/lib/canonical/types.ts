@@ -111,9 +111,22 @@ export interface CanonicalSnapshot {
   ingestedAt: string | null;
 }
 
+export interface CanonicalWriteOptions {
+  /** Soft-delete rows missing from an empty customers list. Disconnect must not set this. */
+  purgeEmpty?: boolean;
+  /** Throw if the sent-email JSON on the tenant row does not persist. */
+  strictSentEmails?: boolean;
+  /** Throw if workspace settings do not persist. */
+  strictWorkspaceSettings?: boolean;
+}
+
 export interface CanonicalStore {
   read(tenantId: string): Promise<CanonicalSnapshot>;
-  write(tenantId: string, snapshot: CanonicalSnapshot): Promise<void>;
+  write(
+    tenantId: string,
+    snapshot: CanonicalSnapshot,
+    options?: CanonicalWriteOptions
+  ): Promise<void>;
   replaceAr(
     tenantId: string,
     payload: {

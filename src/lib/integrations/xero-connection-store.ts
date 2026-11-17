@@ -15,6 +15,7 @@ export interface XeroConnectionRecord {
   organisationName: string;
   refreshToken: EncryptedPayload;
   connectedAt: string;
+  tokenStatus?: 'expired';
 }
 
 const LEGACY_STORE_PATH = path.join(
@@ -114,6 +115,15 @@ export async function findTenantKeyByXeroTenantIds(
     }
   }
   return null;
+}
+
+export async function markXeroConnectionExpired(appTenantId: string): Promise<void> {
+  const connection = await getXeroConnection(appTenantId);
+  if (!connection) return;
+  await writeIntegrationSecret('xero', appTenantId, {
+    ...connection,
+    tokenStatus: 'expired'
+  });
 }
 
 export async function deleteXeroConnection(appTenantId: string): Promise<void> {

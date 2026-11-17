@@ -51,8 +51,9 @@ export function AgingView() {
   const asOfLabel = formatAsOfDate(AGING_REPORT_AS_OF_DATE);
   const hasPriorityFollowUps = useMemo(
     () =>
-      data?.customerBreakdown.some((row) => row.risk === 'high' || row.days60PlusCents > 0) ??
-      false,
+      data?.customerBreakdown.some(
+        (row) => row.risk === 'high' || row.days61to90Cents > 0 || row.days90PlusCents > 0
+      ) ?? false,
     [data?.customerBreakdown]
   );
 

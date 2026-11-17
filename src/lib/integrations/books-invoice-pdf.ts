@@ -1,5 +1,6 @@
 import { getConnectedBooksProvider } from '@/lib/canonical/ingest-accounting';
 import { getCanonicalStore } from '@/lib/canonical/store';
+import { fetchQuickBooksInvoicePdf } from '@/lib/integrations/quickbooks-api';
 import { fetchXeroInvoicePdf, getXeroAccessContext } from '@/lib/integrations/xero-api';
 import { fetchZohoInvoicePdf } from '@/lib/integrations/zoho-api';
 
@@ -21,6 +22,10 @@ export async function fetchConnectedInvoicePdf(
   if (provider === 'xero') {
     const context = await getXeroAccessContext(tenantId);
     return fetchXeroInvoicePdf(context, invoiceId);
+  }
+  if (provider === 'quickbooks') {
+    const ledgerId = await resolveLedgerInvoiceId(tenantId, invoiceId);
+    return fetchQuickBooksInvoicePdf(tenantId, ledgerId);
   }
   throw new Error('Invoice PDFs are not available for this ledger yet.');
 }

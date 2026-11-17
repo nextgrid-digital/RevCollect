@@ -12,10 +12,10 @@ interface AgingBucketBarChartProps {
 
 const bucketBarStyles: Record<AgingReportBucket, string> = {
   current: 'bg-emerald-500',
-  '1-15': 'bg-amber-400',
-  '16-30': 'bg-amber-500',
+  '1-30': 'bg-amber-400',
   '31-60': 'bg-orange-500',
-  '60+': 'bg-red-600'
+  '61-90': 'bg-orange-700',
+  '90+': 'bg-red-600'
 };
 
 export function AgingBucketBarChart({ buckets }: AgingBucketBarChartProps) {

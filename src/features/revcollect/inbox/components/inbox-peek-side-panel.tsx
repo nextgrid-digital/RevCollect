@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
+import { getInboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 import { InboxPeekHeaderBar } from './inbox-peek-header-bar';
 import { InboxThreadDetail } from './inbox-thread-detail';
 
@@ -44,6 +45,7 @@ export function InboxPeekSidePanel({ messageId, onClose }: InboxPeekSidePanelPro
                 subject={selection.message.subject}
                 agentDraftMeta={selection.agentDraftMeta}
                 unread={selection.message.unread}
+                actionStatus={getInboxThreadActionStatus(selection.message, selection.customer)}
                 trailing={
                   <Button
                     type='button'

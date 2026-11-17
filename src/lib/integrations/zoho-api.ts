@@ -1,6 +1,6 @@
 import { getIntegrationTenantId } from './tenant';
 import {
-  deleteZohoConnection,
+  markZohoConnectionExpired,
   getZohoConnection,
   getZohoRefreshToken,
   updateZohoRefreshToken
@@ -89,6 +89,9 @@ async function getAccess(appTenantId: string): Promise<ZohoAccess> {
     if (!config) throw new Error('Zoho OAuth is not configured');
     const connection = await getZohoConnection(appTenantId);
     if (!connection) throw new ZohoNotConnectedError();
+    if (connection.tokenStatus === 'expired') {
+      throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
+    }
     let refreshToken: string | null = null;
     try {
       refreshToken = await getZohoRefreshToken(appTenantId);
@@ -100,9 +103,7 @@ async function getAccess(appTenantId: string): Promise<ZohoAccess> {
     }
     try {
       const accountsUrl =
-        connection.accountsUrl ??
-        accountsUrlFromApiBase(connection.apiBase) ??
-        config.accountsUrl;
+        connection.accountsUrl ?? accountsUrlFromApiBase(connection.apiBase) ?? config.accountsUrl;
       const tokens = await refreshZohoAccessToken(config, refreshToken, accountsUrl);
       if (tokens.refreshToken !== refreshToken) {
         await updateZohoRefreshToken(appTenantId, tokens.refreshToken);
@@ -120,7 +121,7 @@ async function getAccess(appTenantId: string): Promise<ZohoAccess> {
     } catch (error) {
       if (isZohoInvalidGrantError(error)) {
         accessCache.delete(appTenantId);
-        await deleteZohoConnection(appTenantId);
+        await markZohoConnectionExpired(appTenantId);
         throw new ZohoNotConnectedError('Zoho session expired. Reconnect.', 'zoho_expired');
       }
       if (isZohoRateLimitError(error)) {

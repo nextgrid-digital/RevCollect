@@ -9,7 +9,7 @@ import {
   BOOKS_RESYNC_MUTATION_KEY,
   integrationStatusQueryOptions
 } from '@/features/revcollect/api/queries';
-import { formatLastSyncLabel, syncFreshness } from '@/features/revcollect/utils';
+import { formatDate, formatLastSyncLabel, syncFreshness } from '@/features/revcollect/utils';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
 import type { IntegrationStatus } from '@/features/revcollect/types';
 
@@ -51,13 +51,16 @@ export function WorkspaceConnectionStatus() {
   if (!isHydrated || !integrationStatus) return null;
 
   const syncing = booksConnected && !lastSyncAt && resyncing;
-  const lastSyncLabel = lastSyncAt
-    ? `Synced ${formatLastSyncLabel(lastSyncAt, now)}`
-    : syncing
-      ? 'Syncing…'
-      : booksConnected
-        ? 'Waiting for sync'
-        : 'Never synced';
+  const staleLedger = !booksConnected && Boolean(lastSyncAt);
+  const lastSyncLabel = staleLedger
+    ? `Not synced. Data is from ${formatDate(lastSyncAt!)}.`
+    : lastSyncAt
+      ? `Synced ${formatLastSyncLabel(lastSyncAt, now)}`
+      : syncing
+        ? 'Syncing…'
+        : booksConnected
+          ? 'Waiting for sync'
+          : 'Never synced';
 
   return (
     <Link
@@ -65,25 +68,30 @@ export function WorkspaceConnectionStatus() {
       aria-label='Connection and sync status'
       className='flex shrink-0 items-center rounded-md focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none'
       title={
-        lastSyncAt
-          ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
-          : syncing
-            ? 'Syncing accounting data'
-            : booksConnected
-              ? 'Ledger connected but no AR data yet — open Settings to resync'
-              : 'Accounting has not synced yet'
+        staleLedger
+          ? `Not synced. Data is from ${formatDate(lastSyncAt!)}.`
+          : lastSyncAt
+            ? `Last synced ${new Date(lastSyncAt).toLocaleString('en-US')}`
+            : syncing
+              ? 'Syncing accounting data'
+              : booksConnected
+                ? 'Ledger connected but no AR data yet — open Settings to resync'
+                : 'Accounting has not synced yet'
       }
     >
       <span
         className={cn(
-          'inline-flex max-w-[11rem] items-center gap-1 truncate rounded-full px-2 py-1 text-xs font-medium',
-          lastSyncAt
-            ? syncFreshness(lastSyncAt, now) === 'fresh'
-              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-              : syncFreshness(lastSyncAt, now) === 'stale'
-                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-400'
-                : 'bg-red-500/10 text-red-700 dark:text-red-400'
-            : 'bg-muted text-muted-foreground'
+          'inline-flex items-center gap-1 truncate rounded-full px-2 py-1 text-xs font-medium',
+          staleLedger ? 'max-w-[22rem]' : 'max-w-[11rem]',
+          staleLedger
+            ? 'bg-amber-500/10 text-amber-800 dark:text-amber-400'
+            : lastSyncAt
+              ? syncFreshness(lastSyncAt, now) === 'fresh'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                : syncFreshness(lastSyncAt, now) === 'stale'
+                  ? 'bg-amber-500/10 text-amber-800 dark:text-amber-400'
+                  : 'bg-red-500/10 text-red-700 dark:text-red-400'
+              : 'bg-muted text-muted-foreground'
         )}
       >
         {syncing ? (

@@ -1,5 +1,5 @@
 import { deriveCustomerStatus, isCollectionOverrideStatus } from './collection-decision';
-import { invoiceAmountDueCents, isOpenCanonicalInvoice } from './invoice-open';
+import { invoiceAmountDueCents, isCreditNoteInvoice, isOpenCanonicalInvoice } from './invoice-open';
 import type { AgingBucket, Customer, Invoice } from '../types';
 import { getDaysOverdueFromDueDate } from '../utils';
 
@@ -19,8 +19,13 @@ export function withLiveInvoiceAging(invoice: Invoice, asOf: Date = new Date()):
       ? getDaysOverdueFromDueDate(invoice.dueDate, asOf)
       : 0;
   const agingBucket = agingBucketFromDays(daysOverdue);
-  if (invoice.agingBucket === agingBucket) return invoice;
-  return { ...invoice, agingBucket };
+  const status = isCreditNoteInvoice(invoice)
+    ? invoice.status
+    : amountDue <= 0 && ((invoice.paidCents ?? 0) > 0 || invoice.xeroStatus === 'PAID')
+      ? 'paid'
+      : invoice.status;
+  if (invoice.agingBucket === agingBucket && invoice.status === status) return invoice;
+  return { ...invoice, agingBucket, status };
 }
 
 /** Max open-invoice days overdue for a customer as of today. */

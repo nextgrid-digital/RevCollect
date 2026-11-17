@@ -20,6 +20,35 @@ import type { RelationshipPolicyInput } from '@/features/revcollect/lib/relation
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+const BURST_WINDOW_MS = 10_000;
+const BURST_MAX_REQUESTS = 60;
+const burstBuckets = new Map<string, { count: number; resetAt: number }>();
+
+async function burstLimitResponse(): Promise<NextResponse | null> {
+  const userId = await getAuthUserId();
+  if (!userId) return null;
+
+  const now = Date.now();
+  const bucket = burstBuckets.get(userId);
+  if (!bucket || now >= bucket.resetAt) {
+    if (burstBuckets.size > 2000) {
+      for (const [key, entry] of burstBuckets) {
+        if (now >= entry.resetAt) burstBuckets.delete(key);
+      }
+    }
+    burstBuckets.set(userId, { count: 1, resetAt: now + BURST_WINDOW_MS });
+    return null;
+  }
+
+  bucket.count += 1;
+  if (bucket.count <= BURST_MAX_REQUESTS) return null;
+
+  return NextResponse.json(
+    { error: 'Too many requests' },
+    { status: 429, headers: { 'Retry-After': '10' } }
+  );
+}
+
 function parseAgingFilters(request: NextRequest): AgingReportFilters {
   const period = (request.nextUrl.searchParams.get('period') ?? 'all_time') as AgingReportPeriod;
   const sort = (request.nextUrl.searchParams.get('sort') ?? 'amount_desc') as AgingReportSort;
@@ -36,6 +65,9 @@ export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get('refresh') === '1') {
     clearXeroArCache();
   }
+
+  const limited = await burstLimitResponse();
+  if (limited) return limited;
 
   const service = getXeroRevCollectService();
 
@@ -128,6 +160,9 @@ export async function POST(request: NextRequest) {
   if (!op) {
     return NextResponse.json({ error: 'Missing op' }, { status: 400 });
   }
+
+  const limited = await burstLimitResponse();
+  if (limited) return limited;
 
   const service = getXeroRevCollectService();
 
@@ -279,6 +314,7 @@ export async function POST(request: NextRequest) {
           kind?: 'reply' | 'draft_edit';
           messageId?: string;
           attachedInvoiceIds?: string[];
+          idempotencyKey?: string;
         };
         if (!payload?.customerId || !payload.sentBody) {
           return NextResponse.json({ error: 'customerId and sentBody required' }, { status: 400 });
@@ -291,7 +327,8 @@ export async function POST(request: NextRequest) {
           originalBody: payload.originalBody,
           kind,
           messageId: payload.messageId,
-          attachedInvoiceIds: payload.attachedInvoiceIds
+          attachedInvoiceIds: payload.attachedInvoiceIds,
+          idempotencyKey: payload.idempotencyKey
         });
         try {
           if (payload.originalBody) {

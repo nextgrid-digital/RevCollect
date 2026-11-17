@@ -39,7 +39,7 @@ export const BOOKS_LEDGER_OPTIONS: Record<BooksProvider, BooksLedgerOption> = {
   },
   quickbooks: {
     label: 'QuickBooks',
-    description: 'US QuickBooks Online sandbox or production company.',
+    description: 'QuickBooks Online company.',
     connectLabel: 'Connect QuickBooks',
     reconnectLabel: 'Reconnect QuickBooks'
   },
@@ -150,7 +150,11 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
           <div className='flex flex-wrap gap-2'>
             <Button asChild size='sm'>
               <OAuthStartLink
-                href={booksConnectPath(provider, returnTo, provider === 'zoho' ? zohoDc : undefined)}
+                href={booksConnectPath(
+                  provider,
+                  returnTo,
+                  provider === 'zoho' ? zohoDc : undefined
+                )}
               >
                 <BooksLedgerMark provider={provider} />
                 {option.connectLabel}

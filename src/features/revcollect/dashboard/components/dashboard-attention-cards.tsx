@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import {
   InboxListPill,
@@ -12,6 +13,8 @@ import type { DashboardAttentionCard } from '../lib/build-dashboard-snapshot';
 
 interface DashboardAttentionCardsProps {
   cards: DashboardAttentionCard[];
+  currency?: string;
+  ledgerConnected: boolean;
   onOpenThread: (messageId: string) => void;
 }
 
@@ -24,9 +27,11 @@ function reasonPillVariant(tone: StatusBadgeTone): InboxListPillVariant {
 
 function AttentionCard({
   card,
+  currency,
   onOpenThread
 }: {
   card: DashboardAttentionCard;
+  currency?: string;
   onOpenThread: (messageId: string) => void;
 }) {
   const messageId = card.inboxMessageId;
@@ -51,7 +56,7 @@ function AttentionCard({
       </div>
       <div className='flex flex-wrap items-baseline gap-x-2 gap-y-0.5'>
         <span className='text-2xl font-semibold tracking-tight tabular-nums'>
-          {formatCurrencyWhole(card.amountCents)}
+          {formatCurrencyWhole(card.amountCents, currency)}
         </span>
         <span className='text-muted-foreground text-xs'>{card.daysLabel}</span>
       </div>
@@ -117,8 +122,26 @@ function AttentionCard({
   );
 }
 
-export function DashboardAttentionCards({ cards, onOpenThread }: DashboardAttentionCardsProps) {
+export function DashboardAttentionCards({
+  cards,
+  currency,
+  onOpenThread,
+  ledgerConnected
+}: DashboardAttentionCardsProps) {
   if (cards.length === 0) {
+    if (!ledgerConnected) {
+      return (
+        <div className='border-border/60 space-y-2 rounded-2xl border px-4 py-4'>
+          <p className='text-sm font-medium'>Connect your ledger</p>
+          <p className='text-muted-foreground text-sm'>
+            Open receivables show up here after QuickBooks, Xero, or Zoho Books is connected.
+          </p>
+          <Link href='/settings/integrations' className='text-sm font-medium underline'>
+            Connect a ledger
+          </Link>
+        </div>
+      );
+    }
     return <p className='text-muted-foreground text-sm'>Nothing needs attention today.</p>;
   }
 
@@ -138,7 +161,7 @@ export function DashboardAttentionCards({ cards, onOpenThread }: DashboardAttent
       <ul className='grid grid-cols-1 gap-3 md:grid-cols-3'>
         {cards.map((card) => (
           <li key={card.customerId} className='flex min-w-0'>
-            <AttentionCard card={card} onOpenThread={onOpenThread} />
+            <AttentionCard card={card} currency={currency} onOpenThread={onOpenThread} />
           </li>
         ))}
       </ul>

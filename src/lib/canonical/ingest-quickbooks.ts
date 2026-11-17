@@ -44,7 +44,8 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
         issueDate: invoice.TxnDate,
         ledgerEmailedAt: quickBooksInvoiceEmailedAt(invoice),
         billEmail: invoice.BillEmail?.Address,
-        ledgerStatus: amountDueCents > 0 ? 'AUTHORISED' : 'PAID'
+        ledgerStatus: amountDueCents > 0 ? 'AUTHORISED' : 'PAID',
+        currency: invoice.CurrencyRef?.value
       })
     ];
   });
@@ -53,8 +54,10 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
     const displayName = customer.DisplayName?.trim();
     const fullyQualified = (customer as { FullyQualifiedName?: string }).FullyQualifiedName?.trim();
     const companyName = customer.CompanyName?.trim();
-    // Prefer DisplayName / FQN so sub-customers (jobs) stay distinguishable (B17).
-    const label = displayName || fullyQualified || companyName || 'Customer';
+    const label =
+      fullyQualified && fullyQualified.includes(':')
+        ? fullyQualified
+        : displayName || fullyQualified || companyName || 'Customer';
     return {
       id: customer.Id,
       name: label,
@@ -76,7 +79,7 @@ export async function ingestQuickBooksAr(tenantId: string): Promise<CanonicalSna
         customerId,
         invoiceId,
         amountCents,
-        paidAt: `${payment.TxnDate ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`,
+        paidAt: payment.TxnDate ?? new Date().toISOString().slice(0, 10),
         externalId: payment.Id
       }
     ];

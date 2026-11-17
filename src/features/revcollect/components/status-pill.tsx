@@ -9,7 +9,8 @@ const statusConfig: Record<CollectionStatus, { label: string; tone: StatusBadgeT
   due_soon: { label: 'Due soon', tone: 'warning' },
   overdue: { label: 'Overdue', tone: 'danger' },
   in_dispute: { label: 'In dispute', tone: 'info' },
-  promised: { label: 'Promised', tone: 'neutral' }
+  promised: { label: 'Promised', tone: 'neutral' },
+  paid: { label: 'Paid', tone: 'success' }
 };
 
 export const collectionStatusOptions = (

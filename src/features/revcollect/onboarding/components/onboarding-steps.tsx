@@ -209,13 +209,21 @@ export function OnboardingSteps() {
                 Open your dashboard
               </h2>
               <p className='text-muted-foreground text-sm'>
-                See who needs attention and what RevCollect ran overnight.
+                {connectedBooks
+                  ? 'See who needs attention and what RevCollect ran overnight.'
+                  : 'Connect a ledger before opening the dashboard.'}
               </p>
             </div>
             <div className='mt-4 flex flex-wrap gap-2'>
-              <Button asChild size='sm'>
-                <Link href={POST_LOGIN_PATH}>Continue</Link>
-              </Button>
+              {connectedBooks ? (
+                <Button asChild size='sm'>
+                  <Link href={POST_LOGIN_PATH}>Continue</Link>
+                </Button>
+              ) : (
+                <Button size='sm' disabled>
+                  Continue
+                </Button>
+              )}
             </div>
           </WorkspaceCard>
         </div>

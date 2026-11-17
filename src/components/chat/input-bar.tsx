@@ -52,6 +52,8 @@ export type InputBarProps = {
   maxTextareaHeight?: number;
   /** When true, hides the textarea while keeping the action toolbar visible. */
   bodyCollapsed?: boolean;
+  /** Let the left toolbar wrap instead of scrolling sideways. */
+  wrapActions?: boolean;
 };
 
 const PaperclipIcon = ({ className = 'w-[18px] h-[18px]' }) => (
@@ -248,7 +250,8 @@ export const InputBar = memo(function InputBar({
   rightActions,
   fillWidth = false,
   maxTextareaHeight = 280,
-  bodyCollapsed = false
+  bodyCollapsed = false,
+  wrapActions = false
 }: InputBarProps) {
   const [internalInput, setInternalInput] = useState('');
   const isControlled = controlledValue !== undefined;
@@ -397,7 +400,12 @@ export const InputBar = memo(function InputBar({
               bodyCollapsed ? 'pt-2' : 'pt-1'
             )}
           >
-            <div className='flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pb-0.5'>
+            <div
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-1 pb-0.5',
+                wrapActions ? 'flex-wrap' : 'overflow-x-auto overflow-y-hidden whitespace-nowrap'
+              )}
+            >
               {onAttach ? <AttachmentButton onClick={onAttach} disabled={disabled} /> : null}
               {leftActions}
             </div>

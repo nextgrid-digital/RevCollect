@@ -18,6 +18,8 @@ import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import {
   useAgentConfig,
+  useCustomers,
+  useInboxMessages,
   useRewriteAgentDraft,
   useSendInboxFollowUp,
   useWorkspaceGeneralSettings
@@ -30,8 +32,9 @@ import {
   type CollectionPlaybook,
   type CollectionTone
 } from '../composer-options';
-import { CAN_SPAM_SEND_NOTE } from '../../compliance/can-spam';
+import { COLLECTION_SEND_NOTE } from '../../compliance/can-spam';
 import { isDeliverableCustomerEmail } from '../../lib/customer-email';
+import { confirmSameDayRecipientSend, otherOpenAccountsForEmail } from '../lib/same-day-recipient';
 import { followUpDecision, policyFromCustomer } from '../../lib/relationship-policy';
 import { cn } from '@/lib/utils';
 import { MotionPressable } from '@/features/revcollect/motion/motion-primitives';
@@ -126,7 +129,7 @@ const ComposerToolbar = memo(function ComposerToolbar({
   onDraftClick
 }: ComposerToolbarProps) {
   return (
-    <>
+    <div className='flex min-w-0 flex-wrap items-center gap-1'>
       <InboxDraftButton isLoading={isDrafting} isDrafted={isDrafted} onClick={onDraftClick} />
       <ModeSelector modes={COLLECTION_TONES} value={tone} onChange={onToneChange} />
       <ModelPicker
@@ -135,7 +138,7 @@ const ComposerToolbar = memo(function ComposerToolbar({
         onChange={onPlaybookChange}
         placeholder='Playbook'
       />
-    </>
+    </div>
   );
 });
 
@@ -181,6 +184,12 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
     const { data: agentConfig } = useAgentConfig();
     const { data: workspaceSettings } = useWorkspaceGeneralSettings();
     const sendFollowUp = useSendInboxFollowUp();
+    const { data: customers = [] } = useCustomers();
+    const { data: inboxMessages = [] } = useInboxMessages();
+    const sendingRef = useRef(false);
+    const sendKeyRef = useRef<string | null>(null);
+    const recordRetryRef = useRef(false);
+    const [outboundLocked, setOutboundLocked] = useState(false);
     const rewriteDraft = useRewriteAgentDraft();
     const attachment = useOptionalInboxThreadAttachment();
     const signature =
@@ -193,9 +202,16 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
       allowLegalLanguage: agentConfig?.behaviors.allowLegalLanguage
     });
     const storageKey = draftStorageKey(messageId, customerId);
-    const deliverableEmail = isDeliverableCustomerEmail(
-      customer ? (policyFromCustomer(customer).preferredEmail ?? customer.email) : undefined
+    const recipientEmail = customer
+      ? (policyFromCustomer(customer).preferredEmail ?? customer.email)
+      : undefined;
+    const deliverableEmail = isDeliverableCustomerEmail(recipientEmail);
+    const sharedAccounts = otherOpenAccountsForEmail(
+      customers,
+      customer?.id ?? '',
+      recipientEmail ?? ''
     );
+    const sharedRecipientCount = sharedAccounts.length;
 
     const [tone, setTone] = useState<CollectionTone>(resolvedDefaultTone);
     const [playbook, setPlaybook] = useState<CollectionPlaybook>(resolvedPlaybook);
@@ -329,7 +345,7 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
 
     const handleSend = useCallback(() => {
       const sentBody = body.trim();
-      if (!sentBody || sendFollowUp.isPending) return;
+      if (!sentBody || outboundLocked || sendingRef.current || sendFollowUp.isPending) return;
       if (!customerId) {
         toast.error('No customer on this thread');
         return;
@@ -338,28 +354,73 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
         toast.error('Add a deliverable email address before sending');
         return;
       }
+      if (
+        !confirmSameDayRecipientSend({
+          company: customer?.company ?? 'this account',
+          customerId,
+          recipientEmail: recipientEmail ?? '',
+          customers,
+          inboxMessages
+        })
+      ) {
+        return;
+      }
+      const idempotencyKey = sendKeyRef.current ?? crypto.randomUUID();
+      sendKeyRef.current = idempotencyKey;
+      recordRetryRef.current = false;
+      sendingRef.current = true;
       setBody('');
       writeStoredDraft(storageKey, '');
-      sendFollowUp.mutate(
-        {
-          customerId,
-          messageId,
-          originalBody: baseDraft,
-          sentBody,
-          kind: 'reply',
-          attachedInvoiceIds: attachment?.attachedInvoiceIds
-        },
-        {
-          onError: () => setBody(sentBody)
+
+      const payload = {
+        customerId,
+        messageId,
+        originalBody: baseDraft,
+        sentBody,
+        kind: 'reply' as const,
+        attachedInvoiceIds: attachment?.attachedInvoiceIds,
+        idempotencyKey
+      };
+
+      const onSuccess = (result: { recorded?: boolean }) => {
+        if (result.recorded === false) {
+          setOutboundLocked(true);
+          if (!recordRetryRef.current) {
+            recordRetryRef.current = true;
+            sendingRef.current = true;
+            sendFollowUp.mutate(payload, {
+              onSuccess,
+              onSettled: () => {
+                sendingRef.current = false;
+              }
+            });
+          }
+          return;
         }
-      );
+        sendKeyRef.current = null;
+        recordRetryRef.current = false;
+        setOutboundLocked(false);
+      };
+
+      sendFollowUp.mutate(payload, {
+        onSuccess,
+        onError: () => setBody(sentBody),
+        onSettled: () => {
+          sendingRef.current = false;
+        }
+      });
     }, [
       attachment?.attachedInvoiceIds,
       baseDraft,
       body,
+      customer,
       customerId,
+      customers,
       deliverableEmail,
+      inboxMessages,
       messageId,
+      outboundLocked,
+      recipientEmail,
       sendFollowUp,
       storageKey
     ]);
@@ -396,7 +457,8 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
           onChange={setBody}
           placeholder={placeholder}
           onSend={handleSend}
-          disabled={sendFollowUp.isPending}
+          disabled={sendFollowUp.isPending || outboundLocked || !deliverableEmail}
+          wrapActions
           leftActions={
             isAgentDraft ? undefined : (
               <ComposerToolbar
@@ -413,12 +475,27 @@ export const InboxReplyComposer = forwardRef<InboxReplyComposerHandle, InboxRepl
         />
         {!deliverableEmail ? (
           <p className='text-destructive px-1 text-[11px] leading-relaxed'>
-            This customer has no deliverable email address. Update the contact before sending.
+            Needs a contact. Add a deliverable email before sending.
+            {customer?.phone ? ` Phone: ${customer.phone}` : ''}
           </p>
         ) : (
-          <p className='text-muted-foreground px-1 text-[11px] leading-relaxed'>
-            {CAN_SPAM_SEND_NOTE}
-          </p>
+          <div className='space-y-1 px-1'>
+            {sharedRecipientCount > 0 ? (
+              <p className='text-amber-800 text-[11px] leading-relaxed dark:text-amber-300'>
+                This address is also on {sharedAccounts.map((item) => item.company).join(', ')}.
+                Sending here only covers this account. A second email to this address today asks you
+                to confirm.
+              </p>
+            ) : null}
+            {outboundLocked ? (
+              <p className='text-[11px] leading-relaxed text-amber-800 dark:text-amber-300'>
+                This follow-up went out. It is not in the thread yet, so don&apos;t send it again.
+              </p>
+            ) : null}
+            <p className='text-muted-foreground text-[11px] leading-relaxed'>
+              {COLLECTION_SEND_NOTE}
+            </p>
+          </div>
         )}
       </div>
     );

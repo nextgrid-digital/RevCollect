@@ -15,11 +15,11 @@ export function normalizeRiskThresholds(thresholds: AgentRiskThresholds): AgentR
   let urgentEnd = clamp(
     Math.max(thresholds.urgentDays[1], urgentStart + MIN_BAND_SPAN - 1),
     urgentStart,
-    RISK_THRESHOLD_MAX_DAYS - 1
+    RISK_THRESHOLD_MAX_DAYS - 2
   );
   let criticalMin = clamp(
-    Math.max(thresholds.criticalDaysMin, urgentEnd),
-    urgentEnd,
+    Math.max(thresholds.criticalDaysMin, urgentEnd + 1),
+    urgentEnd + 1,
     RISK_THRESHOLD_MAX_DAYS
   );
 
@@ -59,15 +59,11 @@ export function setUrgentRange(
   urgentEnd: number
 ): AgentRiskThresholds {
   const urgentStart = thresholds.watchDays[1] + 1;
-  const nextUrgentEnd = clamp(
-    urgentEnd,
-    urgentStart,
-    Math.max(thresholds.criticalDaysMin, RISK_THRESHOLD_MAX_DAYS - 1)
-  );
+  const nextUrgentEnd = clamp(urgentEnd, urgentStart, RISK_THRESHOLD_MAX_DAYS - 2);
   return normalizeRiskThresholds({
     ...thresholds,
     urgentDays: [urgentStart, nextUrgentEnd],
-    criticalDaysMin: Math.max(thresholds.criticalDaysMin, urgentEnd)
+    criticalDaysMin: Math.max(thresholds.criticalDaysMin, urgentEnd + 1)
   });
 }
 
@@ -89,9 +85,9 @@ export function getRiskThresholdSliderBounds(thresholds: AgentRiskThresholds) {
   const watchMax = Math.max(thresholds.urgentDays[1] - MIN_BAND_SPAN, watchMin);
 
   const urgentMin = thresholds.watchDays[1] + 1;
-  const urgentMax = Math.max(RISK_THRESHOLD_MAX_DAYS - 1, urgentMin);
+  const urgentMax = Math.max(RISK_THRESHOLD_MAX_DAYS - 2, urgentMin);
 
-  const criticalMin = thresholds.urgentDays[1];
+  const criticalMin = thresholds.urgentDays[1] + 1;
   const criticalMax = RISK_THRESHOLD_MAX_DAYS;
 
   return {

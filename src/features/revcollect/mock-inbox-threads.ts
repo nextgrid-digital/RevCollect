@@ -71,6 +71,21 @@ function mapAttachments(
 }
 
 const scenarioByStatus: Record<CollectionStatus, ScenarioTemplate> = {
+  paid: {
+    subject: 'Payment received',
+    preview: 'This invoice is paid.',
+    unread: false,
+    daysAgo: 3,
+    summary: 'The invoice is paid and is not part of open receivables.',
+    draft: 'Thank you. This invoice is paid and needs no further follow-up.',
+    turns: [
+      {
+        author: 'agent',
+        hoursBeforeLatest: 48,
+        body: agentBody('Hello,', ['Confirming this invoice is paid. No further action is needed.'])
+      }
+    ]
+  },
   overdue: {
     subject: 'Overdue balance follow-up',
     preview: 'AP is reviewing the open invoices before releasing payment...',

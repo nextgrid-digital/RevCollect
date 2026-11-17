@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { isDeliverableCustomerEmail } from '../../lib/customer-email';
 import { InboxContextRailSection } from './inbox-context-rail-section';
 
 interface InboxContextDetailsCardProps {
@@ -74,7 +75,11 @@ export function InboxContextDetailsCard({
     <table className='w-full border-collapse'>
       <tbody>
         <DetailRow label='Contact' value={contactName} />
-        <DetailRowLink label='Email' href={`mailto:${contactEmail}`} value={contactEmail} />
+        {isDeliverableCustomerEmail(contactEmail) ? (
+          <DetailRowLink label='Email' href={`mailto:${contactEmail}`} value={contactEmail} />
+        ) : (
+          <DetailRow label='Email' value='Needs a contact' />
+        )}
         {contactPhone ? <DetailRowPhone phone={contactPhone} /> : null}
         <DetailRow label='Terms' value={paymentTerms} />
       </tbody>

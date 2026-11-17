@@ -53,7 +53,7 @@ export function InboxContextMetricsGrid({
             value={formatCurrencyWhole(outstandingCents)}
             valueClassName={isOverdue ? overdueValueClass : undefined}
           />
-          <MetricRow label='Avg DSO' value={`${avgDsoDays}d`} />
+          <MetricRow label='Days to pay' value={avgDsoDays > 0 ? `${avgDsoDays}d` : '—'} />
           <MetricRow label='Follow-ups' value={String(followUpsSent)} />
           <MetricRow label='Lifetime' value={formatCompactCurrency(lifetimeValueCents)} />
         </tbody>

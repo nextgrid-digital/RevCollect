@@ -6,10 +6,12 @@ import {
   filterInvoicesForReport
 } from '../aging/lib/aging-report';
 import {
+  averageCollectionDays,
   creditRemainingCents,
   invoiceAmountDueCents,
   isOpenCanonicalInvoice
 } from '../lib/invoice-open';
+import { dominantOpenCurrency, invoiceCurrencyCode } from '../lib/invoice-currency';
 import type {
   AgingBucket,
   AgingBucketSummary,
@@ -25,7 +27,7 @@ import type {
 } from '../types';
 import { deriveCustomerStatus } from '../lib/collection-decision';
 import { agingBucketFromDays as toAgingBucket } from '../lib/live-aging';
-import { getDaysOverdueFromDueDate } from '../utils';
+import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
 import type { CustomerStatusSummary } from './types';
 
 export { toAgingBucket };
@@ -113,6 +115,7 @@ export function mapLedgerInvoice(input: {
   ledgerStatus?: string;
   ledgerEmailedAt?: string;
   billEmail?: string;
+  currency?: string;
 }): Invoice {
   const daysOverdue = input.amountDueCents > 0 ? getDaysOverdueFromDueDate(input.dueDate) : 0;
   return {
@@ -127,14 +130,25 @@ export function mapLedgerInvoice(input: {
     ledgerEmailedAt: input.ledgerEmailedAt,
     billEmail: input.billEmail,
     dueDate: input.dueDate,
-    status: mapInvoiceStatus(input.ledgerStatus, daysOverdue, input.amountDueCents),
+    status: mapInvoiceStatus(
+      input.ledgerStatus,
+      daysOverdue,
+      input.amountDueCents,
+      input.paidCents
+    ),
     agingBucket: toAgingBucket(daysOverdue),
-    xeroStatus: input.ledgerStatus
+    xeroStatus: input.ledgerStatus,
+    currency: input.currency?.trim().toUpperCase() || undefined
   };
 }
 
 export function mapLedgerCustomers(
-  contacts: Array<{ id: string; name: string; email: string; company?: string }>,
+  contacts: Array<{
+    id: string;
+    name: string;
+    email: string;
+    company?: string;
+  }>,
   invoices: Invoice[]
 ): Customer[] {
   const invoicesByCustomer = new Map<string, Invoice[]>();
@@ -210,21 +224,56 @@ export function mapXeroInvoice(invoice: XeroInvoice): Invoice | null {
     ledgerEmailedAt: invoice.SentToContact ? `${issueDate}T12:00:00.000Z` : undefined,
     billEmail: invoice.Contact?.EmailAddress,
     dueDate,
-    status: mapInvoiceStatus(invoice.Status, daysOverdue, amountDueCents),
+    status: mapInvoiceStatus(invoice.Status, daysOverdue, amountDueCents, paidCents),
     agingBucket: toAgingBucket(daysOverdue),
-    xeroStatus: invoice.Status
+    xeroStatus: invoice.Status,
+    currency: invoice.CurrencyCode?.trim().toUpperCase() || undefined
   };
 }
 
 function mapInvoiceStatus(
   xeroStatus: string | undefined,
   daysOverdue: number,
-  amountDueCents: number
+  amountDueCents: number,
+  paidCents = 0
 ): CollectionStatus {
+  if (xeroStatus === 'PAID' || (amountDueCents <= 0 && paidCents > 0)) return 'paid';
   if (amountDueCents <= 0) return 'current';
   if (daysOverdue > 0) return 'overdue';
-  if (xeroStatus === 'PAID') return 'due_soon';
   return 'due_soon';
+}
+
+export function applyCreditNoteAllocations(
+  invoices: Invoice[],
+  notes: XeroCreditNote[]
+): Invoice[] {
+  const allocatedByInvoice = new Map<string, number>();
+  for (const note of notes) {
+    for (const allocation of note.Allocations ?? []) {
+      const invoiceId = allocation.Invoice?.InvoiceID;
+      if (!invoiceId) continue;
+      allocatedByInvoice.set(
+        invoiceId,
+        (allocatedByInvoice.get(invoiceId) ?? 0) + toCents(allocation.Amount)
+      );
+    }
+  }
+
+  return invoices.map((invoice) => {
+    if (invoice.xeroStatus === 'CREDIT') return invoice;
+    const allocated = allocatedByInvoice.get(invoice.id) ?? 0;
+    if (allocated <= 0) return invoice;
+    const paidCents = (invoice.paidCents ?? 0) + allocated;
+    const amountDueCents = Math.max(0, invoice.amountCents - paidCents);
+    const daysOverdue = amountDueCents > 0 ? getDaysOverdueFromDueDate(invoice.dueDate) : 0;
+    return {
+      ...invoice,
+      paidCents,
+      amountDueCents,
+      status: amountDueCents <= 0 ? 'paid' : daysOverdue > 0 ? 'overdue' : 'due_soon',
+      agingBucket: toAgingBucket(daysOverdue)
+    };
+  });
 }
 
 export function mapXeroInvoices(rawInvoices: XeroInvoice[]): Invoice[] {
@@ -257,9 +306,11 @@ export function mapXeroCreditNotes(notes: XeroCreditNote[]): Invoice[] {
 }
 
 function customerBalanceCents(invoices: Invoice[]): number {
+  const { code } = dominantOpenCurrency(invoices);
   let due = 0;
   let credit = 0;
   for (const invoice of invoices) {
+    if (invoiceCurrencyCode(invoice) !== code) continue;
     credit += creditRemainingCents(invoice);
     if (isOpenCanonicalInvoice(invoice)) {
       due += invoiceAmountDueCents(invoice);
@@ -355,7 +406,8 @@ export function buildCustomerStatusSummary(customers: Customer[]): CustomerStatu
       due_soon: 0,
       overdue: 0,
       in_dispute: 0,
-      promised: 0
+      promised: 0,
+      paid: 0
     } satisfies CustomerStatusSummary
   );
 }
@@ -365,34 +417,35 @@ export function buildCustomerContextFromInvoices(
   invoices: Invoice[],
   sourceLabel = 'Ledger'
 ): CustomerInboxContext {
-  const open = invoices.filter(isOpenCanonicalInvoice);
-  const billed = invoices.filter((invoice) => invoice.xeroStatus !== 'CREDIT');
+  const currency = dominantOpenCurrency(invoices).code;
+  const open = invoices.filter(
+    (invoice) => isOpenCanonicalInvoice(invoice) && invoiceCurrencyCode(invoice) === currency
+  );
+  const billed = invoices.filter(
+    (invoice) => invoice.xeroStatus !== 'CREDIT' && invoiceCurrencyCode(invoice) === currency
+  );
   const overdueCount = open.filter(
     (invoice) => getDaysOverdueFromDueDate(invoice.dueDate) > 0
   ).length;
 
   return {
-    avgDsoDays: customer.daysOverdue,
+    avgDsoDays: averageCollectionDays(invoices),
     lifetimeValueCents: billed.reduce((sum, invoice) => sum + invoice.amountCents, 0),
     followUpsSent: 0,
     paymentTerms: 'As invoiced',
     source: sourceLabel,
     aiInsight:
       overdueCount > 0
-        ? `${overdueCount} overdue invoice${overdueCount === 1 ? '' : 's'} · ${formatInsightBalance(customer.balanceCents)} outstanding`
+        ? `${overdueCount} overdue invoice${overdueCount === 1 ? '' : 's'} · ${formatInsightBalance(customer.balanceCents, currency)} outstanding`
         : customer.balanceCents > 0
-          ? `${formatInsightBalance(customer.balanceCents)} outstanding · nothing overdue yet`
+          ? `${formatInsightBalance(customer.balanceCents, currency)} outstanding · nothing overdue yet`
           : 'No open receivables for this customer',
     deepAnalysis: undefined
   };
 }
 
-function formatInsightBalance(cents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
-  }).format(cents / 100);
+function formatInsightBalance(cents: number, currency: string): string {
+  return formatCurrencyWhole(cents, currency);
 }
 
 export function buildSyntheticInboxFromInvoices(

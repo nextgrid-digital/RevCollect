@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { notFound } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getRevCollectService, MOCK_TENANT_ID } from '../../api';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
@@ -59,26 +60,31 @@ export function InboxThreadDetail({
 }: InboxThreadDetailProps) {
   const reduceMotion = useReducedMotion();
   const isMobile = useIsMobile();
-  const { data: inboxMessages = [] } = useInboxMessages();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { isPending: inboxListPending } = useInboxMessages();
   const {
     data: selection,
     isLoading,
     isFetching,
-    isPlaceholderData
+    isPlaceholderData,
+    isError,
+    error,
+    refetch
   } = useInboxSelectionData(messageId);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const [activityScrollEmailId, setActivityScrollEmailId] = useState<string | null>(null);
   const scrollToEmailId = scrollToEmailIdProp ?? activityScrollEmailId;
   const selectionMatchesMessage = selection?.message.id === messageId;
+  const requestStatus =
+    error && typeof error === 'object' && 'status' in error && typeof error.status === 'number'
+      ? error.status
+      : null;
 
-  if (inboxMessages.length > 0) {
-    const messageExists = inboxMessages.some(
-      (message) => message.id === messageId || message.customerId === messageId
-    );
-    if (!messageExists) {
-      notFound();
-    }
-  }
+  useEffect(() => {
+    if (!isError || requestStatus !== 401) return;
+    router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [isError, pathname, requestStatus, router]);
 
   const replyToEmail = useMemo(
     () =>
@@ -200,24 +206,45 @@ export function InboxThreadDetail({
     return () => cancelAnimationFrame(frame);
   }, [scrollToEmailId, selection, selectionMatchesMessage]);
 
-  if (!selectionMatchesMessage) {
-    if (!isLoading && !isFetching && !isPlaceholderData) {
+  if (isError) {
+    if (requestStatus === 401) {
       return (
         <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
-          Thread not found
+          Sign in to open this thread.
         </div>
       );
     }
 
     return (
-      <div
-        className='bg-background flex min-h-0 flex-1 flex-col gap-3 p-6'
-        aria-busy='true'
-        aria-label='Loading thread'
-      >
-        <div className='bg-muted h-5 w-40 animate-pulse rounded' />
-        <div className='bg-muted h-4 w-64 animate-pulse rounded' />
-        <div className='bg-muted mt-4 h-32 w-full animate-pulse rounded-xl' />
+      <div className='text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 p-8 text-sm'>
+        <p>This thread could not be loaded.</p>
+        <Button type='button' variant='outline' size='sm' onClick={() => void refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!selectionMatchesMessage) {
+    const stillLoading = inboxListPending || isLoading || isFetching || isPlaceholderData;
+
+    if (stillLoading) {
+      return (
+        <div
+          className='bg-background flex min-h-0 flex-1 flex-col gap-3 p-6'
+          aria-busy='true'
+          aria-label='Loading thread'
+        >
+          <div className='bg-muted h-5 w-40 animate-pulse rounded' />
+          <div className='bg-muted h-4 w-64 animate-pulse rounded' />
+          <div className='bg-muted mt-4 h-32 w-full animate-pulse rounded-xl' />
+        </div>
+      );
+    }
+
+    return (
+      <div className='text-muted-foreground flex flex-1 items-center justify-center p-8 text-sm'>
+        Thread not found
       </div>
     );
   }

@@ -25,14 +25,18 @@ import { filterEmailsSince } from '@/lib/integrations/books-connected-at';
 import { BOOKS_PROVIDER_LABELS } from '@/lib/integrations/books-provider';
 import { scheduleBackgroundGmailSync, syncGmailThreads } from '@/lib/canonical/sync-gmail';
 import {
+  clearPendingSend,
+  findStoredSend,
   overlayInboxWithSentEmails,
   persistRehomedSentEmails,
   persistSentFollowUp,
+  readPendingSend,
   rehomeSentEmails,
+  rememberPendingSend,
   sentEmailsForThread
 } from '@/lib/canonical/sent-emails';
 import { getCanonicalStore } from '@/lib/canonical/store';
-import { appendCanSpamFooter } from '../compliance/can-spam';
+import { prepareCollectionBody } from '../compliance/can-spam';
 import {
   sendGmailMessage,
   sentEmailFromResult,
@@ -68,7 +72,7 @@ import type {
 } from '../types';
 import { formatPromisedDateLabel } from '../lib/collection-decision';
 import { formatCurrencyWhole, getDaysOverdueFromDueDate } from '../utils';
-import { isOpenCanonicalInvoice } from '../lib/invoice-open';
+import { isCreditNoteInvoice, isOpenCanonicalInvoice } from '../lib/invoice-open';
 import { applyCollectionDecisionToCustomer } from '../lib/collection-decision';
 import type { CollectionDecisionInput } from '../lib/collection-decision';
 import {
@@ -191,19 +195,9 @@ async function refreshInboxFromGmail(
 
 async function readArData(tenantId: string): Promise<LoadedArData> {
   const booksProvider = await getConnectedBooksProvider(tenantId);
-  if (!booksProvider) {
-    return {
-      tenantId,
-      customers: [],
-      invoices: [],
-      inboxMessages: [],
-      sentEmails: []
-    };
-  }
-
   let snapshot = await (await getCanonicalStore()).read(tenantId);
   const empty = snapshot.customers.length === 0 && snapshot.invoices.length === 0;
-  if (empty) {
+  if (booksProvider && empty) {
     try {
       snapshot = await ensureAccountingIngest(tenantId);
     } catch (error) {
@@ -228,14 +222,16 @@ async function readArData(tenantId: string): Promise<LoadedArData> {
   });
   const sentEmails = rehomeSentEmails(snapshot.sentEmails ?? [], customers);
 
-  after(() => {
-    void scheduleBackgroundAccountingIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
-      if (didIngest) clearArDataMemo(tenantId);
+  if (booksProvider) {
+    after(() => {
+      void scheduleBackgroundAccountingIngest(tenantId, snapshot.ingestedAt).then((didIngest) => {
+        if (didIngest) clearArDataMemo(tenantId);
+      });
+      void scheduleBackgroundGmailSync(tenantId).then((didSync) => {
+        if (didSync) clearArDataMemo(tenantId);
+      });
     });
-    void scheduleBackgroundGmailSync(tenantId).then((didSync) => {
-      if (didSync) clearArDataMemo(tenantId);
-    });
-  });
+  }
 
   return {
     tenantId,
@@ -393,7 +389,7 @@ export class XeroRevCollectService implements RevCollectService {
 
   async getCustomerById(id: string) {
     const { customers } = await loadArData();
-    return customers.find((customer) => customer.id === id);
+    return customers.find((customer) => customer.id === id) ?? null;
   }
 
   async getCustomerContext(customerId: string) {
@@ -415,12 +411,14 @@ export class XeroRevCollectService implements RevCollectService {
 
   async listInvoices() {
     const { invoices } = await loadArData();
-    return invoices;
+    return invoices.filter((invoice) => !isCreditNoteInvoice(invoice));
   }
 
   async getInvoicesForCustomer(customerId: string) {
     const { invoices } = await loadArData();
-    return invoices.filter((invoice) => invoice.customerId === customerId);
+    return invoices.filter(
+      (invoice) => invoice.customerId === customerId && !isCreditNoteInvoice(invoice)
+    );
   }
 
   async getInvoicesByBucket(bucket: AgingBucket) {
@@ -475,15 +473,27 @@ export class XeroRevCollectService implements RevCollectService {
     for (const payment of snapshot.payments) {
       if (payment.customerId !== customerId) continue;
       const invoice = payment.invoiceId ? invoiceById.get(payment.invoiceId) : undefined;
+      if (invoice?.xeroStatus === 'CREDIT') continue;
+      if (!invoice) {
+        const matchesCredit = snapshot.invoices.some(
+          (item) =>
+            item.xeroStatus === 'CREDIT' &&
+            item.customerId === customerId &&
+            item.amountCents === payment.amountCents &&
+            Boolean(item.issueDate) &&
+            payment.paidAt.startsWith(item.issueDate!.slice(0, 10))
+        );
+        if (matchesCredit) continue;
+      }
       events.push({
         id: payment.id,
         customerId,
         type: 'payment',
         title: 'Payment received',
         description: invoice
-          ? `${formatCurrencyWhole(payment.amountCents)} · ${invoice.number}`
+          ? `${formatCurrencyWhole(payment.amountCents, invoice.currency)} · ${invoice.number}`
           : formatCurrencyWhole(payment.amountCents),
-        occurredAt: payment.paidAt
+        occurredAt: payment.paidAt.slice(0, 10)
       });
     }
 
@@ -603,7 +613,7 @@ export class XeroRevCollectService implements RevCollectService {
     }
     // Avoid rewriting synthetic inbox on settings saves (can 500 on schema drift).
     snapshot.inboxMessages = [];
-    await store.write(tenantId, snapshot);
+    await store.write(tenantId, snapshot, { strictWorkspaceSettings: true });
     clearArDataMemo(tenantId);
     return structuredClone(settings);
   }
@@ -779,31 +789,68 @@ export class XeroRevCollectService implements RevCollectService {
     const message = inboxMessages.find(
       (item) => item.id === threadId || item.customerId === customer.id
     );
-    const snapshot = await (await getCanonicalStore()).read(tenantId);
-    const body = appendCanSpamFooter(input.sentBody);
-    const existingThread = (snapshot.sentEmails ?? []).find(
-      (item) => item.customerId === customer.id && item.gmailThreadId
-    );
-    const sent = await sendGmailMessage({
-      tenantId,
-      to,
-      subject: message?.subject ?? `Follow-up — ${customer.company}`,
-      body,
-      fromName: snapshot.workspaceSettings?.sendFromName,
-      gmailThreadId: existingThread?.gmailThreadId,
-      attachments
-    });
-    const email = sentEmailFromResult(sent, {
-      threadId,
-      customerId: customer.id
-    });
-    await persistSentFollowUp({
-      tenantId,
-      customerId: customer.id,
-      email
-    });
+    const store = await getCanonicalStore();
+    const snapshot = await store.read(tenantId);
+    const idempotencyKey = input.idempotencyKey?.trim() || crypto.randomUUID();
+    const alreadyStored = findStoredSend(snapshot.sentEmails ?? [], idempotencyKey);
+    if (alreadyStored) {
+      return { ok: true, sent: true, recorded: true, email: alreadyStored };
+    }
+
+    const pending = readPendingSend(tenantId, idempotencyKey);
+    let email = pending;
+    if (!email) {
+      const settings = snapshot.workspaceSettings;
+      const body = prepareCollectionBody(input.sentBody, settings?.emailSignature);
+      const replyTo = isDeliverableCustomerEmail(settings?.replyToEmail)
+        ? settings?.replyToEmail.trim()
+        : undefined;
+      const existingThread = (snapshot.sentEmails ?? []).find(
+        (item) => item.customerId === customer.id && item.gmailThreadId
+      );
+      const sent = await sendGmailMessage({
+        tenantId,
+        to,
+        subject: message?.subject ?? `Follow-up — ${customer.company}`,
+        body,
+        fromName: settings?.sendFromName?.trim() || undefined,
+        replyTo,
+        gmailThreadId: existingThread?.gmailThreadId,
+        attachments
+      });
+      email = {
+        ...sentEmailFromResult(sent, {
+          threadId,
+          customerId: customer.id
+        }),
+        idempotencyKey
+      };
+      rememberPendingSend(tenantId, idempotencyKey, email);
+    }
+
+    try {
+      await persistSentFollowUp({
+        tenantId,
+        customerId: customer.id,
+        email
+      });
+    } catch (error) {
+      console.error('[send] record failed, retrying write only:', error);
+      try {
+        await persistSentFollowUp({
+          tenantId,
+          customerId: customer.id,
+          email
+        });
+      } catch (retryError) {
+        console.error('[send] record failed after Gmail accepted:', retryError);
+        clearArDataMemo(tenantId);
+        return { ok: true, sent: true, recorded: false, email };
+      }
+    }
+    clearPendingSend(tenantId, idempotencyKey);
     clearArDataMemo(tenantId);
-    return { ok: true, email };
+    return { ok: true, sent: true, recorded: true, email };
   }
 
   async exportTenantData(tenantId: TenantId): Promise<TenantDataExport> {

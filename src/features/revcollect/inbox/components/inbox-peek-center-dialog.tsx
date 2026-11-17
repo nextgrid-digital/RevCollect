@@ -8,6 +8,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { useInboxSelectionData } from '../hooks/use-inbox-selection-data';
+import { getInboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 import { InboxPeekHeaderBar } from './inbox-peek-header-bar';
 import { InboxThreadDetail } from './inbox-thread-detail';
 
@@ -39,6 +40,7 @@ export function InboxPeekCenterDialog({ messageId, onClose }: InboxPeekCenterDia
                 subject={selection.message.subject}
                 agentDraftMeta={selection.agentDraftMeta}
                 unread={selection.message.unread}
+                actionStatus={getInboxThreadActionStatus(selection.message, selection.customer)}
               />
             ) : null}
             <div className='min-h-0 flex-1 overflow-hidden'>

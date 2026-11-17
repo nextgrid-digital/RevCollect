@@ -100,10 +100,15 @@ export async function GET(request: NextRequest) {
       accountsUrl
     });
     await clearInboxForLedgerSwitch(tenantId);
+    const startedAt = new Date().toISOString();
     try {
-      await ingestZohoAr(tenantId);
+      const snapshot = await ingestZohoAr(tenantId);
+      if (!snapshot.ingestedAt || snapshot.ingestedAt < startedAt) {
+        return redirectWithError('books_sync_failed');
+      }
     } catch (ingestError) {
       console.error('[zoho/callback] ingest failed:', ingestError);
+      return redirectWithError('books_sync_failed');
     }
 
     const successUrl = new URL(returnTo, APP_URL);

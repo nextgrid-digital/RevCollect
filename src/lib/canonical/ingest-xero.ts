@@ -9,6 +9,7 @@ import {
 } from '@/lib/integrations/xero-api';
 import { getXeroConnection } from '@/lib/integrations/xero-connection-store';
 import {
+  applyCreditNoteAllocations,
   mapXeroCreditNotes,
   mapXeroCustomers,
   mapXeroInvoices,
@@ -46,7 +47,7 @@ function paymentsFromXeroPayments(
       customerId,
       invoiceId,
       amountCents,
-      paidAt: `${paidAt}T00:00:00.000Z`,
+      paidAt,
       externalId: payment.PaymentID
     });
   }
@@ -66,7 +67,7 @@ function fallbackPaymentsFromInvoices(rawInvoices: XeroInvoice[]): CanonicalPaym
       customerId: invoice.Contact.ContactID,
       invoiceId: invoice.InvoiceID,
       amountCents: paidCents,
-      paidAt: `${paidAt}T00:00:00.000Z`,
+      paidAt,
       externalId: invoice.InvoiceID
     });
   }
@@ -88,14 +89,14 @@ function unappliedBankReceives(
     const amountCents = toCents(transaction.Total);
     if (!transaction.BankTransactionID || !customerId || amountCents <= 0) continue;
     const paidAt = parseXeroDate(transaction.Date);
-    const key = paymentDedupeKey(customerId, amountCents, `${paidAt}T00:00:00.000Z`);
+    const key = paymentDedupeKey(customerId, amountCents, paidAt);
     if (seen.has(key)) continue;
     seen.add(key);
     extras.push({
       id: transaction.BankTransactionID,
       customerId,
       amountCents,
-      paidAt: `${paidAt}T00:00:00.000Z`,
+      paidAt,
       externalId: transaction.BankTransactionID
     });
   }
@@ -112,7 +113,10 @@ export async function ingestXeroAr(tenantId: string): Promise<CanonicalSnapshot>
     bankReceives
   } = await fetchXeroAccountsReceivable(tenantId);
 
-  const invoices = [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)];
+  const invoices = applyCreditNoteAllocations(
+    [...mapXeroInvoices(rawInvoices), ...mapXeroCreditNotes(creditNotes)],
+    creditNotes
+  );
   const customers = mapXeroCustomers(contacts, invoices);
   const fromRegister = paymentsFromXeroPayments(rawPayments, invoices);
   const basePayments =

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { AgentDraftMeta, Customer } from '../../types';
+import type { InboxThreadActionStatus } from '../lib/get-inbox-thread-action-status';
 import { InboxThreadHeader } from './inbox-thread-header';
 
 interface InboxPeekHeaderBarProps {
@@ -9,6 +10,7 @@ interface InboxPeekHeaderBarProps {
   subject: string;
   agentDraftMeta?: AgentDraftMeta;
   unread: boolean;
+  actionStatus?: InboxThreadActionStatus;
   trailing?: ReactNode;
 }
 
@@ -17,6 +19,7 @@ export function InboxPeekHeaderBar({
   subject,
   agentDraftMeta,
   unread,
+  actionStatus,
   trailing
 }: InboxPeekHeaderBarProps) {
   return (
@@ -27,6 +30,7 @@ export function InboxPeekHeaderBar({
           subject={subject}
           agentDraftMeta={agentDraftMeta}
           unread={unread}
+          actionStatus={actionStatus}
           className='py-0'
         />
       </div>

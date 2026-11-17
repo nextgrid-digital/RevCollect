@@ -81,10 +81,15 @@ export async function GET(request: NextRequest) {
       refreshToken: tokens.refresh_token
     });
     await clearInboxForLedgerSwitch(tenantId);
+    const startedAt = new Date().toISOString();
     try {
-      await ingestXeroAr(tenantId);
+      const snapshot = await ingestXeroAr(tenantId);
+      if (!snapshot.ingestedAt || snapshot.ingestedAt < startedAt) {
+        return redirectWithError('books_sync_failed');
+      }
     } catch (ingestError) {
       console.error('[xero/callback] ingest failed:', ingestError);
+      return redirectWithError('books_sync_failed');
     }
 
     const successUrl = new URL(returnTo, APP_URL);

@@ -32,7 +32,8 @@ function exportRowsToCsv(rows: AgingCustomerBreakdownRow[]): void {
     'Current',
     '1-30 days',
     '31-60 days',
-    '60+ days',
+    '61-90 days',
+    '90+ days',
     'Total',
     'Risk'
   ];
@@ -44,7 +45,8 @@ function exportRowsToCsv(rows: AgingCustomerBreakdownRow[]): void {
       (row.currentCents / 100).toFixed(2),
       (row.days1to30Cents / 100).toFixed(2),
       (row.days31to60Cents / 100).toFixed(2),
-      (row.days60PlusCents / 100).toFixed(2),
+      (row.days61to90Cents / 100).toFixed(2),
+      (row.days90PlusCents / 100).toFixed(2),
       (row.totalCents / 100).toFixed(2),
       row.risk
     ].join(',')
@@ -115,12 +117,21 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
         )
       },
       {
-        id: 'days60Plus',
-        accessorKey: 'days60PlusCents',
+        id: 'days61to90',
+        accessorKey: 'days61to90Cents',
         enableSorting: false,
-        header: '60+ days',
+        header: '61–90 days',
         cell: ({ row }) => (
-          <span className='tabular-nums'>{formatCentsCell(row.original.days60PlusCents)}</span>
+          <span className='tabular-nums'>{formatCentsCell(row.original.days61to90Cents)}</span>
+        )
+      },
+      {
+        id: 'days90Plus',
+        accessorKey: 'days90PlusCents',
+        enableSorting: false,
+        header: '90+ days',
+        cell: ({ row }) => (
+          <span className='tabular-nums'>{formatCentsCell(row.original.days90PlusCents)}</span>
         )
       },
       {
@@ -211,7 +222,7 @@ export function AgingCustomerBreakdownTable({ rows }: AgingCustomerBreakdownTabl
         <div>
           <h2 className='text-sm font-semibold sm:text-base'>Customer Breakdown</h2>
           <p className='text-muted-foreground mt-0.5 text-xs'>
-            Table columns group 1–30 and 31–60 day buckets; chart above shows finer buckets.
+            Current, 1–30, 31–60, 61–90, and 90+ match the chart and the dashboard.
           </p>
         </div>
         <button

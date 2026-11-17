@@ -31,7 +31,7 @@ import { expireRelationshipPolicy, policyFromCustomer } from '../../lib/relation
 import { InboxActivityCard } from '../../inbox/components/inbox-activity-card';
 import { InboxAiInsightCard } from '../../inbox/components/inbox-ai-insight-card';
 import { InboxContextSectionLabel } from '../../inbox/components/inbox-context-section-label';
-import type { Invoice } from '../../types';
+import type { CollectionStatus, Invoice } from '../../types';
 import { isOpenCanonicalInvoice, isPaidCanonicalInvoice } from '../../lib/invoice-open';
 import { CustomerDetailMetricsRow } from './customer-detail-metrics-row';
 import { CustomerOutstandingInvoiceCard } from './customer-outstanding-invoice-card';
@@ -45,12 +45,13 @@ interface CustomersDetailPanelProps {
 
 function sortOutstandingInvoices(invoices: Invoice[]): Invoice[] {
   return [...invoices].filter(isOpenCanonicalInvoice).sort((a, b) => {
-    const statusOrder = {
+    const statusOrder: Record<CollectionStatus, number> = {
       overdue: 0,
       in_dispute: 1,
       due_soon: 2,
       promised: 3,
-      current: 4
+      current: 4,
+      paid: 5
     };
     const statusDiff = statusOrder[a.status] - statusOrder[b.status];
     if (statusDiff !== 0) return statusDiff;
@@ -221,7 +222,10 @@ export function CustomersDetailPanel({
                             resumePolicy.isPending && resumePolicy.variables?.action === 'resume'
                           }
                           onClick={() =>
-                            resumePolicy.mutate({ customerId: customer.id, action: 'resume' })
+                            resumePolicy.mutate({
+                              customerId: customer.id,
+                              action: 'resume'
+                            })
                           }
                         >
                           Resume

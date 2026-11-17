@@ -1,4 +1,10 @@
-export type CollectionStatus = 'current' | 'due_soon' | 'overdue' | 'in_dispute' | 'promised';
+export type CollectionStatus =
+  | 'current'
+  | 'due_soon'
+  | 'overdue'
+  | 'in_dispute'
+  | 'promised'
+  | 'paid';
 
 export type AgingBucket = 'current' | '1-30' | '31-60' | '61-90' | '90+';
 
@@ -28,6 +34,8 @@ export interface ThreadEmail {
   attachments?: EmailAttachment[];
   /** Pulled by open-invoice history backfill. Reply polling does not refetch these threads. */
   historyBackfill?: boolean;
+  /** Client key for one send attempt. A repeat with this key must not call Gmail again. */
+  idempotencyKey?: string;
 }
 
 /** @deprecated Use ThreadEmail */
@@ -143,6 +151,8 @@ export interface Invoice {
   amountDueCents?: number;
   /** ISO date when Xero marked the invoice fully paid. */
   paidAt?: string;
+  /** Ledger currency code. Totals never mix two codes. */
+  currency?: string;
   /** When the ledger recorded that it emailed this invoice. Not stored on the invoice row. */
   ledgerEmailedAt?: string;
   /** Address the ledger used for that invoice email. */
@@ -156,6 +166,8 @@ export interface InboxMessage {
   preview: string;
   receivedAt: string;
   unread: boolean;
+  /** True after a collection email was sent on this account. */
+  outboundSent?: boolean;
   channel: MessageChannel;
   replyIntent?: ReplyIntent;
   replyIntentLabel?: string;
@@ -308,7 +320,7 @@ export interface AgingBucketSummary {
   totalCents: number;
 }
 
-export type AgingReportBucket = 'current' | '1-15' | '16-30' | '31-60' | '60+';
+export type AgingReportBucket = AgingBucket;
 
 export type AgingReportPeriod = 'this_month' | 'last_month' | 'all_time';
 
@@ -331,6 +343,8 @@ export interface AgingReportSummary {
   currentDeltaPct: number;
   overdueDeltaPct: number;
   dsoDeltaDays: number;
+  currency?: string;
+  mixedCurrency?: boolean;
 }
 
 export interface AgingChartBucketRow {
@@ -347,7 +361,8 @@ export interface AgingCustomerBreakdownRow {
   currentCents: number;
   days1to30Cents: number;
   days31to60Cents: number;
-  days60PlusCents: number;
+  days61to90Cents: number;
+  days90PlusCents: number;
   totalCents: number;
   risk: AgingRiskLevel;
   relationshipLabel?: string | null;

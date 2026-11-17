@@ -42,10 +42,16 @@ export interface SendInboxFollowUpInput {
   kind?: 'reply' | 'draft_edit';
   messageId?: string;
   attachedInvoiceIds?: string[];
+  /** Stable for one click, including the record-only retry after Gmail accepts. */
+  idempotencyKey?: string;
 }
 
 export interface SendInboxFollowUpResult {
   ok: true;
+  /** Gmail accepted the message, or it was already stored for this key. */
+  sent?: boolean;
+  /** False when Gmail accepted the message and the thread write did not. */
+  recorded?: boolean;
   email?: ThreadEmail;
 }
 
@@ -71,7 +77,7 @@ export interface RevCollectService {
   ): Promise<InboxSelectionData | null>;
 
   listCustomers(): Promise<Customer[]>;
-  getCustomerById(id: string): Promise<Customer | undefined>;
+  getCustomerById(id: string): Promise<Customer | null>;
   getCustomerContext(customerId: string): Promise<CustomerInboxContext | null>;
   getCustomerStatusSummary(): Promise<CustomerStatusSummary>;
 

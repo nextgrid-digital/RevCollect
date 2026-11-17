@@ -6,15 +6,25 @@ import { InboxContextRailBody } from '../inbox/components/inbox-context-rail-bod
 import { InboxDeepAnalysisCard } from '../inbox/components/inbox-deep-analysis-card';
 import type { Customer, CustomerInboxContext, ThreadEmail, TimelineEvent } from '../types';
 import { RelationshipBadge } from './relationship-badge';
+import { isDeliverableCustomerEmail } from '../lib/customer-email';
 
-const XERO_PLACEHOLDER_EMAIL = 'no-email@xero.local';
+function CustomerXeroEmail({ customer }: { customer: Customer }) {
+  const trimmed = customer.email.trim();
 
-function CustomerXeroEmail({ email }: { email: string }) {
-  const trimmed = email.trim();
-  const isMissing = !trimmed || trimmed.toLowerCase() === XERO_PLACEHOLDER_EMAIL;
-
-  if (isMissing) {
-    return <p className='text-muted-foreground truncate text-sm'>No email on file</p>;
+  if (!isDeliverableCustomerEmail(trimmed)) {
+    return (
+      <div className='min-w-0'>
+        <p className='truncate text-sm'>Needs a contact</p>
+        {customer.phone ? (
+          <a
+            href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`}
+            className='text-muted-foreground text-sm'
+          >
+            {customer.phone}
+          </a>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -61,7 +71,7 @@ export function CustomerContextPanelFloatingHeader({
           >
             {customer.company}
           </Link>
-          <CustomerXeroEmail email={customer.email} />
+          <CustomerXeroEmail customer={customer} />
           <div className='mt-1'>
             <RelationshipBadge customer={customer} />
           </div>
@@ -118,7 +128,7 @@ export function CustomerContextPanel({
           >
             {customer.company}
           </Link>
-          <CustomerXeroEmail email={customer.email} />
+          <CustomerXeroEmail customer={customer} />
           <div className='mt-1'>
             <RelationshipBadge customer={customer} />
           </div>

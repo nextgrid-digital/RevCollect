@@ -15,7 +15,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
     healthyDays: [0, 7],
     watchDays: [8, 15],
     urgentDays: [16, 30],
-    criticalDaysMin: 30
+    criticalDaysMin: 31
   },
   customerOverrides: [],
   behaviors: {

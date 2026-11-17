@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
 import { connectedBooksFromStatus } from '@/lib/integrations/books-provider';
 import { useIntegrationStatus } from '../../api/queries';
-import { formatLastSyncLabel } from '../../utils';
+import { formatDate, formatLastSyncLabel } from '../../utils';
 import {
   BOOKS_LEDGER_OPTIONS,
   BooksLedgerMark,
@@ -91,6 +91,20 @@ export function SettingsIntegrationsView() {
               action={<Badge variant='secondary'>Not connected</Badge>}
               className='pt-6'
             >
+              {integrationStatus?.xero.lastSyncAt ||
+              integrationStatus?.quickbooks.lastSyncAt ||
+              integrationStatus?.zoho.lastSyncAt ? (
+                <p className='text-sm text-amber-950 dark:text-amber-100'>
+                  Not synced. Data is from{' '}
+                  {formatDate(
+                    integrationStatus.xero.lastSyncAt ??
+                      integrationStatus.quickbooks.lastSyncAt ??
+                      integrationStatus.zoho.lastSyncAt ??
+                      ''
+                  )}
+                  .
+                </p>
+              ) : null}
               <BooksProviderPicker returnTo='/settings/integrations' />
             </SettingsSection>
           ) : connectedOption && connectedItem ? (

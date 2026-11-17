@@ -448,7 +448,7 @@ export interface XeroResyncResult {
 
 interface XeroResyncError extends Error {
   status?: number;
-  code?: 'xero_expired' | 'xero_disconnected';
+  code?: 'xero_expired' | 'xero_disconnected' | 'books_kept' | 'books_empty' | 'zoho_rate_limited';
 }
 
 function disconnectPath(provider: IntegrationProviderKey): string {
@@ -564,6 +564,10 @@ export function useResyncXero() {
     },
     onError: (error) => {
       const resyncError = error as XeroResyncError;
+      if (resyncError.code === 'books_kept') {
+        toast.error(resyncError.message);
+        return;
+      }
       if (resyncError.status === 409) {
         void queryClient.invalidateQueries({ queryKey: revcollectKeys.integrationStatus() });
         toast.error('Accounting session expired. Reconnect in Settings → Integrations.');
@@ -788,9 +792,14 @@ export function useSendInboxFollowUp() {
           );
         }
       }
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
-      void queryClient.invalidateQueries({ queryKey: revcollectKeys.timeline(input.customerId) });
-      toast.success('Follow-up sent');
+      const recorded = result.recorded !== false;
+      if (recorded) {
+        void queryClient.invalidateQueries({ queryKey: revcollectKeys.inbox() });
+        void queryClient.invalidateQueries({ queryKey: revcollectKeys.timeline(input.customerId) });
+        toast.success('Follow-up sent');
+        return;
+      }
+      toast.message('Follow-up sent. Saving it to the thread failed.');
     },
     onError: (error, _input, context) => {
       if (context?.previousSelections) {

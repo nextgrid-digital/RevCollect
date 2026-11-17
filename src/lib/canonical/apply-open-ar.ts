@@ -69,7 +69,12 @@ export async function applyOpenArSnapshot(
     ingestedAt: new Date().toISOString()
   };
   snapshot = recomputePatternsForSnapshot(snapshot);
-  await store.write(tenantId, snapshot);
+  const incomingEmpty = input.customers.length === 0 && input.invoices.length === 0;
+  const storedHasBooks = current.customers.length > 0 || current.invoices.length > 0;
+  if (incomingEmpty && storedHasBooks) {
+    throw new Error('Sync returned no customers. Existing books were kept.');
+  }
+  await store.write(tenantId, snapshot, { purgeEmpty: !incomingEmpty });
 
   for (const payment of input.payments) {
     if (previousPaymentIds.has(payment.id)) continue;

@@ -1,8 +1,8 @@
 import { getIntegrationTenantId } from './tenant';
 import {
-  deleteQuickBooksConnection,
   getQuickBooksConnection,
   getQuickBooksRefreshToken,
+  markQuickBooksConnectionExpired,
   updateQuickBooksRefreshToken
 } from './quickbooks-connection-store';
 import {
@@ -51,6 +51,7 @@ export interface QboInvoice {
   CustomerRef?: QboRef;
   EmailStatus?: string;
   BillEmail?: { Address?: string };
+  CurrencyRef?: { value?: string };
   DeliveryInfo?: { DeliveryTime?: string };
 }
 
@@ -76,6 +77,12 @@ async function getAccess(appTenantId: string): Promise<{
   if (!config) throw new Error('QuickBooks OAuth is not configured');
   const connection = await getQuickBooksConnection(appTenantId);
   if (!connection) throw new QuickBooksNotConnectedError();
+  if (connection.tokenStatus === 'expired') {
+    throw new QuickBooksNotConnectedError(
+      'QuickBooks session expired. Reconnect QuickBooks.',
+      'xero_expired'
+    );
+  }
   let refreshToken: string | null = null;
   try {
     refreshToken = await getQuickBooksRefreshToken(appTenantId);
@@ -98,7 +105,7 @@ async function getAccess(appTenantId: string): Promise<{
     };
   } catch (error) {
     if (isQuickBooksInvalidGrantError(error)) {
-      await deleteQuickBooksConnection(appTenantId);
+      await markQuickBooksConnectionExpired(appTenantId);
       throw new QuickBooksNotConnectedError(
         'QuickBooks credentials changed or the session expired. Reconnect QuickBooks.',
         'xero_expired'
@@ -134,6 +141,36 @@ async function qboQuery<T>(
   const queryResponse = payload.QueryResponse ?? {};
   const firstArray = Object.values(queryResponse).find((value) => Array.isArray(value));
   return (firstArray as T[] | undefined) ?? [];
+}
+
+export class InvoicePdfUnavailableError extends Error {
+  constructor(message = 'Invoice PDF is not available for this invoice.') {
+    super(message);
+    this.name = 'InvoicePdfUnavailableError';
+  }
+}
+
+export async function fetchQuickBooksInvoicePdf(
+  appTenantId: string,
+  invoiceId: string
+): Promise<Buffer> {
+  const access = await getAccess(appTenantId);
+  const url = new URL(
+    `${apiBase(access.environment)}/v3/company/${access.realmId}/invoice/${encodeURIComponent(invoiceId)}/pdf`
+  );
+  url.searchParams.set('minorversion', '75');
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${access.accessToken}`,
+      Accept: 'application/pdf'
+    }
+  });
+  if (!response.ok) {
+    throw new InvoicePdfUnavailableError();
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length === 0) throw new InvoicePdfUnavailableError();
+  return bytes;
 }
 
 export async function fetchQuickBooksCompanyName(appTenantId: string): Promise<string> {
