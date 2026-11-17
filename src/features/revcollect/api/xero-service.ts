@@ -35,6 +35,7 @@ import {
   rememberPendingSend,
   sentEmailsForThread
 } from '@/lib/canonical/sent-emails';
+import { eraseWorkspaceLedger } from '@/lib/canonical/erase-workspace-ledger';
 import { getCanonicalStore } from '@/lib/canonical/store';
 import { prepareCollectionBody } from '../compliance/can-spam';
 import {
@@ -873,12 +874,13 @@ export class XeroRevCollectService implements RevCollectService {
   }
 
   async requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult> {
+    await eraseWorkspaceLedger(tenantId);
     return {
-      requestId: `xero-del-${Date.now()}`,
+      requestId: `del-${Date.now()}`,
       tenantId,
-      status: 'queued',
+      status: 'completed',
       message:
-        'Deletion request recorded. When Supabase tenant storage is connected, this queues full erasure.'
+        'Books data deleted. QuickBooks, Xero, Zoho, and Gmail tokens were revoked. The subscription record stays.'
     };
   }
 

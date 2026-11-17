@@ -218,6 +218,29 @@ export function isQuickBooksInvalidGrantError(error: unknown): boolean {
   );
 }
 
+export async function fetchQuickBooksOpenIdProfile(
+  accessToken: string,
+  environment: 'sandbox' | 'production'
+): Promise<{ email: string | null; emailVerified: boolean }> {
+  const url =
+    environment === 'production'
+      ? 'https://accounts.platform.intuit.com/v1/openid_connect/userinfo'
+      : 'https://sandbox-accounts.platform.intuit.com/v1/openid_connect/userinfo';
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json'
+    }
+  });
+  if (!response.ok) return { email: null, emailVerified: false };
+  const payload = (await response.json()) as { email?: unknown; emailVerified?: unknown };
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+  return {
+    email: email.includes('@') ? email : null,
+    emailVerified: payload.emailVerified === true
+  };
+}
+
 export async function fetchQuickBooksCompanyNameWithToken(
   accessToken: string,
   realmId: string,

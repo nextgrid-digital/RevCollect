@@ -19,6 +19,7 @@ import {
   ZOHO_DATA_CENTERS,
   type ZohoDataCenterId
 } from '@/lib/integrations/zoho-regions';
+import { ConnectToQuickBooksButton } from './connect-to-quickbooks-button';
 import { OAuthStartLink } from './oauth-start-link';
 
 export type BooksPickerReturnTo = '/onboarding' | '/settings/integrations';
@@ -148,18 +149,22 @@ export function BooksProviderPicker({ returnTo }: { returnTo: BooksPickerReturnT
             You&apos;ll sign in with {option.label} and come back here.
           </p>
           <div className='flex flex-wrap gap-2'>
-            <Button asChild size='sm'>
-              <OAuthStartLink
-                href={booksConnectPath(
-                  provider,
-                  returnTo,
-                  provider === 'zoho' ? zohoDc : undefined
-                )}
-              >
-                <BooksLedgerMark provider={provider} />
-                {option.connectLabel}
-              </OAuthStartLink>
-            </Button>
+            {provider === 'quickbooks' ? (
+              <ConnectToQuickBooksButton href={booksConnectPath(provider, returnTo)} />
+            ) : (
+              <Button asChild size='sm'>
+                <OAuthStartLink
+                  href={booksConnectPath(
+                    provider,
+                    returnTo,
+                    provider === 'zoho' ? zohoDc : undefined
+                  )}
+                >
+                  <BooksLedgerMark provider={provider} />
+                  {option.connectLabel}
+                </OAuthStartLink>
+              </Button>
+            )}
           </div>
         </div>
       ) : null}

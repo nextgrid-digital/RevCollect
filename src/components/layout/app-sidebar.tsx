@@ -92,7 +92,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent className='overflow-x-hidden'>
         {filteredGroups.map((group) => (
-          <SidebarGroup key={group.label || 'ungrouped'} className='py-0'>
+          <SidebarGroup key={group.label || group.items[0]?.url || 'ungrouped'} className='py-0'>
             {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
             <SidebarMenu>
               {group.items.map((item) => {

@@ -14,7 +14,8 @@ import {
   Playfair_Display,
   Noto_Sans_Mono,
   Outfit,
-  Space_Mono
+  Space_Mono,
+  STIX_Two_Text
 } from 'next/font/google';
 
 import { cn } from '@/lib/utils';
@@ -104,6 +105,12 @@ const fontPlayfairDisplay = Playfair_Display({
   variable: '--font-playfair-display'
 });
 
+const fontStixTwoText = STIX_Two_Text({
+  subsets: ['latin'],
+  weight: '500',
+  variable: '--font-stix-two-text'
+});
+
 export const fontVariables = cn(
   fontSans.variable,
   fontMono.variable,
@@ -120,5 +127,6 @@ export const fontVariables = cn(
   fontMerriweather.variable,
   fontCormorantGaramond.variable,
   fontLora.variable,
-  fontPlayfairDisplay.variable
+  fontPlayfairDisplay.variable,
+  fontStixTwoText.variable
 );

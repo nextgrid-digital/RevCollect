@@ -1,22 +1,47 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
+import { disconnectQuickBooks } from '@/lib/integrations/disconnect-integration';
+import { getIntegrationTenantId } from '@/lib/integrations/tenant';
+import { getAuthUserId } from '@/lib/supabase/get-auth-user';
 
 export const metadata: Metadata = {
   title: 'QuickBooks Online connection ended',
   description: 'How to reconnect after disconnecting accounting.'
 };
 
-export default function DisconnectQuickBooksPage() {
+export default async function DisconnectQuickBooksPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const done = params.done === '1';
+  const userId = await getAuthUserId();
+
+  if (userId && !done) {
+    const tenantId = await getIntegrationTenantId();
+    await disconnectQuickBooks(tenantId);
+    redirect('/disconnect/quickbooks?done=1');
+  }
+
   return (
     <LegalPage title='QuickBooks connection ended'>
-      <p>
-        This workspace is no longer connected to QuickBooks Online. Open invoices will not refresh
-        until you reconnect.
-      </p>
+      {done ? (
+        <p>
+          QuickBooks is disconnected. The token was revoked and sync has stopped. Invoices already
+          saved stay until you delete workspace data under Settings → Privacy and data.
+        </p>
+      ) : (
+        <p>
+          Sign in and open this page again to revoke the saved QuickBooks token and remove the
+          connection from your workspace.
+        </p>
+      )}
       <p>
         <Link className='underline underline-offset-4' href='/onboarding/connect-quickbooks'>
-          Reconnect QuickBooks
+          Connect to QuickBooks
         </Link>
         {' · '}
         <Link className='underline underline-offset-4' href='/settings/integrations'>

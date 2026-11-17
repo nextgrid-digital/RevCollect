@@ -31,7 +31,13 @@ export function SettingsPrivacySection() {
           variant='outline'
           size='sm'
           disabled={deletionMutation.isPending}
-          onClick={() => deletionMutation.mutate(tenantId)}
+          onClick={() => {
+            const confirmed = window.confirm(
+              'Delete stored books, payments, and sent collection mail, and revoke QuickBooks, Xero, Zoho, and Gmail? This cannot be undone.'
+            );
+            if (!confirmed) return;
+            deletionMutation.mutate(tenantId);
+          }}
         >
           Request data deletion
         </Button>

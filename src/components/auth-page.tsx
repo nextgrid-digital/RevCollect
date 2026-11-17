@@ -3,22 +3,32 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AuthDivider } from '@/components/auth-divider';
-import { FloatingPaths } from '@/components/floating-paths';
+import { AuthShell } from '@/components/auth-shell';
 import { GoogleIcon } from '@/components/icons/google-icon';
-import { IntuitIcon } from '@/components/icons/intuit-icon';
-import { XeroIcon } from '@/components/icons/xero-icon';
-import { ZohoIcon } from '@/components/icons/zoho-icon';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput
+} from '@/components/ui/input-group';
 import { AUTH_REQUEST_TIMEOUT_MS, TimeoutError, withTimeout } from '@/lib/auth-timeout';
 import { cn } from '@/lib/utils';
 import { POST_LOGIN_PATH, safeNextPath } from '@/lib/auth-paths';
 import { createClient } from '@/lib/supabase/client';
 import { hasSupabaseEnv } from '@/lib/supabase/env';
+import { XeroSignInButton } from '@/components/xero-sign-in-button';
+import { ZohoSignInButton } from '@/components/zoho-sign-in-button';
 import { toast } from 'sonner';
 
-type AuthMode = 'signIn' | 'signUp';
+type AuthMode = 'signIn' | 'signUp' | 'forgot';
+
+function initialAuthMode(view: string | null): AuthMode {
+  if (view === 'forgot') return 'forgot';
+  if (view === 'signUp') return 'signUp';
+  return 'signIn';
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_supabase_env:
@@ -32,15 +42,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_zoho_email: 'Zoho did not return an email for this account.'
 };
 
-function RevCollectMark({ className }: { className?: string }) {
-  return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <Icons.logo className='size-8 shrink-0' />
-      <span className='text-sm font-semibold tracking-tight'>RevCollect</span>
-    </div>
-  );
-}
-
 function authErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof TimeoutError) {
     return 'Sign-in timed out. Check your connection and try again.';
@@ -53,9 +54,10 @@ function authErrorMessage(err: unknown, fallback: string): string {
 
 export function AuthPage() {
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<AuthMode>('signIn');
+  const [mode, setMode] = useState<AuthMode>(() => initialAuthMode(searchParams.get('view')));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -64,8 +66,12 @@ export function AuthPage() {
 
   const nextPath = safeNextPath(searchParams.get('next'));
   const queryError = searchParams.get('error');
+  const intuitEmailUnverified = !error && queryError === 'intuit_email_unverified';
   const displayError =
-    error ?? (queryError ? (ERROR_MESSAGES[queryError] ?? 'Could not sign in') : null);
+    error ??
+    (queryError && !intuitEmailUnverified
+      ? (ERROR_MESSAGES[queryError] ?? 'Could not sign in')
+      : null);
 
   function goToApp(path: string) {
     setIsRedirecting(true);
@@ -161,6 +167,29 @@ export function AuthPage() {
     try {
       const supabase = createClient();
 
+      if (mode === 'forgot') {
+        const redirectTo = new URL('/auth/callback', window.location.origin);
+        redirectTo.searchParams.set('next', '/auth/reset-password');
+        const { error: resetError } = await withTimeout(
+          supabase.auth.resetPasswordForEmail(email.trim(), {
+            redirectTo: redirectTo.toString()
+          }),
+          AUTH_REQUEST_TIMEOUT_MS
+        );
+
+        if (resetError && !/not found/i.test(resetError.message)) {
+          setError(resetError.message);
+          toast.error(resetError.message);
+          setIsPending(false);
+          return;
+        }
+
+        setInfo('Check your email for a link to reset your password.');
+        toast.success('Reset link sent');
+        setIsPending(false);
+        return;
+      }
+
       if (mode === 'signIn') {
         const { error: signInError } = await withTimeout(
           supabase.auth.signInWithPassword({
@@ -225,52 +254,121 @@ export function AuthPage() {
     );
   }
 
-  return (
-    <main className='relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2'>
-      <div className='bg-secondary relative hidden h-full flex-col border-r p-10 lg:flex dark:bg-secondary/20'>
-        <div className='absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background' />
-        <RevCollectMark className='relative z-10 mr-auto' />
+  const heading =
+    mode === 'forgot' ? 'Reset password' : mode === 'signIn' ? 'Sign in' : 'Create account';
 
-        <div className='z-10 mt-auto max-w-lg space-y-3'>
-          <p className='text-xl'>
-            Collections inbox for bookkeepers. Connect Xero, QuickBooks Online, or Zoho Books.
-          </p>
-          <p className='text-muted-foreground text-sm'>
-            Draft follow-ups, then send from Gmail. You stay the sender.
-          </p>
-        </div>
-        <div className='absolute inset-0'>
-          <FloatingPaths position={1} />
-          <FloatingPaths position={-1} />
-        </div>
+  return (
+    <AuthShell>
+      <div className='flex flex-col gap-1'>
+        <h1 className='font-[family-name:var(--font-stix-two-text)] text-4xl font-medium tracking-tight'>
+          {heading}
+        </h1>
       </div>
 
-      <div className='relative flex min-h-screen flex-col justify-center px-8'>
-        <div aria-hidden className='absolute inset-0 -z-10 opacity-60 contain-strict isolate'>
-          <div className='absolute top-0 right-0 h-320 w-140 -translate-y-87.5 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,--theme(--color-foreground/.06)_0,hsla(0,0%,55%,.02)_50%,--theme(--color-foreground/.01)_80%)]' />
-          <div className='absolute top-0 right-0 h-320 w-60 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)] [translate:5%_-50%]' />
-          <div className='absolute top-0 right-0 h-320 w-60 -translate-y-87.5 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)]' />
+      <form className='flex flex-col gap-3' onSubmit={handleSubmit}>
+        <div className='flex flex-col gap-2'>
+          <p className='text-muted-foreground text-start text-xs'>Email</p>
+          <InputGroup>
+            <InputGroupInput
+              placeholder='you@company.com'
+              type='email'
+              autoComplete='email'
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <InputGroupAddon align='inline-start'>
+              <Icons.at className='size-4' />
+            </InputGroupAddon>
+          </InputGroup>
         </div>
 
-        <div className='mx-auto w-full space-y-4 sm:w-sm'>
-          <RevCollectMark className='lg:hidden' />
-          <div className='flex flex-col gap-1'>
-            <h1 className='text-2xl font-bold tracking-wide'>
-              {mode === 'signIn' ? 'Sign in' : 'Create account'}
-            </h1>
-            <p className='text-muted-foreground text-base'>
-              {mode === 'signIn'
-                ? 'Sign in to your RevCollect workspace.'
-                : 'Create your RevCollect account with email and password.'}
-            </p>
+        {mode === 'forgot' ? null : (
+          <div className='flex flex-col gap-2'>
+            <div className='flex items-center justify-between'>
+              <p className='text-muted-foreground text-start text-xs'>Password</p>
+              {mode === 'signIn' ? (
+                <button
+                  type='button'
+                  className='text-muted-foreground hover:text-foreground text-xs underline underline-offset-4'
+                  onClick={() => {
+                    setMode('forgot');
+                    setError(null);
+                    setInfo(null);
+                  }}
+                >
+                  Forgot password?
+                </button>
+              ) : null}
+            </div>
+            <InputGroup>
+              <InputGroupInput
+                placeholder={mode === 'signUp' ? 'At least 6 characters' : 'Your password'}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={mode === 'signUp' ? 6 : undefined}
+              />
+              <InputGroupAddon align='inline-start'>
+                <Icons.lock className='size-4' />
+              </InputGroupAddon>
+              <InputGroupAddon align='inline-end'>
+                <InputGroupButton
+                  size='icon-xs'
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? <Icons.eyeOff /> : <Icons.eye />}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
+        )}
 
-          <div className='bg-muted grid grid-cols-2 gap-1 rounded-lg p-1'>
-            <Button
+        {intuitEmailUnverified ? (
+          <p className='text-destructive text-sm'>
+            This Intuit email is not verified.{' '}
+            <a
+              className='underline underline-offset-4'
+              href='https://accounts.intuit.com/app/account-manager/security'
+            >
+              Verify it in Intuit Sign in & security
+            </a>
+            , then try again.
+          </p>
+        ) : null}
+        {displayError ? <p className='text-destructive text-sm'>{displayError}</p> : null}
+        {info ? <p className='text-sm text-emerald-600 dark:text-emerald-400'>{info}</p> : null}
+
+        <Button className='w-full' type='submit' isLoading={isPending} disabled={isGooglePending}>
+          {mode === 'forgot' ? 'Send reset link' : mode === 'signIn' ? 'Sign in' : 'Create account'}
+        </Button>
+      </form>
+
+      <p className='text-muted-foreground text-center text-sm'>
+        {mode === 'signIn' ? (
+          <>
+            Don&apos;t have an account?{' '}
+            <button
               type='button'
-              variant={mode === 'signIn' ? 'default' : 'ghost'}
-              size='sm'
-              className='w-full'
+              className='text-foreground font-medium underline underline-offset-4'
+              onClick={() => {
+                setMode('signUp');
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              Create an account
+            </button>
+          </>
+        ) : (
+          <>
+            {mode === 'forgot' ? 'Remembered it? ' : 'Already have an account? '}
+            <button
+              type='button'
+              className='text-foreground font-medium underline underline-offset-4'
               onClick={() => {
                 setMode('signIn');
                 setError(null);
@@ -278,21 +376,14 @@ export function AuthPage() {
               }}
             >
               Sign in
-            </Button>
-            <Button
-              type='button'
-              variant={mode === 'signUp' ? 'default' : 'ghost'}
-              size='sm'
-              className='w-full'
-              onClick={() => {
-                setMode('signUp');
-                setError(null);
-                setInfo(null);
-              }}
-            >
-              Sign up
-            </Button>
-          </div>
+            </button>
+          </>
+        )}
+      </p>
+
+      {mode === 'forgot' ? null : (
+        <>
+          <AuthDivider>OR</AuthDivider>
 
           <Button
             type='button'
@@ -305,107 +396,49 @@ export function AuthPage() {
             <GoogleIcon data-icon='inline-start' />
             Continue with Google
           </Button>
-          <Button
-            type='button'
-            className='w-full'
-            variant='outline'
-            disabled={isPending || isGooglePending}
-            onClick={() => {
-              window.location.assign('/api/auth/xero/start');
-            }}
-          >
-            <XeroIcon data-icon='inline-start' />
-            Continue with Xero
-          </Button>
-          <Button
-            type='button'
-            className='w-full'
-            variant='outline'
-            disabled={isPending || isGooglePending}
-            onClick={() => {
-              window.location.assign('/api/auth/intuit/start');
-            }}
-          >
-            <IntuitIcon data-icon='inline-start' />
-            Sign in with Intuit
-          </Button>
-          <Button
-            type='button'
-            className='w-full'
-            variant='outline'
-            disabled={isPending || isGooglePending}
-            onClick={() => {
-              window.location.assign('/api/auth/zoho/start');
-            }}
-          >
-            <ZohoIcon data-icon='inline-start' />
-            Continue with Zoho
-          </Button>
 
           <AuthDivider>OR</AuthDivider>
 
-          <form className='flex flex-col gap-3' onSubmit={handleSubmit}>
-            <div className='flex flex-col gap-2'>
-              <p className='text-muted-foreground text-start text-xs'>Email</p>
-              <InputGroup>
-                <InputGroupInput
-                  placeholder='you@company.com'
-                  type='email'
-                  autoComplete='email'
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+          <div className='flex flex-col items-center gap-2'>
+            <div className='flex items-center justify-center'>
+              <a
+                href='/api/auth/intuit/start'
+                className={cn(
+                  'inline-flex',
+                  (isPending || isGooglePending) && 'pointer-events-none opacity-50'
+                )}
+                aria-label='Sign in with Intuit'
+                aria-disabled={isPending || isGooglePending}
+              >
+                <img
+                  src='/intuit/Sign_in_blue_btn_lg.svg'
+                  alt='Sign in with Intuit'
+                  width={242}
+                  height={52}
+                  className='h-[52px] w-auto'
                 />
-                <InputGroupAddon align='inline-start'>
-                  <Icons.at className='size-4' />
-                </InputGroupAddon>
-              </InputGroup>
+              </a>
             </div>
+            <XeroSignInButton disabled={isPending || isGooglePending} />
+            <ZohoSignInButton disabled={isPending || isGooglePending} />
+          </div>
+        </>
+      )}
 
-            <div className='flex flex-col gap-2'>
-              <p className='text-muted-foreground text-start text-xs'>Password</p>
-              <InputGroup>
-                <InputGroupInput
-                  placeholder={mode === 'signUp' ? 'At least 6 characters' : 'Your password'}
-                  type='password'
-                  autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={mode === 'signUp' ? 6 : undefined}
-                />
-                <InputGroupAddon align='inline-start'>
-                  <Icons.lock className='size-4' />
-                </InputGroupAddon>
-              </InputGroup>
-            </div>
-
-            {displayError ? <p className='text-destructive text-sm'>{displayError}</p> : null}
-            {info ? <p className='text-sm text-emerald-600 dark:text-emerald-400'>{info}</p> : null}
-
-            <Button
-              className='w-full'
-              type='submit'
-              isLoading={isPending}
-              disabled={isGooglePending}
-            >
-              {mode === 'signIn' ? 'Sign in' : 'Create account'}
-            </Button>
-          </form>
-
-          <p className='text-muted-foreground mt-4 text-sm'>
-            By continuing, you agree to our{' '}
-            <a className='hover:text-primary underline underline-offset-4' href='/terms'>
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a className='hover:text-primary underline underline-offset-4' href='/privacy'>
-              Privacy Policy
-            </a>
-            .
-          </p>
-        </div>
-      </div>
-    </main>
+      <p className='text-muted-foreground text-center text-xs whitespace-nowrap'>
+        By continuing, you agree to our{' '}
+        <a className='hover:text-primary underline underline-offset-4' href='/terms'>
+          Terms of Service
+        </a>{' '}
+        and{' '}
+        <a
+          className='hover:text-primary underline underline-offset-4'
+          href='https://revcollect.ai/security/privacy-policy'
+        >
+          Privacy Policy
+        </a>
+        .
+      </p>
+    </AuthShell>
   );
 }

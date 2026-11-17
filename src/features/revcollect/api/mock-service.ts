@@ -292,9 +292,8 @@ export class MockRevCollectService implements RevCollectService {
     return {
       requestId: `mock-del-${Date.now()}`,
       tenantId,
-      status: 'queued',
-      message:
-        'Deletion request recorded (mock). When Supabase is connected, this queues full tenant erasure within 30 days of cancellation.'
+      status: 'completed',
+      message: 'This demo workspace does not store a QuickBooks connection.'
     };
   }
 

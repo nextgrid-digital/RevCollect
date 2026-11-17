@@ -247,13 +247,8 @@ export class HttpXeroRevCollectService implements RevCollectService {
     throw new Error('Export is only available on the server');
   }
 
-  async requestTenantDeletion(tenantId: TenantId): Promise<DeletionRequestResult> {
-    return {
-      requestId: `client-del-${Date.now()}`,
-      tenantId,
-      status: 'queued',
-      message: 'Deletion must be requested from a server action'
-    };
+  requestTenantDeletion(_tenantId: TenantId) {
+    return postJson<DeletionRequestResult>('requestTenantDeletion', {});
   }
 
   async logDataAccess(_event: DataAccessEvent): Promise<void> {

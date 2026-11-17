@@ -302,6 +302,14 @@ export async function POST(request: NextRequest) {
         const copy = await summarizeDashboard(body.payload);
         return NextResponse.json({ copy });
       }
+      case 'requestTenantDeletion': {
+        const userId = await getAuthUserId();
+        if (!userId) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const tenantId = await getIntegrationTenantId();
+        return NextResponse.json(await service.requestTenantDeletion(tenantId));
+      }
       case 'recordInboxSend': {
         const userId = await getAuthUserId();
         if (!userId) {

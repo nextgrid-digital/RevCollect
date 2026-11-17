@@ -16,6 +16,7 @@ import {
   booksConnectPath
 } from './books-provider-picker';
 import { IntegrationConnectToast } from './integration-connect-toast';
+import { ConnectToQuickBooksButton } from './connect-to-quickbooks-button';
 import { OAuthStartLink } from './oauth-start-link';
 import {
   IntegrationDisconnectButton,
@@ -124,13 +125,19 @@ export function SettingsIntegrationsView() {
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
-                  <Button asChild size='sm' variant='outline'>
-                    <OAuthStartLink
+                  {connectedBooks === 'quickbooks' ? (
+                    <ConnectToQuickBooksButton
                       href={booksConnectPath(connectedBooks, '/settings/integrations')}
-                    >
-                      {connectedOption.reconnectLabel}
-                    </OAuthStartLink>
-                  </Button>
+                    />
+                  ) : (
+                    <Button asChild size='sm' variant='outline'>
+                      <OAuthStartLink
+                        href={booksConnectPath(connectedBooks, '/settings/integrations')}
+                      >
+                        {connectedOption.reconnectLabel}
+                      </OAuthStartLink>
+                    </Button>
+                  )}
                   <XeroResyncButton />
                   <IntegrationDisconnectButton
                     provider={connectedBooks}

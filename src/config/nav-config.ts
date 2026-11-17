@@ -3,7 +3,7 @@ import { NavGroup } from '@/types';
 
 export const navGroups: NavGroup[] = [
   {
-    label: 'Collect',
+    label: '',
     items: [
       {
         title: 'Dashboard',

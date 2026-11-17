@@ -19,7 +19,7 @@ export default function SecurityPage() {
         payments, and (on Xero) aged receivables. We do not request Xero accounting.transactions.
       </p>
       <p>
-        Incidents affecting ingest or send: email hello@revcollect.ai. We will tell affected
+        Incidents affecting ingest or send: email admin@revcollect.ai. We will tell affected
         workspaces what failed and how to reconnect.
       </p>
     </LegalPage>

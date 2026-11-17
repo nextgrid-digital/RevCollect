@@ -424,6 +424,9 @@ async function writeSnapshot(
       .from('payments')
       .upsert(paymentRows, { onConflict: 'tenant_id,external_id' });
     if (error) throw new Error(`Failed to upsert payments: ${error.message}`);
+  } else if (options?.purgeEmpty) {
+    const { error } = await supabase.from('payments').delete().eq('tenant_id', tenantId);
+    if (error) console.error('[canonical] skipped payment delete:', error.message);
   }
 
   const inboxIds = snapshot.inboxMessages.map((message) =>
@@ -522,7 +525,7 @@ async function writeSnapshot(
     }
   }
 
-  if (snapshot.ingestedAt) {
+  if (snapshot.ingestedAt || options?.purgeEmpty) {
     const { error } = await supabase
       .from('tenants')
       .update({ last_synced_at: snapshot.ingestedAt, updated_at: now })

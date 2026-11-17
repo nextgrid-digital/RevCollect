@@ -23,6 +23,8 @@ import {
   ZOHO_DATA_CENTERS,
   type ZohoDataCenterId
 } from '@/lib/integrations/zoho-regions';
+import { ConnectToQuickBooksButton } from '@/features/revcollect/settings/components/connect-to-quickbooks-button';
+import { IntegrationDisconnectButton } from '@/features/revcollect/settings/components/integration-manage-buttons';
 import { toast } from 'sonner';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -85,9 +87,9 @@ const BOOKS_COPY: Record<
   },
   quickbooks: {
     title: 'QuickBooks',
-    connectLabel: 'Connect QuickBooks',
-    reconnectLabel: 'Reconnect QuickBooks',
-    disconnectLabel: 'Disconnect QuickBooks',
+    connectLabel: 'Connect to QuickBooks',
+    reconnectLabel: 'Connect to QuickBooks',
+    disconnectLabel: 'Disconnect from QuickBooks',
     connectPath: '/api/integrations/quickbooks/connect',
     description:
       'Connect one QuickBooks Online company. RevCollect maps open invoices and payments into the same inbox as Xero.',
@@ -176,70 +178,86 @@ export function ConnectBooksView({ provider, nextStep }: ConnectBooksViewProps) 
         breadcrumbs={[{ label: 'Onboarding', href: '/onboarding' }, { label: copy.title }]}
       />
       <div className='scroll-stable min-h-0 flex-1 overflow-y-auto'>
-        <WorkspaceCard className='mx-auto w-full max-w-lg p-4 md:p-5'>
-          <div className='flex flex-col gap-1'>
-            <h2 className='text-lg font-semibold'>{copy.title}</h2>
-            <p className='text-muted-foreground text-sm'>{copy.description}</p>
-          </div>
-          <div className='mt-4 space-y-4'>
-            {isPending ? (
-              <p className='text-muted-foreground text-sm'>Checking connection status…</p>
-            ) : connected ? (
-              <div className='space-y-1'>
-                <p className='text-sm font-medium'>Connected</p>
-                <p className='text-muted-foreground text-sm'>
-                  Organisation: {organisationName ?? copy.title}
-                </p>
+        <div className='mx-auto w-full max-w-lg'>
+          <Link
+            href='/onboarding'
+            className='text-muted-foreground hover:text-foreground mb-3 inline-flex text-sm underline-offset-4 hover:underline'
+          >
+            Back to onboarding
+          </Link>
+          <WorkspaceCard className='w-full p-4 md:p-5'>
+            <div className='flex flex-col gap-1'>
+              <h2 className='text-lg font-semibold'>{copy.title}</h2>
+              <p className='text-muted-foreground text-sm'>{copy.description}</p>
+            </div>
+            <div className='mt-4 space-y-4'>
+              {isPending ? (
+                <p className='text-muted-foreground text-sm'>Checking connection status…</p>
+              ) : connected ? (
+                <div className='space-y-1'>
+                  <p className='text-sm font-medium'>Connected</p>
+                  <p className='text-muted-foreground text-sm'>
+                    Organisation: {organisationName ?? copy.title}
+                  </p>
+                </div>
+              ) : (
+                <p className='text-muted-foreground text-sm'>{copy.authorize}</p>
+              )}
+              {provider === 'zoho' ? (
+                <div className='space-y-2'>
+                  <Label htmlFor='zoho-dc'>Zoho data center</Label>
+                  <Select
+                    value={zohoDc}
+                    onValueChange={(value) => setZohoDc(value as ZohoDataCenterId)}
+                  >
+                    <SelectTrigger id='zoho-dc' className='w-full'>
+                      <SelectValue placeholder='Select region' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ZOHO_DATA_CENTERS.map((dc) => (
+                        <SelectItem key={dc.id} value={dc.id}>
+                          {dc.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className='text-muted-foreground text-xs'>
+                    Pick where your Zoho Books organisation lives (same Client ID works for all
+                    regions when Multi-DC is enabled).
+                  </p>
+                </div>
+              ) : null}
+              <div className='flex flex-wrap items-center gap-2'>
+                {provider === 'quickbooks' ? (
+                  <ConnectToQuickBooksButton href={copy.connectPath} />
+                ) : (
+                  <>
+                    {!connected ? (
+                      <Button onClick={handleConnect}>{copy.connectLabel}</Button>
+                    ) : null}
+                    <Button variant='outline' onClick={handleConnect}>
+                      {copy.reconnectLabel}
+                    </Button>
+                  </>
+                )}
+                {connected && provider === 'quickbooks' ? (
+                  <IntegrationDisconnectButton provider='quickbooks' label='QuickBooks' />
+                ) : null}
+                {connected ? (
+                  <Button asChild>
+                    <Link href={nextStep.href}>{nextStep.label}</Link>
+                  </Button>
+                ) : null}
               </div>
-            ) : (
-              <p className='text-muted-foreground text-sm'>{copy.authorize}</p>
-            )}
-            {provider === 'zoho' ? (
-              <div className='space-y-2'>
-                <Label htmlFor='zoho-dc'>Zoho data center</Label>
-                <Select
-                  value={zohoDc}
-                  onValueChange={(value) => setZohoDc(value as ZohoDataCenterId)}
-                >
-                  <SelectTrigger id='zoho-dc' className='w-full'>
-                    <SelectValue placeholder='Select region' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ZOHO_DATA_CENTERS.map((dc) => (
-                      <SelectItem key={dc.id} value={dc.id}>
-                        {dc.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {connected && provider === 'xero' ? (
                 <p className='text-muted-foreground text-xs'>
-                  Pick where your Zoho Books organisation lives (same Client ID works for all
-                  regions when Multi-DC is enabled).
+                  To disconnect, use Settings → Integrations ({copy.disconnectLabel}). If you
+                  revoked access in Xero Connected Apps, reconnect here.
                 </p>
-              </div>
-            ) : null}
-            <div className='flex flex-wrap gap-2'>
-              {!connected ? <Button onClick={handleConnect}>{copy.connectLabel}</Button> : null}
-              <Button variant='outline' onClick={handleConnect}>
-                {copy.reconnectLabel}
-              </Button>
-              <Button asChild variant='outline'>
-                <Link href='/onboarding'>Back to onboarding</Link>
-              </Button>
-              {connected ? (
-                <Button asChild>
-                  <Link href={nextStep.href}>{nextStep.label}</Link>
-                </Button>
               ) : null}
             </div>
-            {connected && provider === 'xero' ? (
-              <p className='text-muted-foreground text-xs'>
-                To disconnect, use Settings → Integrations ({copy.disconnectLabel}). If you revoked
-                access in Xero Connected Apps, reconnect here.
-              </p>
-            ) : null}
-          </div>
-        </WorkspaceCard>
+          </WorkspaceCard>
+        </div>
       </div>
     </WorkspaceCanvas>
   );

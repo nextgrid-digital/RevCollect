@@ -9,7 +9,7 @@ export const metadata = publicMetadata({
 
 export default function TermsPage() {
   return (
-    <LegalPage title='Terms of Service' lastUpdated='October 29, 2026'>
+    <LegalPage title='Terms of Service' lastUpdated='November 17, 2026'>
       <p>
         RevCollect drafts collection follow-ups. You remain the sender. You are responsible for
         CAN-SPAM and similar rules, for the accuracy of your books, and for who you authorize to
@@ -18,14 +18,21 @@ export default function TermsPage() {
       <p>
         Accounting data stays in your ledger. RevCollect is not a substitute for your practice
         management, tax, or legal advice. Disconnecting a provider stops new syncs; stored workspace
-        data follows our retention practices described in the privacy policy.
+        data follows our retention practices described in the{' '}
+        <a
+          className='underline underline-offset-4'
+          href='https://revcollect.ai/security/privacy-policy'
+        >
+          privacy policy
+        </a>
+        .
       </p>
       <p>
         The product name does not include “Xero”, “QuickBooks”, or “Zoho”. Those marks belong to
         their owners. Listing on a marketplace does not make RevCollect an official product of that
         vendor.
       </p>
-      <p>Questions: hello@revcollect.ai.</p>
+      <p>Questions: admin@revcollect.ai.</p>
     </LegalPage>
   );
 }

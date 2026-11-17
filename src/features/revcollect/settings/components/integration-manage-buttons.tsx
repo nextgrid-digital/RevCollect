@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { ConnectToQuickBooksButton } from './connect-to-quickbooks-button';
 import { OAuthStartLink } from './oauth-start-link';
 import {
   useDisconnectIntegration,
@@ -28,7 +29,7 @@ function disconnectCopy(provider: IntegrationProviderKey): string {
     case 'xero':
       return 'You can reconnect later with Connect with Xero. Existing invoices stay until you resync.';
     case 'quickbooks':
-      return 'You can reconnect later. Existing invoices stay until you resync.';
+      return 'This revokes the QuickBooks token and stops sync. Invoices already saved stay until you delete workspace data.';
     case 'zoho':
       return 'You can reconnect later. Existing invoices stay until you resync.';
     default: {
@@ -47,18 +48,25 @@ export function IntegrationDisconnectButton({
 }) {
   const [open, setOpen] = useState(false);
   const disconnect = useDisconnectIntegration();
-  const xeroLabel = provider === 'xero' ? 'Disconnect from Xero' : `Disconnect ${label}`;
+  const triggerLabel =
+    provider === 'xero'
+      ? 'Disconnect from Xero'
+      : provider === 'quickbooks'
+        ? 'Disconnect from QuickBooks'
+        : `Disconnect ${label}`;
+  const dialogTitle =
+    provider === 'quickbooks' ? 'Disconnect from QuickBooks?' : `Disconnect ${label}?`;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button size='sm' variant='outline'>
-          {xeroLabel}
+          {triggerLabel}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Disconnect {label}?</AlertDialogTitle>
+          <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
           <AlertDialogDescription>{disconnectCopy(provider)}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -71,7 +79,7 @@ export function IntegrationDisconnectButton({
               disconnect.mutate(provider);
             }}
           >
-            Disconnect
+            {provider === 'quickbooks' ? 'Disconnect from QuickBooks' : 'Disconnect'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -91,11 +99,9 @@ export function IntegrationReconnectLinks({
           Reconnect with Xero
         </OAuthStartLink>
       </Button>
-      <Button asChild size='sm' variant='outline'>
-        <OAuthStartLink href={`/api/integrations/quickbooks/connect?returnTo=${returnTo}`}>
-          Reconnect QuickBooks
-        </OAuthStartLink>
-      </Button>
+      <ConnectToQuickBooksButton
+        href={`/api/integrations/quickbooks/connect?returnTo=${returnTo}`}
+      />
       <Button asChild size='sm' variant='outline'>
         <Link href={`/onboarding/connect-zoho`}>Reconnect Zoho</Link>
       </Button>

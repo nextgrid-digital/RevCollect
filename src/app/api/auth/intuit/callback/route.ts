@@ -13,8 +13,10 @@ import { saveQuickBooksConnection } from '@/lib/integrations/quickbooks-connecti
 import {
   exchangeQuickBooksAuthCode,
   fetchQuickBooksCompanyNameWithToken,
+  fetchQuickBooksOpenIdProfile,
   getQuickBooksOAuthConfig,
-  getQuickBooksSignupRedirectUri
+  getQuickBooksSignupRedirectUri,
+  revokeQuickBooksRefreshToken
 } from '@/lib/integrations/quickbooks-oauth';
 
 const OAUTH_STATE_COOKIE = 'intuit_signup_oauth_state';
@@ -49,7 +51,13 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeQuickBooksAuthCode(config, code, redirectUri);
     if (!tokens.refresh_token) return redirectHome('missing_refresh_token');
 
-    const email = emailFromIdToken(tokens.id_token);
+    const profile = await fetchQuickBooksOpenIdProfile(tokens.access_token, config.environment);
+    if (!profile.emailVerified) {
+      await revokeQuickBooksRefreshToken(config, tokens.refresh_token);
+      return redirectHome('intuit_email_unverified');
+    }
+
+    const email = profile.email ?? emailFromIdToken(tokens.id_token);
     if (!email) return redirectHome('missing_intuit_email');
 
     const organisationName =

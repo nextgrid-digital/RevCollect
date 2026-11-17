@@ -36,8 +36,8 @@ export default function QuickBooksHelpPage() {
         <Link className='underline underline-offset-4' href='/onboarding/connect-quickbooks'>
           Connect QuickBooks
         </Link>{' '}
-        (or Settings → Integrations). Authorize RevCollect. We request accounting scopes needed for
-        customers and open AR only.
+        (or Settings → Integrations) and choose Connect to QuickBooks. Authorize RevCollect. We
+        request accounting scopes needed for customers and open AR only.
       </p>
 
       <h2 className='text-foreground pt-2 text-base font-medium'>3. Connect Gmail</h2>
@@ -54,11 +54,12 @@ export default function QuickBooksHelpPage() {
 
       <h2 className='text-foreground pt-2 text-base font-medium'>5. Disconnect</h2>
       <p>
-        Use Integrations → Disconnect, or open{' '}
+        Use Integrations → Disconnect from QuickBooks, or open{' '}
         <Link className='underline underline-offset-4' href='/disconnect/quickbooks'>
-          Disconnect QuickBooks
+          Disconnect from QuickBooks
         </Link>
-        . Sync stops until you reconnect.
+        . That revokes the token and stops sync. Saved invoices stay until you delete workspace
+        data.
       </p>
 
       <h2 className='text-foreground pt-2 text-base font-medium'>Pricing</h2>
@@ -70,13 +71,16 @@ export default function QuickBooksHelpPage() {
       <h2 className='text-foreground pt-2 text-base font-medium'>Support</h2>
       <p>
         Email{' '}
-        <a className='underline underline-offset-4' href='mailto:hello@revcollect.ai'>
-          hello@revcollect.ai
+        <a className='underline underline-offset-4' href='mailto:admin@revcollect.ai'>
+          admin@revcollect.ai
         </a>
         . Privacy:{' '}
-        <Link className='underline underline-offset-4' href='/privacy'>
+        <a
+          className='underline underline-offset-4'
+          href='https://revcollect.ai/security/privacy-policy'
+        >
           Privacy
-        </Link>
+        </a>
         {' · '}
         <Link className='underline underline-offset-4' href='/security'>
           Security

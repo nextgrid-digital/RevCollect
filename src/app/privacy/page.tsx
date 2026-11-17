@@ -1,6 +1,8 @@
 import { LegalPage } from '@/features/revcollect/legal/legal-page';
 import { publicMetadata } from '@/lib/site';
 
+const PRIVACY_POLICY_URL = 'https://revcollect.ai/security/privacy-policy';
+
 export const metadata = publicMetadata({
   title: 'Privacy Policy',
   description: 'How RevCollect handles accounting, Gmail, and workspace data.',
@@ -9,35 +11,24 @@ export const metadata = publicMetadata({
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title='Privacy Policy' lastUpdated='October 29, 2026'>
+    <LegalPage title='Privacy Policy'>
       <p>
-        RevCollect is a collections workspace for bookkeepers. We sync open invoices, contacts, and
-        payment status from the accounting system you connect (Xero, QuickBooks Online, or Zoho
-        Books) and send mail only through the Gmail account you authorize.
-      </p>
-      <p>
-        We use that data to show your inbox, draft follow-ups you review, and record what you sent.
-        We do not sell customer lists. We do not use Xero, Intuit, or Zoho API data to train or
-        fine-tune machine learning models. AI drafts are inference-only.
-      </p>
-      <p>
-        Tokens are stored encrypted per workspace. You can disconnect a provider in Settings. If you
-        revoke access in Xero, Intuit, or Zoho, the next sync fails until you reconnect.
-      </p>
-      <p>
-        Support: hello@revcollect.ai. Related:{' '}
-        <a className='underline underline-offset-4' href='/terms'>
-          Terms
-        </a>
-        ,{' '}
-        <a className='underline underline-offset-4' href='/security'>
-          Security
-        </a>
-        ,{' '}
-        <a className='underline underline-offset-4' href='/sub-processors'>
-          Sub-processors
+        The privacy policy is published at{' '}
+        <a className='underline underline-offset-4' href={PRIVACY_POLICY_URL}>
+          revcollect.ai/security/privacy-policy
         </a>
         .
+      </p>
+      <p>
+        Disconnect from QuickBooks revokes the token and stops new syncs. The last snapshot of
+        customers, invoices, and payments stays until you delete it. To erase that snapshot, sign in
+        and choose Settings → Privacy and data → Request data deletion. That also revokes Xero,
+        Zoho, and Gmail and deletes the stored collection mail. The subscription record stays. You
+        can also email{' '}
+        <a className='underline underline-offset-4' href='mailto:admin@revcollect.ai'>
+          admin@revcollect.ai
+        </a>
+        . Requests sent by email are completed within 30 days.
       </p>
     </LegalPage>
   );
